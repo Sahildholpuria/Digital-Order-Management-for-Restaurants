@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: var(--brand-50, #f5f3ff);
+  --color-brand-100: var(--brand-100, #ede9fe);
+  --color-brand-500: var(--brand-500, #6366f1);
+  --color-brand-600: var(--brand-600, #4f46e5);
+  --color-brand-700: var(--brand-700, #4338ca);
+  
+  --font-sans: "Outfit", "Inter", "system-ui", "sans-serif";
+  
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  --shadow-glass-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased selection:bg-indigo-100 dark:bg-slate-950 dark:text-slate-100;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700;
+}
+
+/* Premium Card Styles */
+.card-premium {
+  @apply rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/40;
+}
+
+/* Glassmorphism Styles */
+.glass {
+  @apply border border-white/20 bg-white/70 shadow-glass backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-900/60 dark:shadow-glass-dark;
+}
+
+.glass-card {
+  @apply rounded-2xl border border-white/20 bg-white/60 p-6 shadow-glass backdrop-blur-md dark:border-slate-800/40 dark:bg-slate-900/40 dark:shadow-glass-dark;
+}
+
+/* Hide Spin Buttons in Inputs */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Ripple Chime Trigger Animation */
+@keyframes ping-slow {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+.animate-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
