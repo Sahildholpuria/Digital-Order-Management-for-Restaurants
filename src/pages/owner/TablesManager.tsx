@@ -18,7 +18,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export const TablesManager: React.FC = () => {
-  const { tables, addTable, deleteTable, updateTableStatus, restaurantId } = useRestaurant();
+  const { tables, addTable, deleteTable, updateTableStatus, restaurantId, settings } = useRestaurant();
   
   // Dialog States
   const [isOpen, setIsOpen] = useState(false);
@@ -232,35 +232,57 @@ export const TablesManager: React.FC = () => {
                 </button>
               </div>
 
-              {/* HIDDEN PRINT-READY QR FLYER (Rendered off-screen for html2canvas compilation) */}
+              {/* HIDDEN PRINT-READY QR FLYER (Rendered off-screen with explicit inline styles for html2canvas) */}
               <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                 <div 
                   ref={el => { flyerRefs.current[table.id] = el; }}
-                  style={{ width: '400px', height: '600px' }}
-                  className="bg-gradient-to-br from-slate-900 to-indigo-950 p-8 text-center flex flex-col justify-between text-white font-sans rounded-none"
+                  style={{ 
+                    width: '400px', 
+                    height: '600px', 
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+                    padding: '32px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    color: '#ffffff',
+                    fontFamily: '"Outfit", "Inter", sans-serif',
+                    boxSizing: 'border-box'
+                  }}
                 >
-                  <div className="space-y-2 mt-4">
-                    <h2 className="text-3xl font-black tracking-tight text-amber-400">THE GRAND BISTRO</h2>
-                    <p className="text-xs text-indigo-200 uppercase tracking-widest font-semibold">Self-Ordering Table Menu</p>
+                  <div style={{ marginTop: '16px' }}>
+                    <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#fbbf24', margin: '0 0 4px 0', letterSpacing: '-0.025em', textTransform: 'uppercase' }}>
+                      {settings?.name || 'THE GRAND BISTRO'}
+                    </h2>
+                    <p style={{ fontSize: '11px', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '600', margin: 0 }}>
+                      Self-Ordering Table Menu
+                    </p>
                   </div>
-
-                  <div className="space-y-6 flex flex-col items-center">
-                    <div className="bg-white p-6 rounded-3xl shadow-2xl border-4 border-amber-400/50">
+ 
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <QRCodeCanvas 
                         value={menuUrl} 
-                        size={200} 
+                        size={180} 
                         level="H" 
                         includeMargin={false}
                       />
                     </div>
-                    <div className="bg-white/10 px-6 py-2.5 rounded-full border border-white/10">
-                      <p className="text-2xl font-black text-amber-400">TABLE {table.number}</p>
+                    <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '8px 24px', borderRadius: '9999px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                      <p style={{ fontSize: '18px', fontWeight: '900', color: '#fbbf24', margin: 0, letterSpacing: '0.05em' }}>
+                        TABLE {table.number.replace(/table\s*-\s*/gi, '').toUpperCase()}
+                      </p>
                     </div>
                   </div>
-
-                  <div className="space-y-3 mb-4">
-                    <p className="text-sm font-semibold text-indigo-200">Scan QR Code to Browse & Order</p>
-                    <p className="text-[10px] text-indigo-300/80">No registration or app downloads required. Quick, simple, and secure.</p>
+ 
+                  <div style={{ marginBottom: '16px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: '600', color: '#a5b4fc', margin: '0 0 4px 0' }}>
+                      Scan QR Code to Browse & Order
+                    </p>
+                    <p style={{ fontSize: '10px', color: 'rgba(165, 180, 252, 0.7)', margin: 0, lineHeight: '1.4' }}>
+                      No registration or app downloads required. <br />Quick, simple, and secure.
+                    </p>
                   </div>
                 </div>
               </div>
