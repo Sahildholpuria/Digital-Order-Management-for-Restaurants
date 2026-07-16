@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { isFirebaseConfigured, auth, googleProvider } from '../../services/firebase';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { isSupabaseConfigured, supabase } from '../../services/supabase';
 import { Lock, Mail, Users, ArrowRight, ShieldAlert, Sparkles, HelpCircle } from 'lucide-react';
 
 interface LoginProps {
@@ -25,14 +24,15 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     { role: 'waiter', label: 'Waiter Staff', desc: 'Table requests & ordering', color: 'bg-pink-500' },
   ];
 
-  const handleFirebaseLogin = async (e: React.FormEvent) => {
+  const handleSupabaseLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       onSuccess();
     } catch (err: any) {
       console.error(err);
@@ -46,11 +46,11 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     setLoading(true);
     setError('');
     try {
-      await signInWithPopup(auth, googleProvider);
-      onSuccess();
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      if (error) throw error;
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Google Auth cancelled.');
+      setError(err.message || 'Google Auth failed.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
 
         {isFirebase ? (
           /* Firebase Auth UI Form */
-          <form onSubmit={handleFirebaseLogin} className="space-y-4">
+          <form onSubmit={handleSupabaseLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Email Address</label>
               <div className="relative">

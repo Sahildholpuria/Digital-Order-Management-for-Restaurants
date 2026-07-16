@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import dbService from '../services/database';
-import { isFirebaseConfigured, auth as fbAuth } from '../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { isSupabaseConfigured, supabase } from '../services/supabase';
 import {
   RestaurantSettings,
   UserProfile,
@@ -86,34 +85,54 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
 
-  // Load User Auth State (Firebase or LocalMock)
+  const syncSupabaseProfile = async (user: any) => {
+    try {
+      const users = await dbService.getUsers(restaurantId);
+      const found = users.find(u => u.id === user.id);
+      if (found) {
+        setCurrentUserState(found);
+      } else {
+        const profile: UserProfile = {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
+          email: user.email || '',
+          role: 'admin',
+          createdAt: new Date().toISOString(),
+        };
+        await dbService.addUser(restaurantId, profile);
+        setCurrentUserState(profile);
+      }
+    } catch (err) {
+      console.error('Error syncing user profile:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load User Auth State (Supabase or LocalMock)
   useEffect(() => {
-    if (isFirebaseConfigured && fbAuth) {
-      const unsubscribe = onAuthStateChanged(fbAuth, async (user) => {
-        if (user) {
-          // fetch user profile from firestore
-          const users = await dbService.getUsers(restaurantId);
-          const found = users.find(u => u.id === user.uid);
-          if (found) {
-            setCurrentUserState(found);
-          } else {
-            // fallback create admin if first user
-            const profile: UserProfile = {
-              id: user.uid,
-              name: user.displayName || 'Staff Member',
-              email: user.email || '',
-              role: 'admin',
-              createdAt: new Date().toISOString(),
-            };
-            await dbService.addUser(restaurantId, profile);
-            setCurrentUserState(profile);
-          }
+    if (isSupabaseConfigured) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          syncSupabaseProfile(session.user);
         } else {
           setCurrentUserState(null);
+          setLoading(false);
         }
-        setLoading(false);
       });
-      return unsubscribe;
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          syncSupabaseProfile(session.user);
+        } else {
+          setCurrentUserState(null);
+          setLoading(false);
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
     } else {
       const savedUser = localStorage.getItem('restaurant_current_user');
       if (savedUser) {
@@ -252,7 +271,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const setCurrentUser = (user: UserProfile | null) => {
     setCurrentUserState(user);
-    if (!isFirebaseConfigured) {
+    if (!isSupabaseConfigured) {
       if (user) {
         localStorage.setItem('restaurant_current_user', JSON.stringify(user));
       } else {
@@ -493,8 +512,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const logoutUser = async () => {
-    if (isFirebaseConfigured && fbAuth) {
-      await fbAuth.signOut();
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
     } else {
       setCurrentUser(null);
     }
@@ -514,7 +533,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       currentUser,
       loading,
       restaurantId,
-      isFirebase: isFirebaseConfigured,
+      isFirebase: isSupabaseConfigured,
       setRestaurantId,
       setCurrentTableById,
       setCurrentUser,

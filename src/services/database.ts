@@ -1,24 +1,4 @@
-import {
-  isFirebaseConfigured,
-  db,
-  auth,
-} from './firebase';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  orderBy,
-  where,
-  addDoc,
-  Timestamp,
-  limit,
-} from 'firebase/firestore';
+import { isSupabaseConfigured, supabase } from './supabase';
 import {
   RestaurantSettings,
   UserProfile,
@@ -31,10 +11,207 @@ import {
 } from '../types';
 
 // ==========================================
-// MOCK DATA INITIALIZATION SEED
+// MAPPERS: postgres (snake_case) <-> frontend (camelCase)
 // ==========================================
 
-const DEFAULT_SETTINGS: RestaurantSettings = {
+const mapSettingsToFrontend = (row: any): RestaurantSettings => ({
+  id: row.id,
+  name: row.name,
+  address: row.address,
+  phone: row.phone,
+  email: row.email,
+  logoUrl: row.logo_url,
+  gstNumber: row.gst_number,
+  taxPercentage: Number(row.tax_percentage),
+  currency: row.currency,
+  openingHours: row.opening_hours,
+  closingHours: row.closing_hours,
+  themeColor: row.theme_color,
+  createdAt: row.created_at,
+});
+
+const mapSettingsToDb = (model: Partial<RestaurantSettings>) => ({
+  ...(model.id && { id: model.id }),
+  ...(model.name && { name: model.name }),
+  ...(model.address !== undefined && { address: model.address }),
+  ...(model.phone !== undefined && { phone: model.phone }),
+  ...(model.email !== undefined && { email: model.email }),
+  ...(model.logoUrl !== undefined && { logo_url: model.logoUrl }),
+  ...(model.gstNumber !== undefined && { gst_number: model.gstNumber }),
+  ...(model.taxPercentage !== undefined && { tax_percentage: model.taxPercentage }),
+  ...(model.currency !== undefined && { currency: model.currency }),
+  ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
+  ...(model.closingHours !== undefined && { closing_hours: model.closingHours }),
+  ...(model.themeColor !== undefined && { theme_color: model.themeColor }),
+});
+
+const mapUserToFrontend = (row: any): UserProfile => ({
+  id: row.id,
+  name: row.name,
+  email: row.email,
+  role: row.role,
+  createdAt: row.created_at,
+});
+
+const mapTableToFrontend = (row: any): RestaurantTable => ({
+  id: row.id,
+  number: row.number,
+  capacity: Number(row.capacity),
+  status: row.status,
+  qrCodeUrl: row.qr_code_url,
+  updatedAt: row.updated_at,
+});
+
+const mapTableToDb = (model: RestaurantTable, restaurantId: string) => ({
+  id: model.id,
+  restaurant_id: restaurantId,
+  number: model.number,
+  capacity: model.capacity,
+  status: model.status,
+  qr_code_url: model.qrCodeUrl,
+  updated_at: model.updatedAt,
+});
+
+const mapCategoryToFrontend = (row: any): MenuCategory => ({
+  id: row.id,
+  name: row.name,
+  order: Number(row.order),
+  createdAt: row.created_at,
+});
+
+const mapCategoryToDb = (model: MenuCategory, restaurantId: string) => ({
+  id: model.id,
+  restaurant_id: restaurantId,
+  name: model.name,
+  order: model.order,
+  created_at: model.createdAt,
+});
+
+const mapFoodItemToFrontend = (row: any): FoodItem => ({
+  id: row.id,
+  name: row.name,
+  image: row.image,
+  description: row.description,
+  price: Number(row.price),
+  categoryId: row.category_id,
+  isVeg: row.is_veg,
+  preparationTime: Number(row.preparation_time),
+  isAvailable: row.is_available,
+  isPopular: row.is_popular,
+  isRecommended: row.is_recommended,
+  spicyLevel: row.spicy_level as any,
+  discountPercentage: Number(row.discount_percentage),
+  updatedAt: row.updated_at,
+});
+
+const mapFoodItemToDb = (model: FoodItem, restaurantId: string) => ({
+  id: model.id,
+  restaurant_id: restaurantId,
+  category_id: model.categoryId,
+  name: model.name,
+  image: model.image,
+  description: model.description,
+  price: model.price,
+  is_veg: model.isVeg,
+  preparation_time: model.preparationTime,
+  is_available: model.isAvailable,
+  is_popular: model.isPopular,
+  is_recommended: model.isRecommended,
+  spicy_level: model.spicyLevel,
+  discount_percentage: model.discountPercentage,
+  updated_at: model.updatedAt,
+});
+
+const mapOrderToFrontend = (row: any): RestaurantOrder => ({
+  id: row.id,
+  orderNumber: row.order_number,
+  tableId: row.table_id,
+  tableName: row.table_name,
+  items: row.items, // jsonb is parsed automatically
+  subtotal: Number(row.subtotal),
+  tax: Number(row.tax),
+  discount: Number(row.discount),
+  grandTotal: Number(row.grand_total),
+  status: row.status,
+  createdAt: row.created_at,
+  elapsedTimeStart: row.elapsed_time_start,
+  waiterId: row.waiter_id,
+  feedback: row.feedback,
+});
+
+const mapOrderToDb = (model: RestaurantOrder, restaurantId: string) => ({
+  id: model.id,
+  restaurant_id: restaurantId,
+  order_number: model.orderNumber,
+  table_id: model.tableId,
+  table_name: model.tableName,
+  items: model.items, // serialized as jsonb automatically
+  subtotal: model.subtotal,
+  tax: model.tax,
+  discount: model.discount,
+  grand_total: model.grandTotal,
+  status: model.status,
+  created_at: model.createdAt,
+  elapsed_time_start: model.elapsedTimeStart,
+  ...(model.waiterId && { waiter_id: model.waiterId }),
+  ...(model.feedback && { feedback: model.feedback }),
+});
+
+const mapPaymentToFrontend = (row: any): PaymentRecord => ({
+  id: row.id,
+  orderId: row.order_id,
+  orderNumber: row.order_number,
+  tableName: row.table_name,
+  subtotal: Number(row.subtotal),
+  tax: Number(row.tax),
+  discount: Number(row.discount),
+  grandTotal: Number(row.grand_total),
+  paymentMethod: row.payment_method,
+  createdAt: row.created_at,
+});
+
+const mapPaymentToDb = (model: PaymentRecord, restaurantId: string) => ({
+  id: model.id,
+  restaurant_id: restaurantId,
+  order_id: model.orderId,
+  order_number: model.orderNumber,
+  table_name: model.tableName,
+  subtotal: model.subtotal,
+  tax: model.tax,
+  discount: model.discount,
+  grand_total: model.grandTotal,
+  payment_method: model.paymentMethod,
+  created_at: model.createdAt,
+});
+
+const mapNotificationToFrontend = (row: any): RestaurantNotification => ({
+  id: row.id,
+  type: row.type,
+  tableId: row.table_id,
+  tableName: row.table_name,
+  orderId: row.order_id,
+  message: row.message,
+  isRead: row.is_read,
+  createdAt: row.created_at,
+});
+
+const mapNotificationToDb = (model: RestaurantNotification, restaurantId: string) => ({
+  id: model.id,
+  restaurant_id: restaurantId,
+  type: model.type,
+  table_id: model.tableId,
+  table_name: model.tableName,
+  ...(model.orderId && { order_id: model.orderId }),
+  message: model.message,
+  is_read: model.isRead,
+  created_at: model.createdAt,
+});
+
+// ==========================================
+// LOCAL STORAGE MOCK SEEDS & DEFAULTS
+// ==========================================
+
+const DEFAULT_SETTINGS = {
   id: 'demo-restaurant',
   name: 'The Grand Bistro',
   address: '102 Gourmet Boulevard, Culinary District',
@@ -46,11 +223,11 @@ const DEFAULT_SETTINGS: RestaurantSettings = {
   currency: '₹',
   openingHours: '09:00',
   closingHours: '23:00',
-  themeColor: '#6366F1', // Indigo
+  themeColor: '#6366F1',
   createdAt: new Date().toISOString(),
 };
 
-const DEFAULT_CATEGORIES: MenuCategory[] = [
+const DEFAULT_CATEGORIES = [
   { id: 'cat-1', name: 'Starters', order: 1, createdAt: new Date().toISOString() },
   { id: 'cat-2', name: 'Main Course', order: 2, createdAt: new Date().toISOString() },
   { id: 'cat-3', name: 'Chinese Specials', order: 3, createdAt: new Date().toISOString() },
@@ -58,7 +235,7 @@ const DEFAULT_CATEGORIES: MenuCategory[] = [
   { id: 'cat-5', name: 'Beverages', order: 5, createdAt: new Date().toISOString() },
 ];
 
-const DEFAULT_ITEMS: FoodItem[] = [
+const DEFAULT_ITEMS = [
   {
     id: 'item-1',
     name: 'Truffle Parmesan Fries',
@@ -173,7 +350,7 @@ const DEFAULT_ITEMS: FoodItem[] = [
   },
 ];
 
-const DEFAULT_TABLES: RestaurantTable[] = [
+const DEFAULT_TABLES = [
   { id: 'table-1', number: '1', capacity: 2, status: 'available', qrCodeUrl: '', updatedAt: new Date().toISOString() },
   { id: 'table-2', number: '2', capacity: 4, status: 'available', qrCodeUrl: '', updatedAt: new Date().toISOString() },
   { id: 'table-3', number: '3', capacity: 4, status: 'occupied', qrCodeUrl: '', updatedAt: new Date().toISOString() },
@@ -182,14 +359,14 @@ const DEFAULT_TABLES: RestaurantTable[] = [
   { id: 'table-6', number: '6', capacity: 2, status: 'available', qrCodeUrl: '', updatedAt: new Date().toISOString() },
 ];
 
-const DEFAULT_USERS: UserProfile[] = [
+const DEFAULT_USERS = [
   { id: 'admin-user-id', name: 'Sahil Admin', email: 'admin@restaurant.com', role: 'admin', createdAt: new Date().toISOString() },
   { id: 'manager-user-id', name: 'Rohit Manager', email: 'manager@restaurant.com', role: 'manager', createdAt: new Date().toISOString() },
   { id: 'kitchen-user-id', name: 'Chef Mario', email: 'kitchen@restaurant.com', role: 'kitchen', createdAt: new Date().toISOString() },
   { id: 'waiter-user-id', name: 'David Waiter', email: 'waiter@restaurant.com', role: 'waiter', createdAt: new Date().toISOString() },
 ];
 
-const DEFAULT_ORDERS: RestaurantOrder[] = [
+const DEFAULT_ORDERS = [
   {
     id: 'ord-101',
     orderNumber: 'ORD-0001',
@@ -204,12 +381,11 @@ const DEFAULT_ORDERS: RestaurantOrder[] = [
     discount: 26,
     grandTotal: 540.4,
     status: 'preparing',
-    createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 mins ago
+    createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
     elapsedTimeStart: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
   },
 ];
 
-// Helper to check if key exists in local storage, if not, write defaults
 const initializeLocalStorage = () => {
   if (!localStorage.getItem('restaurant_settings')) {
     localStorage.setItem('restaurant_settings', JSON.stringify(DEFAULT_SETTINGS));
@@ -237,11 +413,10 @@ const initializeLocalStorage = () => {
   }
 };
 
-if (!isFirebaseConfigured) {
+if (!isSupabaseConfigured) {
   initializeLocalStorage();
 }
 
-// Custom event for notifying database changes in the same window
 const notifyLocalSubscribers = () => {
   window.dispatchEvent(new Event('restaurant-db-update'));
 };
@@ -253,27 +428,39 @@ const notifyLocalSubscribers = () => {
 export const dbService = {
   // 1. SETTINGS OPERATIONS
   async getSettings(restaurantId: string): Promise<RestaurantSettings> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId);
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        return snapshot.data() as RestaurantSettings;
-      } else {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('id', restaurantId)
+        .single();
+      
+      if (error) {
         // Create initial settings if not present
-        const settings = { ...DEFAULT_SETTINGS, id: restaurantId };
-        await setDoc(docRef, settings);
-        return settings;
+        const dbSettings = mapSettingsToDb({ ...DEFAULT_SETTINGS, id: restaurantId });
+        const { data: created, error: createError } = await supabase
+          .from('restaurants')
+          .insert(dbSettings)
+          .select()
+          .single();
+        if (createError) throw createError;
+        return mapSettingsToFrontend(created);
       }
+      return mapSettingsToFrontend(data);
     } else {
       const data = localStorage.getItem('restaurant_settings');
-      return data ? JSON.parse(data) : DEFAULT_SETTINGS;
+      return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
 
   async updateSettings(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId);
-      await updateDoc(docRef, updates);
+    if (isSupabaseConfigured) {
+      const dbUpdates = mapSettingsToDb(updates);
+      const { error } = await supabase
+        .from('restaurants')
+        .update(dbUpdates)
+        .eq('id', restaurantId);
+      if (error) throw error;
     } else {
       const current = await this.getSettings(restaurantId);
       const updated = { ...current, ...updates };
@@ -284,20 +471,27 @@ export const dbService = {
 
   // 2. STAFF / USER MANAGEMENT
   async getUsers(restaurantId: string): Promise<UserProfile[]> {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'users');
-      const snapshot = await getDocs(colRef);
-      return snapshot.docs.map(doc => doc.data() as UserProfile);
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
+      return (data || []).map(mapUserToFrontend);
     } else {
       const data = localStorage.getItem('restaurant_users');
-      return data ? JSON.parse(data) : [];
+      return data ? JSON.parse(data).map(mapUserToFrontend) : [];
     }
   },
 
   async updateUserRole(restaurantId: string, userId: string, role: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'users', userId);
-      await updateDoc(docRef, { role });
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .update({ role })
+        .eq('id', userId)
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
     } else {
       const users = await this.getUsers(restaurantId);
       const updated = users.map(u => (u.id === userId ? { ...u, role: role as any } : u));
@@ -307,9 +501,18 @@ export const dbService = {
   },
 
   async addUser(restaurantId: string, user: UserProfile): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'users', user.id);
-      await setDoc(docRef, user);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .insert({
+          id: user.id,
+          restaurant_id: restaurantId,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          created_at: user.createdAt
+        });
+      if (error) throw error;
     } else {
       const users = await this.getUsers(restaurantId);
       users.push(user);
@@ -319,9 +522,13 @@ export const dbService = {
   },
 
   async deleteUser(restaurantId: string, userId: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'users', userId);
-      await deleteDoc(docRef);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
     } else {
       const users = await this.getUsers(restaurantId);
       const updated = users.filter(u => u.id !== userId);
@@ -332,26 +539,47 @@ export const dbService = {
 
   // 3. TABLES (Real-time Subscribe & CRUD)
   subscribeTables(restaurantId: string, callback: (tables: RestaurantTable[]) => void) {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'tables');
-      return onSnapshot(colRef, (snapshot) => {
-        const tables = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RestaurantTable);
-        // Sort tables numerically or by name
-        tables.sort((a, b) => parseFloat(a.number) - parseFloat(b.number));
-        callback(tables);
-      });
+    if (isSupabaseConfigured) {
+      // 1. Fetch initial tables
+      const fetchTables = async () => {
+        const { data, error } = await supabase
+          .from('tables')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('number');
+        if (!error && data) {
+          callback(data.map(mapTableToFrontend));
+        }
+      };
+      
+      fetchTables();
+
+      // 2. Realtime listener
+      const channel = supabase
+        .channel(`public:tables:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'tables', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, () => {
+          fetchTables();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_tables');
         const parsed = data ? JSON.parse(data) : [];
         parsed.sort((a: any, b: any) => parseFloat(a.number) - parseFloat(b.number));
-        callback(parsed);
+        callback(parsed.map(mapTableToFrontend));
       };
 
-      // Initial call
       emitData();
 
-      // Listeners
       const handleStorageChange = (e: StorageEvent) => {
         if (e.key === 'restaurant_tables') emitData();
       };
@@ -368,9 +596,12 @@ export const dbService = {
   },
 
   async saveTable(restaurantId: string, table: RestaurantTable): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'tables', table.id);
-      await setDoc(docRef, table);
+    if (isSupabaseConfigured) {
+      const dbTable = mapTableToDb(table, restaurantId);
+      const { error } = await supabase
+        .from('tables')
+        .upsert(dbTable);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_tables');
       const tables: RestaurantTable[] = data ? JSON.parse(data) : [];
@@ -386,9 +617,13 @@ export const dbService = {
   },
 
   async deleteTable(restaurantId: string, tableId: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'tables', tableId);
-      await deleteDoc(docRef);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('tables')
+        .delete()
+        .eq('id', tableId)
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_tables');
       let tables: RestaurantTable[] = data ? JSON.parse(data) : [];
@@ -400,19 +635,41 @@ export const dbService = {
 
   // 4. CATEGORIES (Real-time Subscribe & CRUD)
   subscribeCategories(restaurantId: string, callback: (categories: MenuCategory[]) => void) {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'categories');
-      const q = query(colRef, orderBy('order', 'asc'));
-      return onSnapshot(q, (snapshot) => {
-        const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as MenuCategory);
-        callback(categories);
-      });
+    if (isSupabaseConfigured) {
+      const fetchCategories = async () => {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('order', { ascending: true });
+        if (!error && data) {
+          callback(data.map(mapCategoryToFrontend));
+        }
+      };
+
+      fetchCategories();
+
+      const channel = supabase
+        .channel(`public:categories:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'categories', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, () => {
+          fetchCategories();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_categories');
         const parsed: MenuCategory[] = data ? JSON.parse(data) : [];
         parsed.sort((a, b) => a.order - b.order);
-        callback(parsed);
+        callback(parsed.map(mapCategoryToFrontend));
       };
 
       emitData();
@@ -433,9 +690,12 @@ export const dbService = {
   },
 
   async saveCategory(restaurantId: string, category: MenuCategory): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'categories', category.id);
-      await setDoc(docRef, category);
+    if (isSupabaseConfigured) {
+      const dbCat = mapCategoryToDb(category, restaurantId);
+      const { error } = await supabase
+        .from('categories')
+        .upsert(dbCat);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_categories');
       const categories: MenuCategory[] = data ? JSON.parse(data) : [];
@@ -451,9 +711,13 @@ export const dbService = {
   },
 
   async deleteCategory(restaurantId: string, categoryId: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'categories', categoryId);
-      await deleteDoc(docRef);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_categories');
       let categories: MenuCategory[] = data ? JSON.parse(data) : [];
@@ -465,16 +729,39 @@ export const dbService = {
 
   // 5. FOOD ITEMS (Real-time Subscribe & CRUD)
   subscribeFoodItems(restaurantId: string, callback: (items: FoodItem[]) => void) {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'foodItems');
-      return onSnapshot(colRef, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as FoodItem);
-        callback(items);
-      });
+    if (isSupabaseConfigured) {
+      const fetchFoodItems = async () => {
+        const { data, error } = await supabase
+          .from('food_items')
+          .select('*')
+          .eq('restaurant_id', restaurantId);
+        if (!error && data) {
+          callback(data.map(mapFoodItemToFrontend));
+        }
+      };
+
+      fetchFoodItems();
+
+      const channel = supabase
+        .channel(`public:food_items:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'food_items', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, () => {
+          fetchFoodItems();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_foodItems');
-        callback(data ? JSON.parse(data) : []);
+        const parsed = data ? JSON.parse(data) : [];
+        callback(parsed.map(mapFoodItemToFrontend));
       };
 
       emitData();
@@ -495,9 +782,12 @@ export const dbService = {
   },
 
   async saveFoodItem(restaurantId: string, item: FoodItem): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'foodItems', item.id);
-      await setDoc(docRef, item);
+    if (isSupabaseConfigured) {
+      const dbItem = mapFoodItemToDb(item, restaurantId);
+      const { error } = await supabase
+        .from('food_items')
+        .upsert(dbItem);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_foodItems');
       const items: FoodItem[] = data ? JSON.parse(data) : [];
@@ -513,9 +803,13 @@ export const dbService = {
   },
 
   async deleteFoodItem(restaurantId: string, itemId: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'foodItems', itemId);
-      await deleteDoc(docRef);
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('food_items')
+        .delete()
+        .eq('id', itemId)
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_foodItems');
       let items: FoodItem[] = data ? JSON.parse(data) : [];
@@ -527,28 +821,41 @@ export const dbService = {
 
   // 6. ORDERS (Real-time Subscribe & CRUD)
   subscribeOrders(restaurantId: string, callback: (orders: RestaurantOrder[]) => void) {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'orders');
-      const q = query(colRef, orderBy('createdAt', 'desc'));
-      return onSnapshot(q, (snapshot) => {
-        const orders = snapshot.docs.map(doc => {
-          const raw = doc.data();
-          return {
-            id: doc.id,
-            ...raw,
-            // Convert timestamps if needed
-            createdAt: raw.createdAt instanceof Timestamp ? raw.createdAt.toDate().toISOString() : raw.createdAt,
-            elapsedTimeStart: raw.elapsedTimeStart instanceof Timestamp ? raw.elapsedTimeStart.toDate().toISOString() : raw.elapsedTimeStart,
-          } as RestaurantOrder;
-        });
-        callback(orders);
-      });
+    if (isSupabaseConfigured) {
+      const fetchOrders = async () => {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          callback(data.map(mapOrderToFrontend));
+        }
+      };
+
+      fetchOrders();
+
+      const channel = supabase
+        .channel(`public:orders:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'orders', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, () => {
+          fetchOrders();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_orders');
         const parsed: RestaurantOrder[] = data ? JSON.parse(data) : [];
         parsed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(parsed);
+        callback(parsed.map(mapOrderToFrontend));
       };
 
       emitData();
@@ -569,9 +876,12 @@ export const dbService = {
   },
 
   async saveOrder(restaurantId: string, order: RestaurantOrder): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'orders', order.id);
-      await setDoc(docRef, order);
+    if (isSupabaseConfigured) {
+      const dbOrder = mapOrderToDb(order, restaurantId);
+      const { error } = await supabase
+        .from('orders')
+        .upsert(dbOrder);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_orders');
       const orders: RestaurantOrder[] = data ? JSON.parse(data) : [];
@@ -588,19 +898,41 @@ export const dbService = {
 
   // 7. PAYMENTS (CRUD & List)
   subscribePayments(restaurantId: string, callback: (payments: PaymentRecord[]) => void) {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'payments');
-      const q = query(colRef, orderBy('createdAt', 'desc'));
-      return onSnapshot(q, (snapshot) => {
-        const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as PaymentRecord);
-        callback(payments);
-      });
+    if (isSupabaseConfigured) {
+      const fetchPayments = async () => {
+        const { data, error } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          callback(data.map(mapPaymentToFrontend));
+        }
+      };
+
+      fetchPayments();
+
+      const channel = supabase
+        .channel(`public:payments:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'payments', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, () => {
+          fetchPayments();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_payments');
         const parsed: PaymentRecord[] = data ? JSON.parse(data) : [];
         parsed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(parsed);
+        callback(parsed.map(mapPaymentToFrontend));
       };
 
       emitData();
@@ -621,9 +953,12 @@ export const dbService = {
   },
 
   async addPayment(restaurantId: string, payment: PaymentRecord): Promise<void> {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'payments');
-      await addDoc(colRef, payment);
+    if (isSupabaseConfigured) {
+      const dbPayment = mapPaymentToDb(payment, restaurantId);
+      const { error } = await supabase
+        .from('payments')
+        .insert(dbPayment);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_payments');
       const payments: PaymentRecord[] = data ? JSON.parse(data) : [];
@@ -635,19 +970,42 @@ export const dbService = {
 
   // 8. NOTIFICATIONS (Real-time Subscribe & CRUD)
   subscribeNotifications(restaurantId: string, callback: (notifications: RestaurantNotification[]) => void) {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'notifications');
-      const q = query(colRef, orderBy('createdAt', 'desc'), limit(50));
-      return onSnapshot(q, (snapshot) => {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RestaurantNotification);
-        callback(list);
-      });
+    if (isSupabaseConfigured) {
+      const fetchNotifications = async () => {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (!error && data) {
+          callback(data.map(mapNotificationToFrontend));
+        }
+      };
+
+      fetchNotifications();
+
+      const channel = supabase
+        .channel(`public:notifications:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, () => {
+          fetchNotifications();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_notifications');
         const parsed: RestaurantNotification[] = data ? JSON.parse(data) : [];
         parsed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(parsed);
+        callback(parsed.map(mapNotificationToFrontend));
       };
 
       emitData();
@@ -668,9 +1026,12 @@ export const dbService = {
   },
 
   async addNotification(restaurantId: string, n: RestaurantNotification): Promise<void> {
-    if (isFirebaseConfigured) {
-      const colRef = collection(db, 'restaurants', restaurantId, 'notifications');
-      await addDoc(colRef, n);
+    if (isSupabaseConfigured) {
+      const dbNotification = mapNotificationToDb(n, restaurantId);
+      const { error } = await supabase
+        .from('notifications')
+        .insert(dbNotification);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_notifications');
       const list: RestaurantNotification[] = data ? JSON.parse(data) : [];
@@ -681,9 +1042,13 @@ export const dbService = {
   },
 
   async markNotificationRead(restaurantId: string, id: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      const docRef = doc(db, 'restaurants', restaurantId, 'notifications', id);
-      await updateDoc(docRef, { isRead: true });
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id)
+        .eq('restaurant_id', restaurantId);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_notifications');
       const list: RestaurantNotification[] = data ? JSON.parse(data) : [];
@@ -694,13 +1059,13 @@ export const dbService = {
   },
 
   async clearAllNotifications(restaurantId: string): Promise<void> {
-    if (isFirebaseConfigured) {
-      // In production, we'd batch delete, but for client sync let's mark all read
-      const colRef = collection(db, 'restaurants', restaurantId, 'notifications');
-      const q = query(colRef, where('isRead', '==', false));
-      const snapshot = await getDocs(q);
-      // Wait for all updates
-      await Promise.all(snapshot.docs.map(d => updateDoc(doc(db, 'restaurants', restaurantId, 'notifications', d.id), { isRead: true })));
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('restaurant_id', restaurantId)
+        .eq('is_read', false);
+      if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_notifications');
       const list: RestaurantNotification[] = data ? JSON.parse(data) : [];
