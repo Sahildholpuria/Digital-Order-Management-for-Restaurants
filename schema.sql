@@ -88,7 +88,7 @@ create table public.orders (
   id text primary key,
   restaurant_id text references public.restaurants(id) on delete cascade not null,
   order_number text not null,
-  table_id text references public.tables(id) on delete set null,
+  table_id text,
   table_name text not null,
   items jsonb not null, -- Array of OrderItem
   subtotal numeric not null,
@@ -122,7 +122,7 @@ create table public.notifications (
   id text primary key,
   restaurant_id text references public.restaurants(id) on delete cascade not null,
   type text check (type in ('new_order', 'call_waiter', 'request_bill')) not null,
-  table_id text references public.tables(id) on delete cascade not null,
+  table_id text,
   table_name text not null,
   order_id text,
   message text not null,

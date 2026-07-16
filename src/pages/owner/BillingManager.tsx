@@ -213,7 +213,7 @@ export const BillingManager: React.FC = () => {
               {/* Thermal Receipt Design (Ref target) */}
               <div 
                 ref={receiptRef}
-                className="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 font-mono text-slate-800 dark:text-slate-200 text-xs space-y-4 leading-normal shadow-inner"
+                className="bg-white p-6 border border-slate-200 font-mono text-slate-900 text-xs space-y-4 leading-normal shadow-sm max-w-sm mx-auto"
               >
                 <div className="text-center space-y-1">
                   {settings?.logoUrl ? (
@@ -226,32 +226,32 @@ export const BillingManager: React.FC = () => {
                     <Receipt className="w-8 h-8 mx-auto text-brand-500" />
                   )}
                   <h4 className="font-bold text-sm uppercase tracking-wide">{settings?.name || 'The Grand Bistro'}</h4>
-                  <p className="text-[10px] text-slate-550 dark:text-slate-450 leading-tight">
+                  <p className="text-[10px] text-slate-500 leading-tight">
                     {settings?.address || '102 Gourmet Blvd, Culinary District'}
                   </p>
-                  <p className="text-[10px] text-slate-550 dark:text-slate-450">GSTIN: {settings?.gstNumber || '22AAAAA1111A1Z1'}</p>
+                  <p className="text-[10px] text-slate-500">GSTIN: {settings?.gstNumber || '22AAAAA1111A1Z1'}</p>
                 </div>
 
-                <div className="border-t border-dashed border-slate-300 dark:border-slate-700 my-2"></div>
+                <div className="border-t border-dashed border-slate-300 my-2"></div>
 
-                <div className="space-y-1 text-[10px]">
+                <div className="space-y-1 text-[10px] text-slate-700">
                   <div className="flex justify-between">
                     <span>Receipt No: {selectedOrder.orderNumber}</span>
                     <span>Date: {new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Table: {selectedOrder.tableName}</span>
+                    <span>Table: {selectedOrder.tableName.replace(/table\s*-\s*/gi, '')}</span>
                     <span>Time: {new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-dashed border-slate-300 dark:border-slate-700 my-2"></div>
+                <div className="border-t border-dashed border-slate-300 my-2"></div>
 
                 {/* Items List */}
-                <table className="w-full text-[10px]">
+                <table className="w-full text-[10px] text-slate-800">
                   <thead>
-                    <tr className="border-b border-dashed border-slate-350 dark:border-slate-650">
-                      <th className="font-bold pb-1">Item</th>
+                    <tr className="border-b border-dashed border-slate-300">
+                      <th className="font-bold pb-1 text-left">Item</th>
                       <th className="font-bold text-center pb-1">Qty</th>
                       <th className="font-bold text-right pb-1">Price</th>
                     </tr>
@@ -267,16 +267,16 @@ export const BillingManager: React.FC = () => {
                   </tbody>
                 </table>
 
-                <div className="border-t border-dashed border-slate-300 dark:border-slate-700 my-2"></div>
+                <div className="border-t border-dashed border-slate-300 my-2"></div>
 
                 {/* Totals Block */}
-                <div className="space-y-1.5 text-[10px]">
+                <div className="space-y-1.5 text-[10px] text-slate-800">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>{currency}{subtotal.toFixed(2)}</span>
                   </div>
                   {discountAmount > 0 && (
-                    <div className="flex justify-between text-red-500 font-bold">
+                    <div className="flex justify-between text-red-650 font-bold">
                       <span>Discount ({discountPercent}%)</span>
                       <span>-{currency}{discountAmount.toFixed(2)}</span>
                     </div>
@@ -286,17 +286,17 @@ export const BillingManager: React.FC = () => {
                     <span>{currency}{taxAmount.toFixed(2)}</span>
                   </div>
                   
-                  <div className="border-t border-dashed border-slate-300 dark:border-slate-700 my-1.5"></div>
+                  <div className="border-t border-dashed border-slate-300 my-1.5"></div>
                   
-                  <div className="flex justify-between text-sm font-black">
+                  <div className="flex justify-between text-sm font-black text-slate-900">
                     <span>GRAND TOTAL</span>
                     <span>{currency}{grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-dashed border-slate-300 dark:border-slate-700 my-2"></div>
+                <div className="border-t border-dashed border-slate-300 my-2"></div>
 
-                <div className="text-center text-[9px] text-slate-400 space-y-0.5">
+                <div className="text-center text-[9px] text-slate-550 space-y-0.5">
                   <p>Settled via {paymentMethod.toUpperCase()}</p>
                   <p>Thank you for dining with us!</p>
                   <p>www.{settings?.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bistro'}.com</p>
