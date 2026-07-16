@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface CustomerMenuProps {
@@ -13,6 +13,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     settings,
     categories,
     foodItems,
+    orders,
     cart,
     addToCart,
     removeFromCart,
@@ -39,10 +40,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   
   // Status states for call staff feedback
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
+
+  // All orders placed at this table in this session
+  const tableOrders = orders
+    .filter(o => o.tableId === tableId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   useEffect(() => {
     if (tableId) {
@@ -270,9 +277,143 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <Receipt className="w-3.5 h-3.5" />
               <span>{billRequested ? 'Requested' : 'Bill'}</span>
             </button>
+
+            {/* My Orders button with badge */}
+            <button
+              onClick={() => setIsOrdersOpen(true)}
+              className="relative flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50"
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Orders</span>
+              {tableOrders.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-brand-600 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {tableOrders.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </header>
+
+      {/* ===== MY ORDERS SLIDE-UP PANEL ===== */}
+      {isOrdersOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          onClick={() => setIsOrdersOpen(false)}
+        >
+          {/* Scrim */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+          {/* Panel */}
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl border-t border-slate-100 dark:border-slate-800 animate-slide-up"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-base">My Orders</h2>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                  Table {currentTable?.number || tableId.replace('table-', '')} · {tableOrders.length} order{tableOrders.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsOrdersOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Orders List */}
+            <div className="overflow-y-auto flex-1 px-4 py-4 space-y-3">
+              {tableOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <ClipboardList className="w-12 h-12 text-slate-200 dark:text-slate-700 mb-3" />
+                  <p className="text-sm font-bold text-slate-400">No orders placed yet</p>
+                  <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Add items to your basket and place an order!</p>
+                </div>
+              ) : (
+                tableOrders.map(order => {
+                  const statusColors: Record<string, string> = {
+                    pending:   'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30',
+                    accepted:  'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30',
+                    preparing: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30',
+                    ready:     'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/20 dark:text-brand-400 dark:border-brand-900/30',
+                    served:    'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30',
+                    completed: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
+                    cancelled: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                  };
+                  const statusDot: Record<string, string> = {
+                    pending: 'bg-yellow-400 animate-pulse', accepted: 'bg-blue-500 animate-pulse',
+                    preparing: 'bg-orange-500 animate-pulse', ready: 'bg-brand-500 animate-pulse',
+                    served: 'bg-green-500', completed: 'bg-slate-400', cancelled: 'bg-red-500',
+                  };
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800"
+                    >
+                      {/* Order header row */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="font-extrabold text-slate-800 dark:text-slate-100 text-sm">{order.orderNumber}</p>
+                          <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3" />
+                            {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusColors[order.status] || statusColors.pending}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusDot[order.status] || 'bg-yellow-400'}`} />
+                          {order.status}
+                        </span>
+                      </div>
+
+                      {/* Items list */}
+                      <div className="space-y-1 mb-3">
+                        {order.items.slice(0, 3).map(item => (
+                          <div key={item.itemId} className="flex justify-between text-xs">
+                            <span className="text-slate-600 dark:text-slate-400 font-medium">{item.name} × {item.quantity}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold">{settings?.currency || '₹'}{(item.price * item.quantity).toFixed(0)}</span>
+                          </div>
+                        ))}
+                        {order.items.length > 3 && (
+                          <p className="text-[10px] text-slate-400">+{order.items.length - 3} more items</p>
+                        )}
+                      </div>
+
+                      {/* Total + Track button */}
+                      <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-slate-700">
+                        <span className="text-sm font-black text-slate-800 dark:text-slate-100">
+                          {settings?.currency || '₹'}{order.grandTotal.toFixed(2)}
+                        </span>
+                        {order.status !== 'completed' && order.status !== 'cancelled' && (
+                          <button
+                            onClick={() => {
+                              setIsOrdersOpen(false);
+                              window.location.pathname = `/menu/${tableId}/track/${order.id}`;
+                            }}
+                            className="flex items-center gap-1 bg-brand-600 hover:bg-brand-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl transition-colors"
+                          >
+                            <span>Track Order</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-md mx-auto px-4 mt-6">
         {/* Modern Search Bar */}
