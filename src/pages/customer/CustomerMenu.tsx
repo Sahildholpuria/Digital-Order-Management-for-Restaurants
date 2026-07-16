@@ -46,9 +46,59 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
 
-  // All orders placed at this table in this session
+  // Load/manage order completion timestamps to auto-remove completed orders after 5 minutes
+  const [completedTimestamps, setCompletedTimestamps] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('completed_orders_timestamps');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Track and save completed orders' completion times
+  useEffect(() => {
+    let updated = false;
+    const newTimestamps = { ...completedTimestamps };
+
+    orders.forEach(o => {
+      if (o.status === 'completed' && !newTimestamps[o.id]) {
+        newTimestamps[o.id] = new Date().toISOString();
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      setCompletedTimestamps(newTimestamps);
+      localStorage.setItem('completed_orders_timestamps', JSON.stringify(newTimestamps));
+    }
+  }, [orders, completedTimestamps]);
+
+  // Periodic tick to trigger recalculation of expired completed orders every 10 seconds
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // All orders placed at this table in this session, filtering out completed ones after 2 minutes
   const tableOrders = orders
-    .filter(o => o.tableId === tableId)
+    .filter(o => {
+      if (o.tableId !== tableId) return false;
+      if (o.status === 'completed') {
+        const completedAtStr = completedTimestamps[o.id] || o.createdAt;
+        const completedAt = new Date(completedAtStr).getTime();
+        const now = new Date().getTime();
+        const diffMs = now - completedAt;
+        const twoMinutesMs = 2 * 60 * 1000;
+        if (diffMs > twoMinutesMs) {
+          return false;
+        }
+      }
+      return true;
+    })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   useEffect(() => {
