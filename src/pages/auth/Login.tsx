@@ -15,6 +15,16 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('login_remember_email');
+    const remember = localStorage.getItem('login_remember_me') === 'true';
+    if (remember && savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   // Mock roles for easy testing
   const mockRoles = [
@@ -33,6 +43,16 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      // Save credentials if Remember Me is checked
+      if (rememberMe) {
+        localStorage.setItem('login_remember_email', email);
+        localStorage.setItem('login_remember_me', 'true');
+      } else {
+        localStorage.removeItem('login_remember_email');
+        localStorage.removeItem('login_remember_me');
+      }
+
       onSuccess();
     } catch (err: any) {
       console.error(err);
@@ -97,7 +117,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
                   placeholder="name@restaurant.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white text-slate-805 dark:text-slate-100 dark:focus:bg-slate-800"
                 />
               </div>
             </div>
@@ -114,9 +134,25 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white"
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white text-slate-805 dark:text-slate-100 dark:focus:bg-slate-800"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 mt-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-brand-600 focus:ring-brand-500 bg-transparent cursor-pointer accent-brand-500"
+              />
+              <label 
+                htmlFor="rememberMe" 
+                className="text-xs font-bold text-slate-500 dark:text-slate-400 select-none cursor-pointer hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              >
+                Remember Me
+              </label>
             </div>
 
             <button

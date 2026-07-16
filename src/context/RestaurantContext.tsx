@@ -28,6 +28,7 @@ interface RestaurantContextType {
   currentTable: RestaurantTable | null;
   currentUser: UserProfile | null;
   loading: boolean;
+  tablesLoaded: boolean;
   restaurantId: string;
   isFirebase: boolean;
   setRestaurantId: (id: string) => void;
@@ -81,6 +82,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentTable, setCurrentTable] = useState<RestaurantTable | null>(null);
   const [currentUser, setCurrentUserState] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
@@ -159,6 +161,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Subscriptions
         unsubTables = dbService.subscribeTables(restaurantId, (data) => {
           setTables(data);
+          setTablesLoaded(true); // Mark tables as definitively loaded
           // Sync current table status if selected
           if (currentTable) {
             const fresh = data.find(t => t.id === currentTable.id);
@@ -357,28 +360,38 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       elapsedTimeStart: new Date().toISOString(),
     };
 
-    // Save order
+    // Save order to database
     await dbService.saveOrder(restaurantId, newOrder);
     
-    // Update table status to occupied
-    await dbService.saveTable(restaurantId, {
-      ...currentTable,
-      status: 'occupied',
-      updatedAt: new Date().toISOString()
-    });
+    // Update table status to occupied — only possible when a staff session is active.
+    // Customer sessions are anonymous (no auth.uid) so this call is skipped to
+    // avoid an RLS violation that would abort the entire order placement.
+    try {
+      await dbService.saveTable(restaurantId, {
+        ...currentTable,
+        status: 'occupied',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (_) {
+      // Silently ignore — staff can update table status manually from the dashboard
+    }
 
-    // Add alert notification
-    const notification: RestaurantNotification = {
-      id: `notify-${Date.now()}`,
-      type: 'new_order',
-      tableId: currentTable.id,
-      tableName: `Table ${currentTable.number}`,
-      orderId: newOrder.id,
-      message: `New order ${orderNum} received from Table ${currentTable.number}.`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    await dbService.addNotification(restaurantId, notification);
+    // Add alert notification for kitchen/staff
+    try {
+      const notification: RestaurantNotification = {
+        id: `notify-${Date.now()}`,
+        type: 'new_order',
+        tableId: currentTable.id,
+        tableName: `Table ${currentTable.number}`,
+        orderId: newOrder.id,
+        message: `New order ${orderNum} received from Table ${currentTable.number}.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+      await dbService.addNotification(restaurantId, notification);
+    } catch (_) {
+      // Notification failure must not block the customer's order confirmation
+    }
 
     clearCart();
     return newOrder;
@@ -552,6 +565,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       currentTable,
       currentUser,
       loading,
+      tablesLoaded,
       restaurantId,
       isFirebase: isSupabaseConfigured,
       setRestaurantId,

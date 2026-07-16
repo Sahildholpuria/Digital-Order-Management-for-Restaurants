@@ -27,6 +27,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     currentTable,
     tables,
     loading,
+    tablesLoaded,
   } = useRestaurant();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,8 +110,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     setTimeout(() => setBillRequested(false), 5000);
   };
 
-  // Show premium loading state while tables are loading
-  if (loading) {
+  // Show loading state while the initial context or tables list hasn't arrived yet.
+  // We wait for BOTH loading=false AND tablesLoaded=true before making any
+  // table-existence decision, so we never accidentally block a valid table that
+  // just hasn't loaded from the DB yet.
+  if (loading || !tablesLoaded) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center p-6 text-center animate-fade-in">
         <div className="flex flex-col items-center gap-3.5">
@@ -121,8 +125,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     );
   }
 
-  // Check if table is deleted or inactive
-  const isTableDeleted = tables.length > 0 && !tables.some(t => t.id === tableId);
+  // Once tables have been definitively loaded from the database, if this
+  // tableId is NOT in the list the table has been deleted by the owner.
+  const isTableDeleted = !tables.some(t => t.id === tableId);
   if (isTableDeleted) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">

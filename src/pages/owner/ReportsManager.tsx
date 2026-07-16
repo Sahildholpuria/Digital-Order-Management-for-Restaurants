@@ -110,33 +110,30 @@ export const ReportsManager: React.FC = () => {
 
   const peakHoursData = getPeakHours();
 
-  // Stable Daily Sales over 7 days for visual report
+  // Daily sales chart — purely derived from real payment records in the DB.
+  // Groups settled payments by day-of-week for the last 7 days.
   const getDailySalesData = () => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const salesMap: { [key: string]: number } = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+    const today = new Date();
+    // Build a map keyed by date string for the last 7 days
+    const result: { day: string; date: string; sales: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0]; // "YYYY-MM-DD"
+      const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short' }); // "Mon", "Tue" …
+      result.push({ day: dayLabel, date: dateStr, sales: 0 });
+    }
 
+    // Accumulate real payments into the matching day bucket
     payments.forEach(p => {
-      const dayName = new Date(p.createdAt).toLocaleDateString(undefined, { weekday: 'short' });
-      if (salesMap[dayName] !== undefined) {
-        salesMap[dayName] += p.grandTotal;
+      const paymentDate = new Date(p.createdAt).toISOString().split('T')[0];
+      const bucket = result.find(r => r.date === paymentDate);
+      if (bucket) {
+        bucket.sales += p.grandTotal;
       }
     });
 
-    // Static baseline sales to prevent random fluctuations on re-renders
-    const baselineSales: { [key: string]: number } = {
-      Mon: 4800,
-      Tue: 3500,
-      Wed: 5200,
-      Thu: 4900,
-      Fri: 7200,
-      Sat: 11500,
-      Sun: 9800
-    };
-
-    return days.map(day => ({
-      day,
-      sales: baselineSales[day] + (salesMap[day] || 0)
-    }));
+    return result.map(({ day, sales }) => ({ day, sales }));
   };
 
   const dailySalesData = getDailySalesData();
