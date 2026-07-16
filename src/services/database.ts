@@ -921,6 +921,31 @@ export const dbService = {
     }
   },
 
+  async cleanupExpiredOrders(restaurantId: string): Promise<void> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('restaurant_id', restaurantId)
+        .lt('created_at', thirtyDaysAgoStr);
+      if (error) {
+        console.error('Error cleaning up old orders:', error);
+      }
+    } else {
+      const data = localStorage.getItem('restaurant_orders');
+      if (data) {
+        const orders: RestaurantOrder[] = JSON.parse(data);
+        const filtered = orders.filter(o => new Date(o.createdAt).getTime() >= thirtyDaysAgo.getTime());
+        localStorage.setItem('restaurant_orders', JSON.stringify(filtered));
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
   // 7. PAYMENTS (CRUD & List)
   subscribePayments(restaurantId: string, callback: (payments: PaymentRecord[]) => void) {
     if (isSupabaseConfigured) {

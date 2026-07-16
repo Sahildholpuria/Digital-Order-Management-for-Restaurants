@@ -215,6 +215,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const loadData = async () => {
       try {
+        await dbService.cleanupExpiredOrders(restaurantId);
         const setts = await dbService.getSettings(restaurantId);
         setSettings(setts);
 

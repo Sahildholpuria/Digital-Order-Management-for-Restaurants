@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { jsPDF } from 'jspdf';
 import { 
   BarChart as RechartsBarChart, 
   Bar, 
@@ -139,6 +140,129 @@ export const ReportsManager: React.FC = () => {
   const dailySalesData = getDailySalesData();
 
   // ==========================================
+  // PDF EXPORTER (30 DAYS DATA & MOST ORDERED DISH)
+  // ==========================================
+  const get30DaysData = () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const filteredOrders = orders.filter(o => 
+      o.status === 'completed' && new Date(o.createdAt).getTime() >= thirtyDaysAgo.getTime()
+    );
+
+    // Calculate most ordered dish in last 30 days
+    const dishStats: { [key: string]: { name: string; qty: number; sales: number } } = {};
+    filteredOrders.forEach(o => {
+      o.items.forEach(i => {
+        if (!dishStats[i.itemId]) {
+          dishStats[i.itemId] = { name: i.name, qty: 0, sales: 0 };
+        }
+        dishStats[i.itemId].qty += i.quantity;
+        dishStats[i.itemId].sales += i.price * i.quantity;
+      });
+    });
+
+    const sortedDishes = Object.values(dishStats).sort((a, b) => b.qty - a.qty);
+    const mostOrderedDish = sortedDishes[0] || null;
+
+    // Total revenue in last 30 days
+    const totalRevenue30Days = filteredOrders.reduce((acc, curr) => {
+      const orderSum = curr.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      return acc + orderSum;
+    }, 0);
+
+    return {
+      filteredOrders,
+      mostOrderedDish,
+      totalRevenue30Days,
+      sortedDishes
+    };
+  };
+
+  const handleExportPDF = () => {
+    const { filteredOrders, mostOrderedDish, totalRevenue30Days, sortedDishes } = get30DaysData();
+
+    const doc = new jsPDF();
+
+    // Title / Header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(99, 102, 241); // Indigo color
+    doc.text(`${settings?.name || 'Bistro'} Restaurant Report`, 14, 22);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(148, 163, 184); // Slate color
+    doc.text(`Generated on: ${new Date().toLocaleString()} | Period: Last 30 Days`, 14, 28);
+    
+    // Horizontal divider
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 32, 196, 32);
+
+    // Section 1: Summary Dashboard
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59);
+    doc.text('30-DAY BUSINESS SUMMARY', 14, 42);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Total Settled Orders: ${filteredOrders.length}`, 14, 50);
+    doc.text(`Total 30-Day Revenue: ${currency}${totalRevenue30Days.toFixed(2)}`, 14, 56);
+    
+    // Highlight most ordered dish
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, 64, 182, 26, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.text('🏆 MOST ORDERED DISH (LAST 30 DAYS)', 18, 70);
+    doc.setFont('helvetica', 'normal');
+    if (mostOrderedDish) {
+      doc.text(`Dish Name: ${mostOrderedDish.name}`, 18, 77);
+      doc.text(`Total Quantity Ordered: ${mostOrderedDish.qty} times | Total Sales: ${currency}${mostOrderedDish.sales.toFixed(2)}`, 18, 83);
+    } else {
+      doc.text('No dishes ordered in the last 30 days.', 18, 78);
+    }
+
+    // Section 2: Dish Popularity Breakdown
+    doc.setFont('helvetica', 'bold');
+    doc.text('DISH POPULARITY CHART', 14, 102);
+    
+    // Table Header
+    doc.setFillColor(99, 102, 241);
+    doc.rect(14, 108, 182, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.text('Dish Name', 18, 113.5);
+    doc.text('Quantity Ordered', 110, 113.5);
+    doc.text('Total Revenue', 160, 113.5);
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'normal');
+    let yPos = 124;
+    sortedDishes.slice(0, 15).forEach((dish) => {
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+      doc.text(dish.name, 18, yPos);
+      doc.text(dish.qty.toString(), 110, yPos);
+      doc.text(`${currency}${dish.sales.toFixed(2)}`, 160, yPos);
+      
+      // Bottom border line for row
+      doc.setDrawColor(241, 245, 249);
+      doc.line(14, yPos + 3, 196, yPos + 3);
+      yPos += 8;
+    });
+
+    // Footnote
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Note: Order history entries older than 30 days are automatically deleted permanently from the database logs.', 14, yPos + 10);
+
+    doc.save(`Restaurant_30Day_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // ==========================================
   // CSV EXPORTER
   // ==========================================
   const handleExportCSV = () => {
@@ -175,13 +299,23 @@ export const ReportsManager: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleExportCSV}
-          className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/10"
-        >
-          <Download className="w-4 h-4" />
-          <span>Export Sales CSV</span>
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleExportPDF}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-red-500/10 transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download 30-Day PDF</span>
+          </button>
+          
+          <button
+            onClick={handleExportCSV}
+            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/10 transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export Sales CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Reports Overview Cards */}
