@@ -83,9 +83,69 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentUser, setCurrentUserState] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
+  const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
+
+  // Silent audio loop to keep browser tab active in background, and visibility listener to re-sync
+  useEffect(() => {
+    let interval: any;
+    let audioCtx: AudioContext | null = null;
+
+    const startKeepAlive = () => {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        // Play tiny silent sound every 10 seconds to keep the process running in the background
+        interval = setInterval(() => {
+          if (!audioCtx) return;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          gain.gain.setValueAtTime(0, audioCtx.currentTime); // SILENT (0 volume)
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.05);
+        }, 10000);
+      } catch (e) {
+        console.warn('Audio keep-alive failed to initialize:', e);
+      }
+    };
+
+    // Trigger on first user interaction to bypass browser autoplay policies
+    const handleInteraction = () => {
+      startKeepAlive();
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+
+    // Force complete database re-sync when tab gains focus or visibility
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setSubscriptionTrigger(t => t + 1);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (audioCtx) audioCtx.close();
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
+  }, []);
 
   const syncSupabaseProfile = async (user: any) => {
     try {
@@ -214,7 +274,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubPayments();
       unsubNotifications();
     };
-  }, [restaurantId, currentTable?.id]);
+  }, [restaurantId, currentTable?.id, subscriptionTrigger]);
 
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
