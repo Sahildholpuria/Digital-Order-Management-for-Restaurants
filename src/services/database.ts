@@ -14,21 +14,27 @@ import {
 // MAPPERS: postgres (snake_case) <-> frontend (camelCase)
 // ==========================================
 
-const mapSettingsToFrontend = (row: any): RestaurantSettings => ({
-  id: row.id,
-  name: row.name,
-  address: row.address,
-  phone: row.phone,
-  email: row.email,
-  logoUrl: row.logo_url,
-  gstNumber: row.gst_number,
-  taxPercentage: Number(row.tax_percentage),
-  currency: row.currency,
-  openingHours: row.opening_hours,
-  closingHours: row.closing_hours,
-  themeColor: row.theme_color,
-  createdAt: row.created_at,
-});
+const mapSettingsToFrontend = (row: any): RestaurantSettings => {
+  // UI-only toggles are stored in localStorage since they have no Supabase column
+  const uiSettings = JSON.parse(localStorage.getItem('restaurant_ui_settings') || '{}');
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address,
+    phone: row.phone,
+    email: row.email,
+    logoUrl: row.logo_url,
+    gstNumber: row.gst_number,
+    taxPercentage: Number(row.tax_percentage),
+    currency: row.currency,
+    openingHours: row.opening_hours,
+    closingHours: row.closing_hours,
+    themeColor: row.theme_color,
+    enableWaiterCall: uiSettings.enableWaiterCall ?? true,
+    enableBillRequest: uiSettings.enableBillRequest ?? true,
+    createdAt: row.created_at,
+  };
+};
 
 const mapSettingsToDb = (model: Partial<RestaurantSettings>) => ({
   ...(model.id && { id: model.id }),
@@ -43,6 +49,7 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => ({
   ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
   ...(model.closingHours !== undefined && { closing_hours: model.closingHours }),
   ...(model.themeColor !== undefined && { theme_color: model.themeColor }),
+  // enableWaiterCall and enableBillRequest are NOT Supabase columns — stored in localStorage only
 });
 
 const mapUserToFrontend = (row: any): UserProfile => ({
@@ -454,6 +461,15 @@ export const dbService = {
   },
 
   async updateSettings(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
+    // Always persist the two UI-only toggles in localStorage (no Supabase column needed)
+    const uiToggles: Record<string, boolean> = {};
+    if (updates.enableWaiterCall !== undefined) uiToggles.enableWaiterCall = updates.enableWaiterCall;
+    if (updates.enableBillRequest !== undefined) uiToggles.enableBillRequest = updates.enableBillRequest;
+    if (Object.keys(uiToggles).length > 0) {
+      const existing = JSON.parse(localStorage.getItem('restaurant_ui_settings') || '{}');
+      localStorage.setItem('restaurant_ui_settings', JSON.stringify({ ...existing, ...uiToggles }));
+    }
+
     if (isSupabaseConfigured) {
       const dbUpdates = mapSettingsToDb(updates);
       const { error } = await supabase

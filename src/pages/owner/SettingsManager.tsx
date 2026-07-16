@@ -12,7 +12,10 @@ import {
   Clock, 
   Check,
   Palette,
-  Sparkles
+  Sparkles,
+  Bell,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
@@ -30,6 +33,8 @@ export const SettingsManager: React.FC = () => {
   const [openingHours, setOpeningHours] = useState(settings?.openingHours || '09:00');
   const [closingHours, setClosingHours] = useState(settings?.closingHours || '22:00');
   const [themeColor, setThemeColor] = useState(settings?.themeColor || '#6366F1');
+  const [enableWaiterCall, setEnableWaiterCall] = useState(settings?.enableWaiterCall ?? true);
+  const [enableBillRequest, setEnableBillRequest] = useState(settings?.enableBillRequest ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   // Preset theme brand colors
@@ -65,7 +70,9 @@ export const SettingsManager: React.FC = () => {
         currency,
         openingHours,
         closingHours,
-        themeColor
+        themeColor,
+        enableWaiterCall,
+        enableBillRequest,
       });
       alert('Restaurant settings updated successfully!');
     } catch (err) {
@@ -341,6 +348,66 @@ export const SettingsManager: React.FC = () => {
                     className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-xl px-4 text-xs font-mono focus:outline-none"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Menu Feature Toggles */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
+              <Bell className="w-5 h-5 text-brand-500" />
+              <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Customer Menu Controls</h3>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-normal">
+              Control which action buttons are visible to customers on the self-ordering QR menu.
+            </p>
+
+            <div className="space-y-3">
+              {/* Waiter Call Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Call Waiter Button</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Customers can ring for a waiter from their phone</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableWaiterCall(v => !v)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    enableWaiterCall
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                  }`}
+                >
+                  {enableWaiterCall ? (
+                    <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
+                  ) : (
+                    <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
+                  )}
+                </button>
+              </div>
+
+              {/* Bill Request Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Request Bill Button</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Customers can request their bill from their phone</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableBillRequest(v => !v)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    enableBillRequest
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                  }`}
+                >
+                  {enableBillRequest ? (
+                    <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
+                  ) : (
+                    <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
+                  )}
+                </button>
               </div>
             </div>
           </div>

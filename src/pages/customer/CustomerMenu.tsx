@@ -252,31 +252,35 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
           {/* Quick Staff Interactions */}
           <div className="flex gap-2">
-            <button
-              onClick={handleCallWaiter}
-              disabled={waiterCalled}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                waiterCalled 
-                  ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>{waiterCalled ? 'Calling...' : 'Waiter'}</span>
-            </button>
+            {(settings?.enableWaiterCall ?? true) && (
+              <button
+                onClick={handleCallWaiter}
+                disabled={waiterCalled}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  waiterCalled 
+                    ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>{waiterCalled ? 'Calling...' : 'Waiter'}</span>
+              </button>
+            )}
             
-            <button
-              onClick={handleRequestBill}
-              disabled={billRequested}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                billRequested 
-                  ? 'bg-green-600 border-green-600 text-white shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              <Receipt className="w-3.5 h-3.5" />
-              <span>{billRequested ? 'Requested' : 'Bill'}</span>
-            </button>
+            {(settings?.enableBillRequest ?? true) && (
+              <button
+                onClick={handleRequestBill}
+                disabled={billRequested}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  billRequested 
+                    ? 'bg-green-600 border-green-600 text-white shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>{billRequested ? 'Requested' : 'Bill'}</span>
+              </button>
+            )}
 
             {/* My Orders button with badge */}
             <button

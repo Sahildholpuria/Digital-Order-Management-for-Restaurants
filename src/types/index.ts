@@ -11,6 +11,8 @@ export interface RestaurantSettings {
   openingHours: string;
   closingHours: string;
   themeColor: string;
+  enableWaiterCall: boolean;   // show/hide Waiter button on customer menu
+  enableBillRequest: boolean;  // show/hide Bill button on customer menu
   createdAt: any;
 }
 
