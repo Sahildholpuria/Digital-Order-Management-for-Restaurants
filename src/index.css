@@ -7,9 +7,11 @@
 @theme {
   --color-brand-50: var(--brand-50, #f5f3ff);
   --color-brand-100: var(--brand-100, #ede9fe);
+  --color-brand-405: #818cf8;
   --color-brand-500: var(--brand-500, #6366f1);
   --color-brand-550: #6366f1;
   --color-brand-600: var(--brand-600, #4f46e5);
+  --color-brand-650: #4f46e5;
   --color-brand-655: #4f46e5;
   --color-brand-700: var(--brand-700, #4338ca);
   
@@ -17,19 +19,28 @@
   --color-slate-105: #f1f5f9;
   --color-slate-150: #e2e8f0;
   --color-slate-205: #cbd5e1;
+  --color-slate-350: #cbd5e1;
+  --color-slate-405: #94a3b8;
   --color-slate-450: #94a3b8;
   --color-slate-455: #64748b;
   --color-slate-505: #475569;
+  --color-slate-550: #475569;
   --color-slate-555: #334155;
+  --color-slate-650: #334155;
   --color-slate-655: #1e293b;
+  --color-slate-750: #1e293b;
   --color-slate-805: #0f172a;
   --color-slate-850: #0b0f19;
   --color-slate-855: #020617;
   --color-slate-955: #020617;
   
   --color-amber-105: #fef3c7;
+  --color-amber-705: #d97706;
   --color-red-650: #e11d48;
   --color-red-655: #be123c;
+  --color-pink-650: #db2777;
+  --color-green-550: #16a34a;
+  --color-orange-550: #ea580c;
   
   --font-sans: "Outfit", "Inter", "system-ui", "sans-serif";
   
@@ -100,7 +111,7 @@
 
 /* Glassmorphism Styles */
 .glass {
-  @apply border border-white/20 bg-white/75 shadow-glass backdrop-blur-md dark:border-slate-800/40 dark:bg-slate-950/60 dark:shadow-glass-dark;
+  @apply border border-white/20 bg-white/75 shadow-glass backdrop-blur-md dark:border-slate-800/40 dark:bg-slate-955/60 dark:shadow-glass-dark;
 }
 
 .glass-card {

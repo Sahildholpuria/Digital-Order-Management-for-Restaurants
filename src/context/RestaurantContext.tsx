@@ -453,26 +453,46 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addTable = async (table: RestaurantTable) => {
     await dbService.saveTable(restaurantId, table);
+    setTables(prev => {
+      const exists = prev.some(t => t.id === table.id);
+      if (exists) {
+        return prev.map(t => t.id === table.id ? table : t);
+      }
+      return [...prev, table].sort((a, b) => a.number.localeCompare(b.number));
+    });
   };
 
   const deleteTable = async (tableId: string) => {
     await dbService.deleteTable(restaurantId, tableId);
+    setTables(prev => prev.filter(t => t.id !== tableId));
   };
 
   const addCategory = async (category: MenuCategory) => {
     await dbService.saveCategory(restaurantId, category);
+    setCategories(prev => {
+      const exists = prev.some(c => c.id === category.id);
+      if (exists) return prev.map(c => c.id === category.id ? category : c);
+      return [...prev, category].sort((a, b) => a.order - b.order);
+    });
   };
 
   const deleteCategory = async (categoryId: string) => {
     await dbService.deleteCategory(restaurantId, categoryId);
+    setCategories(prev => prev.filter(c => c.id !== categoryId));
   };
 
   const addFoodItem = async (item: FoodItem) => {
     await dbService.saveFoodItem(restaurantId, item);
+    setFoodItems(prev => {
+      const exists = prev.some(f => f.id === item.id);
+      if (exists) return prev.map(f => f.id === item.id ? item : f);
+      return [...prev, item];
+    });
   };
 
   const deleteFoodItem = async (itemId: string) => {
     await dbService.deleteFoodItem(restaurantId, itemId);
+    setFoodItems(prev => prev.filter(f => f.id !== itemId));
   };
 
   const updateSettings = async (updates: Partial<RestaurantSettings>) => {

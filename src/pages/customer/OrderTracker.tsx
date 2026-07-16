@@ -202,7 +202,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
                 <span>Tax & Service Charge</span>
                 <span>{settings?.currency || '₹'}{order.tax.toFixed(0)}</span>
               </div>
-              <div className="flex justify-between text-sm font-bold text-slate-800 dark:text-slate-200 pt-2 border-t border-slate-55 dark:border-slate-800/40">
+              <div className="flex justify-between text-sm font-bold text-slate-800 dark:text-slate-200 pt-2 border-t border-slate-150 dark:border-slate-800/40">
                 <span>Total Paid/Payable</span>
                 <span>{settings?.currency || '₹'}{order.grandTotal.toFixed(0)}</span>
               </div>

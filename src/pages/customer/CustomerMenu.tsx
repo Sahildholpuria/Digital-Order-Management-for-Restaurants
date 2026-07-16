@@ -25,6 +25,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     requestBill,
     setCurrentTableById,
     currentTable,
+    tables,
+    loading,
   } = useRestaurant();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +109,51 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     setTimeout(() => setBillRequested(false), 5000);
   };
 
-  const totalItemsCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
+  // Show premium loading state while tables are loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center p-6 text-center animate-fade-in">
+        <div className="flex flex-col items-center gap-3.5">
+          <div className="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Synchronizing table details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if table is deleted or inactive
+  const isTableDeleted = tables.length > 0 && !tables.some(t => t.id === tableId);
+  if (isTableDeleted) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-150/60 dark:border-slate-800/80 animate-scale-in">
+          <div className="w-20 h-20 bg-rose-500/10 dark:bg-rose-950/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/20">
+            <X className="w-10 h-10 text-rose-600 dark:text-rose-400" />
+          </div>
+          
+          <h2 className="text-2xl font-black mb-2 text-slate-800 dark:text-slate-100 font-sans tracking-tight">Table Inactive</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-6 text-xs font-semibold leading-relaxed">
+            This table QR code has been deactivated or deleted by the restaurant management. Please contact our staff or scan a valid table QR code to proceed.
+          </p>
+
+          <div className="bg-slate-50 dark:bg-slate-800/20 rounded-2xl p-4.5 mb-6 text-left border border-slate-100 dark:border-slate-800/40 text-xs">
+            <div className="flex justify-between items-center text-slate-500 dark:text-slate-455">
+              <span className="font-semibold uppercase tracking-wider text-[10px]">Reference ID</span>
+              <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{tableId}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => window.location.href = '/'}
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+          >
+            <span>Return to Homepage</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (orderSuccess) {
     return (
@@ -161,6 +207,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       </div>
     );
   }
+
+  const totalItemsCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
@@ -311,7 +359,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 <div
                   key={item.id}
                   onClick={() => handleOpenItem(item)}
-                  className="bg-white/90 dark:bg-slate-900/65 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-3.5 flex gap-4 cursor-pointer hover:border-slate-305 dark:hover:border-slate-700 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 group backdrop-blur-sm"
+                  className="bg-white/90 dark:bg-slate-900/65 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-3.5 flex gap-4 cursor-pointer hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 group backdrop-blur-sm"
                 >
                   <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-850 flex-shrink-0">
                     <img 

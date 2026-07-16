@@ -272,7 +272,7 @@ export const App: React.FC = () => {
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
                       isActive
                         ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25 translate-x-1'
-                        : 'text-slate-500 hover:bg-slate-50/80 dark:text-slate-400 dark:hover:bg-slate-800 hover:text-slate-800 hover:translate-x-0.5'
+                        : 'text-slate-500 hover:bg-slate-50/80 dark:text-slate-400 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100 hover:translate-x-0.5'
                     }`}
                   >
                     <item.icon className="w-4.5 h-4.5" />
