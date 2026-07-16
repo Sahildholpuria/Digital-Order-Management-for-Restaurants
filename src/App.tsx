@@ -40,7 +40,18 @@ export const App: React.FC = () => {
   // Navigation Routing States
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
+    if (validTabs.includes(hash)) {
+      return hash;
+    }
+    const saved = localStorage.getItem('pos_portal_active_tab');
+    if (saved && validTabs.includes(saved)) {
+      return saved;
+    }
+    return 'dashboard';
+  });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Sync route on browser navigation (back/forward)
@@ -48,6 +59,12 @@ export const App: React.FC = () => {
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);
       setCurrentHash(window.location.hash);
+      
+      const hash = window.location.hash.replace('#', '');
+      const validTabs = ['dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
+      if (validTabs.includes(hash)) {
+        setActiveTab(hash);
+      }
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -59,16 +76,13 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Update hash if tab changes (so POS link redirects work)
+  // Persist tab change to URL hash and localStorage
   useEffect(() => {
-    if (currentPath === '/admin' || currentPath === '/dashboard' || currentPath === '/') {
-      if (currentHash === '#billing') {
-        setActiveTab('billing');
-      } else if (currentHash === '#menu') {
-        setActiveTab('menu');
-      }
+    if (currentPath === '/admin' || currentPath === '/dashboard') {
+      localStorage.setItem('pos_portal_active_tab', activeTab);
+      window.history.replaceState(null, '', `${currentPath}#${activeTab}`);
     }
-  }, [currentHash, currentPath]);
+  }, [activeTab, currentPath]);
 
   const navigateTo = (path: string, hash: string = '') => {
     window.history.pushState(null, '', path + hash);
@@ -108,6 +122,22 @@ export const App: React.FC = () => {
 
   // Kitchen direct display access
   if (currentPath === '/kitchen' || currentHash === '#kitchen') {
+    if (!currentUser) {
+      return <Login onSuccess={() => navigateTo('/kitchen')} />;
+    }
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'kitchen') {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
+            <h2 className="text-2xl font-black text-red-500 mb-2 font-sans tracking-tight">Access Denied</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">You do not have the required permissions to view the Kitchen Display Console.</p>
+            <button onClick={() => navigateTo('/')} className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-6 rounded-xl text-xs transition-colors">
+              Go Home
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="relative">
         <button 
@@ -123,8 +153,24 @@ export const App: React.FC = () => {
 
   // Waiter direct display access
   if (currentPath === '/waiter' || currentHash === '#waiter') {
+    if (!currentUser) {
+      return <Login onSuccess={() => navigateTo('/waiter')} />;
+    }
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'waiter') {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
+            <h2 className="text-2xl font-black text-red-500 mb-2 font-sans tracking-tight">Access Denied</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">You do not have the required permissions to view the Waiter Console.</p>
+            <button onClick={() => navigateTo('/')} className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-6 rounded-xl text-xs transition-colors">
+              Go Home
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh p-6 relative">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh p-6 relative">
         <button 
           onClick={() => navigateTo('/')}
           className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 transition-all shadow-sm"
