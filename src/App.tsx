@@ -30,8 +30,7 @@ import {
   Menu, 
   X,
   Sparkles,
-  ArrowRight,
-  ShieldCheck
+  ArrowRight
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -79,10 +78,10 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center animate-fade-in">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Bootstrapping Bistro System...</p>
+          <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto shadow-md"></div>
+          <p className="text-sm font-bold tracking-wide text-slate-500 dark:text-slate-400">Bootstrapping Bistro System...</p>
         </div>
       </div>
     );
@@ -113,7 +112,7 @@ export const App: React.FC = () => {
       <div className="relative">
         <button 
           onClick={() => navigateTo('/')}
-          className="absolute top-4 left-4 bg-slate-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 transition-colors"
+          className="absolute top-4 left-4 bg-slate-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 transition-colors shadow-lg"
         >
           &larr; Exit KDS
         </button>
@@ -125,10 +124,10 @@ export const App: React.FC = () => {
   // Waiter direct display access
   if (currentPath === '/waiter' || currentHash === '#waiter') {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 relative">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh p-6 relative">
         <button 
           onClick={() => navigateTo('/')}
-          className="absolute top-4 right-4 bg-slate-205 dark:bg-slate-900 border dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-200 z-50 transition-all"
+          className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 transition-all shadow-sm"
         >
           &larr; Exit Console
         </button>
@@ -163,7 +162,7 @@ export const App: React.FC = () => {
         <div className="relative">
           <button 
             onClick={async () => { await logoutUser(); navigateTo('/'); }}
-            className="absolute top-4 right-4 bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 flex items-center gap-1.5 transition-colors"
+            className="absolute top-4 right-4 bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 flex items-center gap-1.5 transition-colors shadow-lg"
           >
             <LogOut className="w-4 h-4" /> Sign Out
           </button>
@@ -175,12 +174,12 @@ export const App: React.FC = () => {
     // Waiter Console redirect for waiters
     if (currentUser.role === 'waiter') {
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 relative">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh p-6 relative">
           <button 
             onClick={async () => { await logoutUser(); navigateTo('/'); }}
-            className="absolute top-4 right-4 bg-slate-205 dark:bg-slate-900 border dark:border-slate-800 text-slate-700 dark:text-slate-350 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 z-50 flex items-center gap-1.5"
+            className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 flex items-center gap-1.5 shadow-sm"
           >
-            <LogOut className="w-4 h-4" /> Sign Out
+            <LogOut className="w-4.5 h-4.5" /> Sign Out
           </button>
           <WaiterDashboard />
         </div>
@@ -213,38 +212,40 @@ export const App: React.FC = () => {
     };
 
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col md:flex-row animate-fade-in">
         
         {/* Mobile Header Bar */}
-        <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-850 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+        <header className="md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-brand-600" />
+            <div className="w-8 h-8 bg-brand-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-brand-500/10">
+              <ChefHat className="w-4 h-4" />
+            </div>
             <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">POS Portal</span>
           </div>
           <div className="flex gap-2">
-            <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800">
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
             </button>
-            <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} className="p-2 rounded-xl text-slate-450 hover:bg-slate-50 dark:hover:bg-slate-800">
-              <Menu className="w-5 h-5" />
+            <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Menu className="w-4.5 h-4.5" />
             </button>
           </div>
         </header>
 
         {/* Sidebar Frame */}
-        <aside className={`fixed md:sticky top-0 bottom-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-150/60 dark:border-slate-850 p-6 flex flex-col justify-between transition-transform duration-300 md:translate-x-0 ${
+        <aside className={`fixed md:sticky top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 md:translate-x-0 backdrop-blur-xl ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
           <div className="space-y-8">
             {/* Sidebar Top / Brand logo */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-brand-500/20">
+                <div className="w-10 h-10 bg-brand-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
                   <ChefHat className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="font-black text-sm text-slate-800 dark:text-slate-150 uppercase tracking-wider">POS Portal</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">{currentUser.role}</p>
+                  <h2 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">POS Portal</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{currentUser.role}</p>
                 </div>
               </div>
 
@@ -268,10 +269,10 @@ export const App: React.FC = () => {
                       setMobileSidebarOpen(false);
                       navigateTo('/admin');
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
                       isActive
-                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/10'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-850'
+                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25 translate-x-1'
+                        : 'text-slate-500 hover:bg-slate-50/80 dark:text-slate-400 dark:hover:bg-slate-800 hover:text-slate-800 hover:translate-x-0.5'
                     }`}
                   >
                     <item.icon className="w-4.5 h-4.5" />
@@ -287,7 +288,7 @@ export const App: React.FC = () => {
             {/* Theme selector */}
             <button 
               onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-850 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
             >
               {theme === 'dark' ? (
                 <>
@@ -303,7 +304,7 @@ export const App: React.FC = () => {
             </button>
 
             {/* User Logged Details */}
-            <div className="bg-slate-50 dark:bg-slate-850 p-3 rounded-2xl text-xs space-y-1">
+            <div className="bg-slate-50/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-800/50 p-3 rounded-2xl text-xs space-y-1">
               <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate">{currentUser.name}</p>
               <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
             </div>
@@ -313,7 +314,7 @@ export const App: React.FC = () => {
                 await logoutUser();
                 navigateTo('/');
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all"
             >
               <LogOut className="w-4.5 h-4.5" />
               <span>Log Out</span>
@@ -322,7 +323,7 @@ export const App: React.FC = () => {
         </aside>
 
         {/* Content Container */}
-        <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden">
+        <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
           {renderActiveTabContent()}
         </main>
 
@@ -334,22 +335,22 @@ export const App: React.FC = () => {
   // LANDING PAGE SELECTION CHANNELS (Default /)
   // ==========================================
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between py-12 px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex flex-col justify-between py-12 px-4 relative overflow-hidden animate-fade-in">
       
       {/* Background visual graphics */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header info */}
-      <header className="max-w-4xl mx-auto w-full text-center space-y-3 z-10">
-        <div className="bg-brand-500/15 border border-brand-500/20 text-brand-655 dark:text-brand-400 px-4 py-1.5 rounded-full inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase">
+      <header className="max-w-4xl mx-auto w-full text-center space-y-4 z-10">
+        <div className="bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400 px-4 py-1.5 rounded-full inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase">
           <Sparkles className="w-3.5 h-3.5 fill-current" />
           <span>QR SaaS Platform Suite</span>
         </div>
-        <h1 className="text-4xl sm:text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-sans leading-none">
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
           Restaurant Order Management
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto text-sm sm:text-base">
+        <p className="text-slate-550 dark:text-slate-400 max-w-md mx-auto text-sm sm:text-base font-medium font-sans">
           A production-ready POS terminal, KDS displays, and table QR-code menus.
         </p>
       </header>
@@ -360,19 +361,19 @@ export const App: React.FC = () => {
         {/* Customer Menu QR Bypass Card */}
         <div 
           onClick={() => navigateTo('/menu/table-3')}
-          className="bg-white/70 dark:bg-slate-900/60 border border-white/20 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
+          className="bg-white/75 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
         >
           <div>
-            <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center mb-6 border border-amber-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center mb-6 border border-amber-500/20 group-hover:scale-105 transition-transform duration-300">
               <QrCode className="w-7 h-7" />
             </div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Customer Flow</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Scan QR code standees, browse categories, filter food specs, customized kitchen instructions, and place real-time orders directly.
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Customer Flow</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
+              Scan QR code standees, browse categories, filter food specs, customize kitchen instructions, and place real-time orders directly.
             </p>
           </div>
           
-          <span className="text-xs font-bold text-amber-500 flex items-center gap-1 mt-4">
+          <span className="text-xs font-extrabold text-amber-500 flex items-center gap-1 mt-4">
             <span>Scan QR Demo (Table 3)</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </span>
@@ -381,32 +382,32 @@ export const App: React.FC = () => {
         {/* Owner POS terminal Card */}
         <div 
           onClick={() => navigateTo(currentUser ? '/admin' : '/login')}
-          className="bg-white/70 dark:bg-slate-900/60 border border-white/20 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
+          className="bg-white/75 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
         >
           <div>
-            <div className="w-14 h-14 bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl flex items-center justify-center mb-6 border border-brand-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-14 h-14 bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-2xl flex items-center justify-center mb-6 border border-brand-500/20 group-hover:scale-105 transition-transform duration-300">
               <TrendingUp className="w-7 h-7" />
             </div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Staff & Settings Portal</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Staff & Settings Portal</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
               Access the administrator overview cards, live cooking tickets, billing invoices, table capacities, menu organizer, and analytical reports.
             </p>
           </div>
           
-          <span className="text-xs font-bold text-brand-500 flex items-center gap-1 mt-4">
+          <span className="text-xs font-extrabold text-brand-600 dark:text-brand-450 flex items-center gap-1 mt-4">
             <span>Enter Staff Dashboard</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </span>
         </div>
 
         {/* Quick Direct links row */}
-        <div className="col-span-full bg-white/40 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-150/40 dark:border-slate-850/60 flex flex-wrap gap-4 items-center justify-center text-xs font-semibold text-slate-500">
+        <div className="col-span-full bg-white/40 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 flex flex-wrap gap-4 items-center justify-center text-xs font-bold text-slate-500">
           <span>Direct Access Consoles:</span>
-          <button onClick={() => navigateTo('/kitchen')} className="text-amber-500 hover:underline flex items-center gap-1">
+          <button onClick={() => navigateTo('/kitchen')} className="text-amber-500 hover:text-amber-600 flex items-center gap-1 transition-colors">
             <ChefHat className="w-3.5 h-3.5" /> Kitchen KDS
           </button>
           <span className="text-slate-300">|</span>
-          <button onClick={() => navigateTo('/waiter')} className="text-pink-500 hover:underline flex items-center gap-1">
+          <button onClick={() => navigateTo('/waiter')} className="text-pink-500 hover:text-pink-600 flex items-center gap-1 transition-colors">
             <User className="w-3.5 h-3.5" /> Waiter Console
           </button>
         </div>
@@ -414,11 +415,12 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer copyright */}
-      <footer className="max-w-4xl mx-auto w-full text-center text-[10px] text-slate-400 font-medium">
+      <footer className="max-w-4xl mx-auto w-full text-center text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
         <p>&copy; {new Date().getFullYear()} {settings?.name || 'The Grand Bistro'} SaaS Terminal. Apple inspired minimal design.</p>
       </footer>
 
     </div>
   );
 };
+
 export default App;
