@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantTable, TableStatus } from '../../types';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { 
   Plus, 
   Trash2, 
@@ -79,11 +79,7 @@ export const TablesManager: React.FC = () => {
     }
 
     try {
-      // Force render hidden flyer node to canvas
-      element.style.display = 'block';
       const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      element.style.display = 'none';
-
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -110,10 +106,7 @@ export const TablesManager: React.FC = () => {
     }
 
     try {
-      element.style.display = 'block';
       const canvas = await html2canvas(element, { scale: 3, useCORS: true });
-      element.style.display = 'none';
-
       const link = document.createElement('a');
       link.download = `Table_${table.number}_QR.png`;
       link.href = canvas.toDataURL('image/png');
@@ -185,7 +178,7 @@ export const TablesManager: React.FC = () => {
               {/* QR Mini Code Box */}
               <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl flex items-center justify-center gap-4">
                 <div className="bg-white p-2.5 rounded-xl shadow-sm">
-                  <QRCodeSVG 
+                  <QRCodeCanvas 
                     value={menuUrl} 
                     size={72} 
                     level="M"
@@ -243,7 +236,7 @@ export const TablesManager: React.FC = () => {
               <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                 <div 
                   ref={el => { flyerRefs.current[table.id] = el; }}
-                  style={{ display: 'none', width: '400px', height: '600px' }}
+                  style={{ width: '400px', height: '600px' }}
                   className="bg-gradient-to-br from-slate-900 to-indigo-950 p-8 text-center flex flex-col justify-between text-white font-sans rounded-none"
                 >
                   <div className="space-y-2 mt-4">
@@ -253,7 +246,7 @@ export const TablesManager: React.FC = () => {
 
                   <div className="space-y-6 flex flex-col items-center">
                     <div className="bg-white p-6 rounded-3xl shadow-2xl border-4 border-amber-400/50">
-                      <QRCodeSVG 
+                      <QRCodeCanvas 
                         value={menuUrl} 
                         size={200} 
                         level="H" 
