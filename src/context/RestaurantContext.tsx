@@ -36,7 +36,7 @@ interface RestaurantContextType {
   setCurrentUser: (user: UserProfile | null) => void;
   
   // Cart Actions
-  addToCart: (item: FoodItem, quantity: number, instructions?: string) => void;
+  addToCart: (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string) => void;
   removeFromCart: (itemId: string) => void;
   updateCartQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -366,20 +366,40 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // CART LOGIC
-  const addToCart = (item: FoodItem, quantity: number, instructions?: string) => {
+  const addToCart = (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string) => {
     setCart(prev => {
-      const existing = prev.find(i => i.itemId === item.id);
+      let finalName = item.name;
+      let finalPrice = item.price;
+      let uniqueId = item.id;
+
+      if (selectedVariantName && item.description && item.description.includes('||variants:')) {
+        const [, variantsStr] = item.description.split('||variants:');
+        const variants = variantsStr.split(';').map(v => {
+          const [name, price] = v.split('=');
+          return { name, price: Number(price) };
+        });
+        const matched = variants.find(v => v.name === selectedVariantName);
+        if (matched) {
+          finalName = `${item.name} (${matched.name})`;
+          finalPrice = matched.price;
+          uniqueId = `${item.id}-${matched.name}`;
+        }
+      }
+
+      const discountedPrice = finalPrice * (1 - (item.discountPercentage || 0) / 100);
+
+      const existing = prev.find(i => i.itemId === uniqueId);
       if (existing) {
         return prev.map(i =>
-          i.itemId === item.id
+          i.itemId === uniqueId
             ? { ...i, quantity: i.quantity + quantity, specialInstructions: instructions || i.specialInstructions }
             : i
         );
       }
       return [...prev, {
-        itemId: item.id,
-        name: item.name,
-        price: item.price * (1 - (item.discountPercentage || 0) / 100),
+        itemId: uniqueId,
+        name: finalName,
+        price: discountedPrice,
         quantity,
         specialInstructions: instructions,
       }];

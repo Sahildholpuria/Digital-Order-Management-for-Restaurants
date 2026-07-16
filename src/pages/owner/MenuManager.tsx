@@ -39,6 +39,7 @@ export const MenuManager: React.FC = () => {
   // Item Edit States
   const [isItemOpen, setIsItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
+  const [variants, setVariants] = useState<{ name: string; price: number }[]>([]);
   
   // Food Item Form States
   const [itemName, setItemName] = useState('');
@@ -125,6 +126,7 @@ export const MenuManager: React.FC = () => {
     setItemPrice(0);
     setItemImage('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60'); // healthy plate placeholder
     setItemDesc('');
+    setVariants([]);
     setItemCat(categories[0]?.id || '');
     setItemVeg(true);
     setItemPrep(10);
@@ -141,7 +143,6 @@ export const MenuManager: React.FC = () => {
     setItemName(item.name);
     setItemPrice(item.price);
     setItemImage(item.image);
-    setItemDesc(item.description);
     setItemCat(item.categoryId);
     setItemVeg(item.isVeg);
     setItemPrep(item.preparationTime);
@@ -150,6 +151,20 @@ export const MenuManager: React.FC = () => {
     setItemRecommended(item.isRecommended);
     setItemSpicy(item.spicyLevel);
     setItemDiscount(item.discountPercentage);
+
+    // Extract variants if serialized in description
+    let cleanDesc = item.description || '';
+    let parsedVariants: { name: string; price: number }[] = [];
+    if (cleanDesc.includes('||variants:')) {
+      const [desc, variantsStr] = cleanDesc.split('||variants:');
+      cleanDesc = desc;
+      parsedVariants = variantsStr.split(';').map(v => {
+        const [name, price] = v.split('=');
+        return { name, price: Number(price) };
+      });
+    }
+    setItemDesc(cleanDesc);
+    setVariants(parsedVariants);
     setIsItemOpen(true);
   };
 
@@ -157,12 +172,18 @@ export const MenuManager: React.FC = () => {
     e.preventDefault();
     if (!itemName || !itemCat) return;
 
+    // Serialize variants to description string
+    let finalDesc = itemDesc;
+    if (variants.length > 0) {
+      finalDesc = `${itemDesc}||variants:${variants.map(v => `${v.name}=${v.price}`).join(';')}`;
+    }
+
     const newItem: FoodItem = {
       id: editingItem ? editingItem.id : `item-${Date.now()}`,
       name: itemName,
       price: Number(itemPrice),
       image: itemImage,
-      description: itemDesc,
+      description: finalDesc,
       categoryId: itemCat,
       isVeg: itemVeg,
       preparationTime: Number(itemPrep),
@@ -649,6 +670,66 @@ export const MenuManager: React.FC = () => {
                   />
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Recommended Tag</span>
                 </label>
+              </div>
+
+              {/* Portion Variants Editor Block */}
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Portion Options (Variants)</label>
+                  <button
+                    type="button"
+                    onClick={() => setVariants([...variants, { name: '', price: 0 }])}
+                    className="flex items-center gap-1 text-[10px] bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 font-bold px-2.5 py-1 rounded-lg transition-all"
+                  >
+                    <Plus className="w-3 h-3" /> Add Portion
+                  </button>
+                </div>
+
+                {variants.length === 0 ? (
+                  <p className="text-[10px] text-slate-400 italic">No portions defined. Defaults to single item price.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {variants.map((v, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Half, Full"
+                          value={v.name}
+                          onChange={(e) => {
+                            const copy = [...variants];
+                            copy[idx].name = e.target.value;
+                            setVariants(copy);
+                          }}
+                          className="flex-1 bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-xl py-2 px-3 text-xs focus:outline-none"
+                        />
+                        <div className="relative w-28">
+                          <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-450 text-xs">{currency}</span>
+                          <input
+                            type="number"
+                            required
+                            min={0}
+                            placeholder="Price"
+                            value={v.price || ''}
+                            onChange={(e) => {
+                              const copy = [...variants];
+                              copy[idx].price = Number(e.target.value);
+                              setVariants(copy);
+                            }}
+                            className="w-full bg-slate-50 dark:bg-slate-855 border border-slate-150 dark:border-slate-800 rounded-xl py-2 pl-6 pr-3 text-xs focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVariants(variants.filter((_, i) => i !== idx))}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 rounded-xl transition-all"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>

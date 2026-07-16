@@ -38,6 +38,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [selectedVariantName, setSelectedVariantName] = useState<string>('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
@@ -122,17 +123,28 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     setSelectedItem(item);
     setQuantity(1);
     setSpecialInstructions('');
+
+    // Default selected variant
+    let defaultVariant = '';
+    if (item.description && item.description.includes('||variants:')) {
+      const [, variantsStr] = item.description.split('||variants:');
+      const parts = variantsStr.split(';');
+      if (parts.length > 0) {
+        defaultVariant = parts[0].split('=')[0];
+      }
+    }
+    setSelectedVariantName(defaultVariant);
   };
 
   const handleAddToCart = () => {
     if (selectedItem) {
-      addToCart(selectedItem, quantity, specialInstructions);
+      addToCart(selectedItem, quantity, specialInstructions, selectedVariantName || undefined);
       setSelectedItem(null);
       
       // Mini pop confetti on button click
       confetti({
         particleCount: 40,
-        spread: 40,
+        spread: 45,
         origin: { y: 0.9 }
       });
     }
@@ -682,21 +694,49 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                               </span>
                             </div>
                             
-                            <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-2 mt-1 leading-normal font-medium truncate-2-lines">
-                              {item.description}
+                            <p className="text-slate-550 dark:text-slate-400 text-[11px] line-clamp-2 mt-1 leading-normal font-medium truncate-2-lines">
+                              {item.description ? item.description.split('||variants:')[0] : ''}
                             </p>
                           </div>
 
                           <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/40">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
-                                {settings?.currency || '₹'}{discountedPrice.toFixed(0)}
-                              </span>
-                              {item.discountPercentage > 0 && (
-                                <span className="text-[10px] text-slate-400 line-through">
-                                  {settings?.currency || '₹'}{item.price}
-                                </span>
-                              )}
+                              {(() => {
+                                if (item.description && item.description.includes('||variants:')) {
+                                  const [, variantsStr] = item.description.split('||variants:');
+                                  const prices = variantsStr.split(';').map(v => Number(v.split('=')[1])).filter(p => !isNaN(p));
+                                  if (prices.length > 0) {
+                                    const minPrice = Math.min(...prices);
+                                    const maxPrice = Math.max(...prices);
+                                    const discMin = minPrice * (1 - (item.discountPercentage || 0) / 100);
+                                    const discMax = maxPrice * (1 - (item.discountPercentage || 0) / 100);
+                                    if (minPrice === maxPrice) {
+                                      return (
+                                        <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                          {settings?.currency || '₹'}{discMin.toFixed(0)}
+                                        </span>
+                                      );
+                                    }
+                                    return (
+                                      <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                        {settings?.currency || '₹'}{discMin.toFixed(0)} - {settings?.currency || '₹'}{discMax.toFixed(0)}
+                                      </span>
+                                    );
+                                  }
+                                }
+                                return (
+                                  <>
+                                    <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                      {settings?.currency || '₹'}{discountedPrice.toFixed(0)}
+                                    </span>
+                                    {item.discountPercentage > 0 && (
+                                      <span className="text-[10px] text-slate-400 line-through">
+                                        {settings?.currency || '₹'}{item.price}
+                                      </span>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
 
                             <div className="flex items-center gap-2 text-[8px] font-bold text-slate-450 uppercase tracking-wider">
@@ -805,8 +845,51 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </div>
 
               <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6 font-medium">
-                {selectedItem.description}
+                {selectedItem.description ? selectedItem.description.split('||variants:')[0] : ''}
               </p>
+
+              {/* Portion Variants Selector */}
+              {(() => {
+                let variants: { name: string; price: number }[] = [];
+                if (selectedItem.description && selectedItem.description.includes('||variants:')) {
+                  const [, variantsStr] = selectedItem.description.split('||variants:');
+                  variants = variantsStr.split(';').map(v => {
+                    const [name, price] = v.split('=');
+                    return { name, price: Number(price) };
+                  });
+                }
+
+                if (variants.length === 0) return null;
+
+                return (
+                  <div className="mb-5">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-450 mb-2">
+                      Select Portion Size
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {variants.map(v => {
+                        const discountedPrice = v.price * (1 - (selectedItem.discountPercentage || 0) / 100);
+                        const isSelected = selectedVariantName === v.name;
+                        return (
+                          <button
+                            key={v.name}
+                            type="button"
+                            onClick={() => setSelectedVariantName(v.name)}
+                            className={`flex py-2.5 px-3.5 rounded-2xl border font-bold text-xs justify-between items-center transition-all ${
+                              isSelected
+                                ? 'border-brand-600 bg-brand-50/10 text-brand-600 dark:border-brand-500 dark:bg-brand-950/20 dark:text-brand-400 shadow-sm'
+                                : 'border-slate-200 text-slate-555 dark:border-slate-800 hover:bg-slate-55/50 dark:hover:bg-slate-850'
+                            }`}
+                          >
+                            <span>{v.name}</span>
+                            <span className="font-extrabold">{settings?.currency || '₹'}{discountedPrice.toFixed(0)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Special Instructions Field */}
               <div className="mb-6">
@@ -824,12 +907,30 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
               {/* Quantity Controls & Price */}
               <div className="flex items-center justify-between pt-5 border-t border-slate-100 dark:border-slate-800">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Item Total</p>
-                  <p className="text-xl font-black text-slate-850 dark:text-slate-100">
-                    {settings?.currency || '₹'}{(selectedItem.price * (1 - (selectedItem.discountPercentage || 0) / 100) * quantity).toFixed(0)}
-                  </p>
-                </div>
+                {(() => {
+                  let currentPrice = selectedItem.price;
+                  if (selectedItem.description && selectedItem.description.includes('||variants:')) {
+                    const [, variantsStr] = selectedItem.description.split('||variants:');
+                    const variants = variantsStr.split(';').map(v => {
+                      const [name, price] = v.split('=');
+                      return { name, price: Number(price) };
+                    });
+                    const matched = variants.find(v => v.name === selectedVariantName);
+                    if (matched) {
+                      currentPrice = matched.price;
+                    }
+                  }
+                  const discountedItemPrice = currentPrice * (1 - (selectedItem.discountPercentage || 0) / 100);
+                  
+                  return (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-455">Item Total</p>
+                      <p className="text-xl font-black text-slate-850 dark:text-slate-100">
+                        {settings?.currency || '₹'}{(discountedItemPrice * quantity).toFixed(0)}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex items-center gap-3 bg-slate-550/5 dark:bg-slate-800/80 px-3.5 py-2 rounded-2xl border border-slate-100/50 dark:border-slate-700/50">
                   <button
