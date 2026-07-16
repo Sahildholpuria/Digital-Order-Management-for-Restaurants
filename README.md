@@ -2,7 +2,7 @@
 
 A modern, production-ready, and highly aesthetic QR-based self-ordering and POS dashboard system designed for both single-location diners and multi-branch restaurant chains. 
 
-Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, and **Firebase** (with an intelligent real-time fallback mock engine).
+Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, and **Supabase** (with an intelligent real-time fallback mock engine).
 
 ---
 
@@ -21,7 +21,7 @@ Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, a
 
 ### 3. Smart Tables & QR Flyers
 - **Capacity Controls**: Edit seating capacity, table name tags, and occupancy status.
-- **Instant Export**: Generates table standees and download options for high-quality **PNG** and **PDF print-ready flyers** dynamically using `html2canvas` and `jspdf`.
+- **Instant Export**: Generates table standees and download options for high-quality **PNG** and **PDF print-ready flyers** dynamically using `html2canvas-pro` and `jspdf`.
 
 ### 4. Menu & Category Organizer
 - **Interactive Sidebar**: Add, delete, and re-order category lists (Shift Up/Down).
@@ -47,9 +47,9 @@ Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, a
 ## 🛠️ Technology Stack
 - **Frontend**: React (v19), Vite, TypeScript, Tailwind CSS v4, Lucide Icons.
 - **Analytics & Graphs**: Recharts.
-- **Document Exporter**: jsPDF & html2canvas.
+- **Document Exporter**: jsPDF & html2canvas-pro.
 - **QR Engine**: qrcode.react.
-- **Database / Backend**: Firebase (Auth, Firestore, Hosting, Storage).
+- **Database / Backend**: Supabase (PostgreSQL, Realtime, Auth).
 
 ---
 
@@ -68,8 +68,8 @@ npm run dev
 ```
 
 > [!TIP]
-> **Intelligent Multi-Tab Sync (No Firebase Required)**
-> By default, if no Firebase environment keys are provided in `.env`, the app launches in **Real-time Mock Mode**. 
+> **Intelligent Multi-Tab Sync (No Supabase Required)**
+> By default, if no Supabase environment keys are provided in `.env`, the app launches in **Real-time Mock Mode**. 
 > - Open two browser tabs side-by-side:
 >   1. **Tab A (Customer View)**: Go to `http://localhost:5173/menu/table-3` and add items to place an order.
 >   2. **Tab B (POS Console)**: Go to `http://localhost:5173/` and click **Staff Dashboard**. Login as any role.
@@ -77,28 +77,64 @@ npm run dev
 
 ---
 
-## ☁️ Firebase Configuration
+## ☁️ Supabase Backend Setup Guide
 
-To switch the system to a live Firebase backend:
+To connect the application to a live database for restaurant operations:
 
-1. Create a Firebase Project at [Firebase Console](https://console.firebase.google.com/).
-2. Enable **Firestore Database**, **Authentication** (Email/Password & Google Sign-In), and **Firebase Storage**.
-3. Create a `.env` file in the root directory:
+### Step 1: Create a Supabase Project
+1. Log in to the [Supabase Dashboard](https://supabase.com/).
+2. Click **New Project**, choose a name, set a database password, select your region, and click **Create**.
+
+### Step 2: Initialize the Database Schema
+1. In your Supabase dashboard sidebar, navigate to the **SQL Editor**.
+2. Click **New Query** to create a blank editor.
+3. Open the file [schema.sql](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%2520Restaurants/schema.sql) in this repository, copy the entire SQL script, and paste it into the editor.
+4. Click **Run** to execute the script. This creates all tables: `tables`, `categories`, `food_items`, `orders`, `payments`, and `notifications`.
+
+### Step 3: Run Database Rule Modifiers
+Run the following commands in the SQL Editor to ensure customer menus can place orders without strict foreign key blocking:
+```sql
+alter table public.orders drop constraint if exists orders_table_id_fkey;
+alter table public.notifications drop constraint if exists notifications_table_id_fkey;
+```
+
+### Step 4: Add Environment Variables
+1. Go to your Supabase project dashboard and click **Project Settings** (gear icon) -> **API**.
+2. Copy the **Project URL** and the **anon (public) API key**.
+3. Create a `.env` file in the root of your local project workspace:
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-api-key
 ```
-4. Restart the development server. The app will automatically connect to your live Firebase project.
+4. Restart your dev server (`npm run dev`) to enable the database integration.
 
-### 🔒 Firestore Security Rules
-Deploy the included `firestore.rules` file to restrict access:
-```bash
-firebase deploy --only firestore:rules
+---
+
+## 📦 Vercel Deployment Guide
+
+Deploy the React SPA to Vercel in 3 simple steps:
+
+### Step 1: Import Project to Vercel
+1. Push your code repository to GitHub, GitLab, or Bitbucket.
+2. Log in to the [Vercel Dashboard](https://vercel.com/) and click **Add New** -> **Project**.
+3. Import your code repository.
+
+### Step 2: Configure Environment Keys
+Under the **Environment Variables** accordion section of the setup dashboard, add the two keys:
+- `VITE_SUPABASE_URL` = `https://your-project-id.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = `your-anon-public-api-key`
+
+### Step 3: Deploy & Route Check
+1. Click **Deploy**. Vercel will build the Vite assets automatically.
+2. The included `vercel.json` file is pre-configured with a rewrite rule to redirect all routes to `index.html` for single-page routing (SPA):
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
 ```
+*This ensures pathnames like `/menu/table-3` resolve correctly when scanned by customer phones.*
 
 ---
 
@@ -114,35 +150,7 @@ firebase deploy --only firestore:rules
     /kitchen     - KDS Displays
     /waiter      - Service Requests
     /auth        - Login portal
-  /services      - Firebase client service, Mock service (fallback)
+  /services      - Supabase service, Mock service (fallback)
   /types         - TS type definitions
   /utils         - PDF exports, formatting helpers
 ```
-
----
-
-## 📈 Database Schema Design (Firestore Collections)
-
-### `restaurants/{restaurantId}`
-Main settings document containing tax ratios, opening hours, brand details, and themes.
-
-### `restaurants/{restaurantId}/users`
-Accounts assigned roles: `admin`, `manager`, `cashier`, `kitchen`, or `waiter`.
-
-### `restaurants/{restaurantId}/tables`
-Physical tables tracking seat limits, table statuses (`available`, `occupied`, `reserved`), and QR code landing URLs.
-
-### `restaurants/{restaurantId}/categories`
-Food course groups ordered via order index.
-
-### `restaurants/{restaurantId}/foodItems`
-Individual menu cards containing prices, discount rates, descriptions, spicy tags, and dietary labels.
-
-### `restaurants/{restaurantId}/orders`
-Active cooking tickets and receipts listing ordered items, subtotals, table mappings, and statuses.
-
-### `restaurants/{restaurantId}/payments`
-Completed sales records for accounting dashboards.
-
-### `restaurants/{restaurantId}/notifications`
-Chimes and alerts database triggering sound chimes and screen warnings in POS sidebars.
