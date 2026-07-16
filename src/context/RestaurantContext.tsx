@@ -283,29 +283,36 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const soundEnabled = settings?.enableSoundNotification ?? true;
       if (!soundEnabled) return;
 
-      // Play Audio Notification Chime
+      // Rich 4-note ascending chime with smooth fade-in/out envelopes
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.15);
-      
-      setTimeout(() => {
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(880.00, audioCtx.currentTime); // A5
-        gain2.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        osc2.start();
-        osc2.stop(audioCtx.currentTime + 0.3);
-      }, 150);
+
+      const playNote = (freq: number, startTime: number, duration: number, peakGain: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        // Smoother waveform for a bell-like tone
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        
+        // Smooth fade-in → sustain → fade-out envelope (avoids harsh clicks)
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.04); // fast attack
+        gain.gain.setValueAtTime(peakGain, startTime + duration * 0.6); // sustain
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration); // smooth decay
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration + 0.05);
+      };
+
+      const t = audioCtx.currentTime;
+
+      // 4-note ascending bell sequence: C5 → E5 → G5 → C6
+      playNote(523.25, t + 0.0,  0.35, 0.55); // C5
+      playNote(659.25, t + 0.22, 0.35, 0.55); // E5
+      playNote(783.99, t + 0.44, 0.35, 0.55); // G5
+      playNote(1046.5, t + 0.66, 0.55, 0.65); // C6 - held longer for a satisfying ring
 
       // Speech Synthesis Voice Announcement
       if ('speechSynthesis' in window) {
@@ -322,16 +329,28 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           speechMessage = `New message from Table ${tableCleanName}.`;
         }
 
-        const speech = new SpeechSynthesisUtterance(speechMessage);
-        speech.rate = 0.82; // Slower rate for smoother, clearer pronunciation
-        speech.pitch = 1.0;
-        speech.lang = 'en-US';
+        // Delay speech slightly so chime plays first
+        setTimeout(() => {
+          const speech = new SpeechSynthesisUtterance(speechMessage);
+          speech.rate = 0.78;   // Slower for clarity
+          speech.pitch = 1.05;  // Slightly higher for a warm restaurant tone
+          speech.volume = 1.0;  // Max volume
+          speech.lang = 'en-US';
 
-        const voices = window.speechSynthesis.getVoices();
-        const enVoice = voices.find(v => v.lang.includes('en') || v.lang.includes('EN'));
-        if (enVoice) speech.voice = enVoice;
+          // Prefer a high-quality natural voice
+          const voices = window.speechSynthesis.getVoices();
+          const preferredVoice =
+            voices.find(v => v.name.includes('Samantha')) ||     // macOS premium
+            voices.find(v => v.name.includes('Google US English')) || // Chrome
+            voices.find(v => v.name.includes('Microsoft Aria')) ||    // Edge
+            voices.find(v => v.lang === 'en-US' && v.localService) || // any local en-US
+            voices.find(v => v.lang.startsWith('en'));                 // any English
 
-        window.speechSynthesis.speak(speech);
+          if (preferredVoice) speech.voice = preferredVoice;
+
+          window.speechSynthesis.cancel(); // clear any queued speech
+          window.speechSynthesis.speak(speech);
+        }, 900); // let the chime finish before speaking
       }
     } catch (e) {
       console.warn('Notification audio/speech synthesis blocked by browser:', e);
