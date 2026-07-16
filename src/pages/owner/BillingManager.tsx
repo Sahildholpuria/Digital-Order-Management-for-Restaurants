@@ -15,7 +15,7 @@ import {
   Percent
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 
 export const BillingManager: React.FC = () => {
   const { 

@@ -15,7 +15,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 
 export const TablesManager: React.FC = () => {
   const { tables, addTable, deleteTable, updateTableStatus, restaurantId, settings } = useRestaurant();
@@ -232,8 +232,8 @@ export const TablesManager: React.FC = () => {
                 </button>
               </div>
 
-              {/* HIDDEN PRINT-READY QR FLYER (Rendered off-screen with explicit inline styles for html2canvas) */}
-              <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+              {/* HIDDEN PRINT-READY QR FLYER (Rendered invisibly inside viewport for html2canvas) */}
+              <div style={{ position: 'fixed', left: 0, top: 0, opacity: 0, zIndex: -1000, pointerEvents: 'none' }}>
                 <div 
                   ref={el => { flyerRefs.current[table.id] = el; }}
                   style={{ 
