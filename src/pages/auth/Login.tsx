@@ -42,19 +42,6 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-      if (error) throw error;
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Google Auth failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleMockRoleLogin = async (role: string) => {
     setLoading(true);
@@ -141,24 +128,6 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <div className="relative my-6 text-center">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-150 dark:border-slate-800"></div></div>
-              <span className="relative bg-white dark:bg-slate-900 px-3 text-[10px] uppercase font-bold text-slate-400 tracking-widest">Or login with</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-350 border border-slate-200 dark:border-slate-850 hover:bg-slate-50 font-semibold py-3 px-6 rounded-2xl transition-all flex items-center justify-center gap-2.5 text-sm"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.9h6.6c-.28 1.5-.1.97-1.12 1.83v2.53h6.6c3.85-3.55 6.07-8.77 6.07-14.19z"/>
-                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-6.6-2.53c-1.83 1.23-4.17 1.96-6.6 1.96-5.07 0-9.35-3.43-10.88-8.06H.27v2.61C2.26 21.06 6.8 24 12 24z"/>
-                <path fill="#FBBC05" d="M1.12 12.46a14.1 14.1 0 0 1 0-4.92V4.93H.27a11.98 11.98 0 0 0 0 14.14l6.6-2.61z"/>
-                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.19 15.24 0 12 0 6.8 0 2.26 2.94.27 7.37l6.6 2.61c1.53-4.63 5.81-8.06 10.88-8.06z"/>
-              </svg>
-              <span>Sign in with Google</span>
-            </button>
           </form>
         ) : (
           /* Demo Mock User Selection */

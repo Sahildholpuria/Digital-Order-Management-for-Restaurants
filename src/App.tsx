@@ -356,29 +356,8 @@ export const App: React.FC = () => {
       </header>
 
       {/* Flow Selectors Grid */}
-      <main className="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 my-10 z-10">
+      <main className="max-w-xl mx-auto w-full flex flex-col gap-6 my-10 z-10">
         
-        {/* Customer Menu QR Bypass Card */}
-        <div 
-          onClick={() => navigateTo('/menu/table-3')}
-          className="bg-white/75 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
-        >
-          <div>
-            <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center mb-6 border border-amber-500/20 group-hover:scale-105 transition-transform duration-300">
-              <QrCode className="w-7 h-7" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Customer Flow</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed font-medium">
-              Scan QR code standees, browse categories, filter food specs, customize kitchen instructions, and place real-time orders directly.
-            </p>
-          </div>
-          
-          <span className="text-xs font-extrabold text-amber-500 flex items-center gap-1 mt-4">
-            <span>Scan QR Demo (Table 3)</span>
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-          </span>
-        </div>
-
         {/* Owner POS terminal Card */}
         <div 
           onClick={() => navigateTo(currentUser ? '/admin' : '/login')}
@@ -401,7 +380,7 @@ export const App: React.FC = () => {
         </div>
 
         {/* Quick Direct links row */}
-        <div className="col-span-full bg-white/40 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 flex flex-wrap gap-4 items-center justify-center text-xs font-bold text-slate-500">
+        <div className="bg-white/40 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 flex flex-wrap gap-4 items-center justify-center text-xs font-bold text-slate-500">
           <span>Direct Access Consoles:</span>
           <button onClick={() => navigateTo('/kitchen')} className="text-amber-500 hover:text-amber-600 flex items-center gap-1 transition-colors">
             <ChefHat className="w-3.5 h-3.5" /> Kitchen KDS
