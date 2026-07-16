@@ -15,7 +15,8 @@ import {
   Sparkles,
   Bell,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Volume2
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
@@ -35,6 +36,7 @@ export const SettingsManager: React.FC = () => {
   const [themeColor, setThemeColor] = useState(settings?.themeColor || '#6366F1');
   const [enableWaiterCall, setEnableWaiterCall] = useState(settings?.enableWaiterCall ?? true);
   const [enableBillRequest, setEnableBillRequest] = useState(settings?.enableBillRequest ?? true);
+  const [enableSoundNotification, setEnableSoundNotification] = useState(settings?.enableSoundNotification ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   // Preset theme brand colors
@@ -73,6 +75,7 @@ export const SettingsManager: React.FC = () => {
         themeColor,
         enableWaiterCall,
         enableBillRequest,
+        enableSoundNotification,
       });
       alert('Restaurant settings updated successfully!');
     } catch (err) {
@@ -403,6 +406,43 @@ export const SettingsManager: React.FC = () => {
                   }`}
                 >
                   {enableBillRequest ? (
+                    <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
+                  ) : (
+                    <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Audio Alerts Controls */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
+              <Volume2 className="w-5 h-5 text-brand-500" />
+              <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Audio Alert Controls</h3>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-normal">
+              Configure order chime alert sound and automatic voice announcement for incoming requests.
+            </p>
+
+            <div className="space-y-3">
+              {/* Notification Chime Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Order Alert Sound</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Play sound chime + speech text on new orders and guest calls</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableSoundNotification(v => !v)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    enableSoundNotification
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                  }`}
+                >
+                  {enableSoundNotification ? (
                     <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
                   ) : (
                     <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>

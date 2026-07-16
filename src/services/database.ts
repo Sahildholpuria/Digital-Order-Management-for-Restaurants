@@ -15,42 +15,57 @@ import {
 // ==========================================
 
 const mapSettingsToFrontend = (row: any): RestaurantSettings => {
-  // UI-only toggles are stored in localStorage since they have no Supabase column
-  const uiSettings = JSON.parse(localStorage.getItem('restaurant_ui_settings') || '{}');
+  const rawTheme = row.theme_color || row.themeColor || '#6366F1';
+  const themeParts = rawTheme.split('|');
+  const themeColor = themeParts[0] || '#6366F1';
+  const enableWaiterCall = themeParts[1] !== 'false';
+  const enableBillRequest = themeParts[2] !== 'false';
+  const enableSoundNotification = themeParts[3] !== 'false';
+
   return {
     id: row.id,
     name: row.name,
     address: row.address,
     phone: row.phone,
     email: row.email,
-    logoUrl: row.logo_url,
-    gstNumber: row.gst_number,
-    taxPercentage: Number(row.tax_percentage),
-    currency: row.currency,
-    openingHours: row.opening_hours,
-    closingHours: row.closing_hours,
-    themeColor: row.theme_color,
-    enableWaiterCall: uiSettings.enableWaiterCall ?? true,
-    enableBillRequest: uiSettings.enableBillRequest ?? true,
-    createdAt: row.created_at,
+    logoUrl: row.logo_url || row.logoUrl,
+    gstNumber: row.gst_number || row.gstNumber,
+    taxPercentage: Number(row.tax_percentage ?? row.taxPercentage ?? 18),
+    currency: row.currency || '₹',
+    openingHours: row.opening_hours || row.openingHours || '09:00',
+    closingHours: row.closing_hours || row.closingHours || '23:00',
+    themeColor,
+    enableWaiterCall,
+    enableBillRequest,
+    enableSoundNotification,
+    createdAt: row.created_at || row.createdAt,
   };
 };
 
-const mapSettingsToDb = (model: Partial<RestaurantSettings>) => ({
-  ...(model.id && { id: model.id }),
-  ...(model.name && { name: model.name }),
-  ...(model.address !== undefined && { address: model.address }),
-  ...(model.phone !== undefined && { phone: model.phone }),
-  ...(model.email !== undefined && { email: model.email }),
-  ...(model.logoUrl !== undefined && { logo_url: model.logoUrl }),
-  ...(model.gstNumber !== undefined && { gst_number: model.gstNumber }),
-  ...(model.taxPercentage !== undefined && { tax_percentage: model.taxPercentage }),
-  ...(model.currency !== undefined && { currency: model.currency }),
-  ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
-  ...(model.closingHours !== undefined && { closing_hours: model.closingHours }),
-  ...(model.themeColor !== undefined && { theme_color: model.themeColor }),
-  // enableWaiterCall and enableBillRequest are NOT Supabase columns — stored in localStorage only
-});
+const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
+  const dbRow: any = {
+    ...(model.id && { id: model.id }),
+    ...(model.name && { name: model.name }),
+    ...(model.address !== undefined && { address: model.address }),
+    ...(model.phone !== undefined && { phone: model.phone }),
+    ...(model.email !== undefined && { email: model.email }),
+    ...(model.logoUrl !== undefined && { logo_url: model.logoUrl }),
+    ...(model.gstNumber !== undefined && { gst_number: model.gstNumber }),
+    ...(model.taxPercentage !== undefined && { tax_percentage: model.taxPercentage }),
+    ...(model.currency !== undefined && { currency: model.currency }),
+    ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
+    ...(model.closingHours !== undefined && { closing_hours: model.closingHours }),
+  };
+
+  if (model.themeColor !== undefined) {
+    const waiter = model.enableWaiterCall ?? true;
+    const bill = model.enableBillRequest ?? true;
+    const sound = model.enableSoundNotification ?? true;
+    dbRow.theme_color = `${model.themeColor}|${waiter}|${bill}|${sound}|en`;
+  }
+
+  return dbRow;
+};
 
 const mapUserToFrontend = (row: any): UserProfile => ({
   id: row.id,
@@ -461,17 +476,11 @@ export const dbService = {
   },
 
   async updateSettings(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
-    // Always persist the two UI-only toggles in localStorage (no Supabase column needed)
-    const uiToggles: Record<string, boolean> = {};
-    if (updates.enableWaiterCall !== undefined) uiToggles.enableWaiterCall = updates.enableWaiterCall;
-    if (updates.enableBillRequest !== undefined) uiToggles.enableBillRequest = updates.enableBillRequest;
-    if (Object.keys(uiToggles).length > 0) {
-      const existing = JSON.parse(localStorage.getItem('restaurant_ui_settings') || '{}');
-      localStorage.setItem('restaurant_ui_settings', JSON.stringify({ ...existing, ...uiToggles }));
-    }
-
     if (isSupabaseConfigured) {
-      const dbUpdates = mapSettingsToDb(updates);
+      // Fetch current settings to perform a complete merge and avoid losing toggle configuration
+      const current = await this.getSettings(restaurantId);
+      const merged = { ...current, ...updates };
+      const dbUpdates = mapSettingsToDb(merged);
       const { error } = await supabase
         .from('restaurants')
         .update(dbUpdates)

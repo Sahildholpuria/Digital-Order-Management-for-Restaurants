@@ -13,6 +13,7 @@ export interface RestaurantSettings {
   themeColor: string;
   enableWaiterCall: boolean;   // show/hide Waiter button on customer menu
   enableBillRequest: boolean;  // show/hide Bill button on customer menu
+  enableSoundNotification: boolean; // turn order/request sound chime + voice announcement ON/OFF
   createdAt: any;
 }
 

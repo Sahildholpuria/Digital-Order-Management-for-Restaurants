@@ -219,6 +219,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
     try {
+      const soundEnabled = settings?.enableSoundNotification ?? true;
+      if (!soundEnabled) return;
+
       // Play Audio Notification Chime
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
@@ -243,11 +246,30 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         osc2.stop(audioCtx.currentTime + 0.3);
       }, 150);
 
-      // Speech Synthesis
+      // Speech Synthesis Voice Announcement
       if ('speechSynthesis' in window) {
-        const speech = new SpeechSynthesisUtterance(n.message);
-        speech.rate = 1.0;
+        const tableCleanName = n.tableName.replace(/Table\s*/i, '');
+        let speechMessage = '';
+
+        if (n.type === 'new_order') {
+          speechMessage = `New order received from Table ${tableCleanName}.`;
+        } else if (n.type === 'call_waiter') {
+          speechMessage = `Table ${tableCleanName} is requesting a waiter.`;
+        } else if (n.type === 'request_bill') {
+          speechMessage = `Table ${tableCleanName} requested the bill.`;
+        } else {
+          speechMessage = `New message from Table ${tableCleanName}.`;
+        }
+
+        const speech = new SpeechSynthesisUtterance(speechMessage);
+        speech.rate = 0.82; // Slower rate for smoother, clearer pronunciation
         speech.pitch = 1.0;
+        speech.lang = 'en-US';
+
+        const voices = window.speechSynthesis.getVoices();
+        const enVoice = voices.find(v => v.lang.includes('en') || v.lang.includes('EN'));
+        if (enVoice) speech.voice = enVoice;
+
         window.speechSynthesis.speak(speech);
       }
     } catch (e) {
