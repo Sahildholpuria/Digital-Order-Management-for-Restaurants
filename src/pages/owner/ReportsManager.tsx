@@ -183,78 +183,178 @@ export const ReportsManager: React.FC = () => {
     const { filteredOrders, mostOrderedDish, totalRevenue30Days, sortedDishes } = get30DaysData();
 
     const doc = new jsPDF();
+    const pdfCurrency = currency === '₹' ? 'Rs. ' : `${currency} `;
 
-    // Title / Header
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    const dateRangeStr = `${startDate.toLocaleDateString()} - ${new Date().toLocaleDateString()}`;
+
+    // --- Page 1: Cover and Summary ---
+    
+    // Header Panel
+    doc.setFillColor(99, 102, 241); // Indigo Primary
+    doc.rect(0, 0, 210, 35, 'F');
+
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.setTextColor(99, 102, 241); // Indigo color
-    doc.text(`${settings?.name || 'Bistro'} Restaurant Report`, 14, 22);
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    const titleText = settings?.name ? `${settings.name} Sales Report` : "Restaurant Sales Report";
+    doc.text(titleText, 14, 18);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(148, 163, 184); // Slate color
-    doc.text(`Generated on: ${new Date().toLocaleString()} | Period: Last 30 Days`, 14, 28);
-    
-    // Horizontal divider
+    doc.setFontSize(9);
+    doc.setTextColor(220, 225, 255);
+    doc.text(`Generated on: ${new Date().toLocaleString()} | Period: Last 30 Days (${dateRangeStr})`, 14, 25);
+
+    // Section 1: Business Metrics
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59); // Dark slate
+    doc.text('30-DAY BUSINESS PERFORMANCE', 14, 48);
+
     doc.setDrawColor(226, 232, 240);
-    doc.line(14, 32, 196, 32);
-
-    // Section 1: Summary Dashboard
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(30, 41, 59);
-    doc.text('30-DAY BUSINESS SUMMARY', 14, 42);
+    doc.line(14, 52, 196, 52);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Total Settled Orders: ${filteredOrders.length}`, 14, 50);
-    doc.text(`Total 30-Day Revenue: ${currency}${totalRevenue30Days.toFixed(2)}`, 14, 56);
-    
-    // Highlight most ordered dish
-    doc.setFillColor(248, 250, 252);
-    doc.rect(14, 64, 182, 26, 'F');
+    doc.text(`Total Settled Orders: ${filteredOrders.length}`, 14, 60);
+    doc.text(`Total 30-Day Revenue: ${pdfCurrency}${totalRevenue30Days.toFixed(2)}`, 14, 67);
+
+    // Bestseller Dish Box
+    doc.setFillColor(243, 244, 246); // Light gray
+    doc.rect(14, 76, 182, 25, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.text('🏆 MOST ORDERED DISH (LAST 30 DAYS)', 18, 70);
+    doc.setTextColor(79, 70, 229); // Accent indigo
+    doc.text('BEST SELLING DISH', 18, 83);
+    
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
     if (mostOrderedDish) {
-      doc.text(`Dish Name: ${mostOrderedDish.name}`, 18, 77);
-      doc.text(`Total Quantity Ordered: ${mostOrderedDish.qty} times | Total Sales: ${currency}${mostOrderedDish.sales.toFixed(2)}`, 18, 83);
+      doc.text(`Dish Name: ${mostOrderedDish.name}`, 18, 90);
+      doc.text(`Volume: ${mostOrderedDish.qty} times ordered | Sales: ${pdfCurrency}${mostOrderedDish.sales.toFixed(2)}`, 18, 95);
     } else {
-      doc.text('No dishes ordered in the last 30 days.', 18, 78);
+      doc.text('No dishes logged in this period.', 18, 91);
     }
 
-    // Section 2: Dish Popularity Breakdown
+    // Section 2: Dish Popularity List
     doc.setFont('helvetica', 'bold');
-    doc.text('DISH POPULARITY CHART', 14, 102);
-    
+    doc.setTextColor(30, 41, 59);
+    doc.text('DISH POPULARITY BREAKDOWN', 14, 115);
+    doc.line(14, 118, 196, 118);
+
     // Table Header
     doc.setFillColor(99, 102, 241);
-    doc.rect(14, 108, 182, 8, 'F');
+    doc.rect(14, 122, 182, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
-    doc.text('Dish Name', 18, 113.5);
-    doc.text('Quantity Ordered', 110, 113.5);
-    doc.text('Total Revenue', 160, 113.5);
+    doc.text('Dish Name', 18, 127.5);
+    doc.text('Quantity Ordered', 110, 127.5);
+    doc.text('Total Revenue', 160, 127.5);
 
     doc.setTextColor(30, 41, 59);
     doc.setFont('helvetica', 'normal');
-    let yPos = 124;
+    let yPos = 138;
     sortedDishes.slice(0, 15).forEach((dish) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
       doc.text(dish.name, 18, yPos);
       doc.text(dish.qty.toString(), 110, yPos);
-      doc.text(`${currency}${dish.sales.toFixed(2)}`, 160, yPos);
+      doc.text(`${pdfCurrency}${dish.sales.toFixed(2)}`, 160, yPos);
       
-      // Bottom border line for row
       doc.setDrawColor(241, 245, 249);
       doc.line(14, yPos + 3, 196, yPos + 3);
       yPos += 8;
     });
 
-    // Footnote
+    // --- Page 2: Detailed Order Transaction Log ---
+    doc.addPage();
+
+    // Page 2 Header
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, 210, 25, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('30-DAY ORDER TRANSACTION LOG', 14, 16);
+
+    // Table Header for Orders Log
+    doc.setFillColor(243, 244, 246);
+    doc.rect(14, 32, 182, 8, 'F');
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(9);
+    doc.text('Order Date/Time', 18, 37.5);
+    doc.text('Table', 65, 37.5);
+    doc.text('Items Details', 90, 37.5);
+    doc.text('Grand Total', 165, 37.5);
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'normal');
+    yPos = 48;
+
+    // Sort orders newest first
+    const sortedOrdersLog = [...filteredOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    sortedOrdersLog.forEach((ord) => {
+      if (yPos > 275) {
+        doc.addPage();
+        
+        // Sub-page header
+        doc.setFillColor(99, 102, 241);
+        doc.rect(0, 0, 210, 20, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(255, 255, 255);
+        doc.text('30-DAY ORDER TRANSACTION LOG (CONTINUED)', 14, 13);
+        
+        // Sub-page table header
+        doc.setFillColor(243, 244, 246);
+        doc.rect(14, 28, 182, 8, 'F');
+        doc.setTextColor(71, 85, 105);
+        doc.setFontSize(9);
+        doc.text('Order Date/Time', 18, 33.5);
+        doc.text('Table', 65, 33.5);
+        doc.text('Items Details', 90, 33.5);
+        doc.text('Grand Total', 165, 33.5);
+
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'normal');
+        yPos = 44;
+      }
+
+      // Date Format: DD/MM/YYYY HH:MM
+      const orderDate = new Date(ord.createdAt);
+      const formattedDate = `${orderDate.getDate().toString().padStart(2, '0')}/${(orderDate.getMonth() + 1).toString().padStart(2, '0')}/${orderDate.getFullYear()} ${orderDate.getHours().toString().padStart(2, '0')}:${orderDate.getMinutes().toString().padStart(2, '0')}`;
+
+      // Table name
+      const tableName = ord.tableName || `Table ${ord.tableId}`;
+
+      // Items list summary
+      let itemsSummary = ord.items.map(i => `${i.name} (x${i.quantity})`).join(', ');
+      if (itemsSummary.length > 38) {
+        itemsSummary = itemsSummary.substring(0, 35) + '...';
+      }
+      
+      // Calculate order total
+      const orderTotal = ord.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      doc.setFontSize(8.5);
+      doc.text(formattedDate, 18, yPos);
+      doc.text(tableName, 65, yPos);
+      doc.text(itemsSummary, 90, yPos);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${pdfCurrency}${orderTotal.toFixed(0)}`, 165, yPos);
+      doc.setFont('helvetica', 'normal');
+
+      doc.setDrawColor(241, 245, 249);
+      doc.line(14, yPos + 3, 196, yPos + 3);
+      yPos += 8;
+    });
+
+    // Footnote page at end
+    if (yPos > 280) {
+      doc.addPage();
+      yPos = 20;
+    }
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text('Note: Order history entries older than 30 days are automatically deleted permanently from the database logs.', 14, yPos + 10);
