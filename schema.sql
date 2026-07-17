@@ -146,14 +146,19 @@ on conflict (id) do nothing;
 -- 5. PROFILE SYNC TRIGGER (Creates user profile row automatically on Supabase Auth Sign Up)
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  is_first_user boolean;
 begin
+  -- Check if this is the first user in the system
+  select not exists (select 1 from public.users) into is_first_user;
+
   insert into public.users (id, restaurant_id, name, email, role)
   values (
     new.id,
     'demo-restaurant',
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
-    'admin' -- default first user role
+    case when is_first_user then 'admin'::text else 'waiter'::text end
   );
   return new;
 end;
@@ -211,5 +216,5 @@ create policy "Allow public service call insertions" on public.notifications for
 create policy "Allow staff service call lookups" on public.notifications for all using (exists (select 1 from public.users where id = auth.uid()));
 
 -- Policies for user profiles (remedied recursion)
-create policy "Allow users to read profiles" on public.users for select using (true);
+create policy "Allow users to read profiles" on public.users for select using (auth.uid() is not null);
 create policy "Allow admin write for profiles" on public.users for all using (public.is_admin(auth.uid()));
