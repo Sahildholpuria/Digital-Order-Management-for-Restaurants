@@ -146,19 +146,14 @@ on conflict (id) do nothing;
 -- 5. PROFILE SYNC TRIGGER (Creates user profile row automatically on Supabase Auth Sign Up)
 create or replace function public.handle_new_user()
 returns trigger as $$
-declare
-  is_first_user boolean;
 begin
-  -- Check if this is the first user in the system
-  select not exists (select 1 from public.users) into is_first_user;
-
   insert into public.users (id, restaurant_id, name, email, role)
   values (
     new.id,
     'demo-restaurant',
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
-    case when is_first_user then 'admin'::text else 'waiter'::text end
+    'admin' -- default first user role
   );
   return new;
 end;
@@ -189,32 +184,72 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Policies for public menus & table layouts
+-- Helper function to check if user belongs to a restaurant
+create or replace function public.belongs_to_restaurant(user_id uuid, rest_id text)
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.users
+    where id = user_id and restaurant_id = rest_id
+  );
+end;
+$$ language plpgsql security definer;
+
+-- Helper function to get a user's restaurant_id
+create or replace function public.get_user_restaurant(user_id uuid)
+returns text as $$
+begin
+  return (select restaurant_id from public.users where id = user_id);
+end;
+$$ language plpgsql security definer;
+
+-- Policies for settings (tenant configuration)
 create policy "Allow public read for settings" on public.restaurants for select using (true);
-create policy "Allow admin write for settings" on public.restaurants for all using (public.is_admin(auth.uid()));
+create policy "Allow admin write for settings" on public.restaurants for all using (public.is_admin(auth.uid()) and id = public.get_user_restaurant(auth.uid()));
 
+-- Policies for tables (staff write restricted)
 create policy "Allow public read for tables" on public.tables for select using (true);
-create policy "Allow staff write for tables" on public.tables for all using (exists (select 1 from public.users where id = auth.uid()));
+create policy "Allow staff write for tables" on public.tables for all using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
 
+-- Policies for menu categories (manager/admin restricted)
 create policy "Allow public read for categories" on public.categories for select using (true);
-create policy "Allow manager write for categories" on public.categories for all using (exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager')));
+create policy "Allow manager write for categories" on public.categories for all using (
+  public.belongs_to_restaurant(auth.uid(), restaurant_id) and 
+  exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager'))
+);
 
+-- Policies for food items (manager/admin restricted)
 create policy "Allow public read for items" on public.food_items for select using (true);
-create policy "Allow manager write for items" on public.food_items for all using (exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager')));
+create policy "Allow manager write for items" on public.food_items for all using (
+  public.belongs_to_restaurant(auth.uid(), restaurant_id) and 
+  exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager'))
+);
 
--- Policies for orders (public creates, staff updates)
+-- Policies for orders (public creates, matching staff updates)
 create policy "Allow public order creation" on public.orders for insert with check (true);
 create policy "Allow public order reading" on public.orders for select using (true);
-create policy "Allow staff updates for orders" on public.orders for update using (exists (select 1 from public.users where id = auth.uid()));
-create policy "Allow admin deletions for orders" on public.orders for delete using (public.is_admin(auth.uid()));
+create policy "Allow staff updates for orders" on public.orders for update using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+create policy "Allow admin deletions for orders" on public.orders for delete using (
+  public.is_admin(auth.uid()) and 
+  restaurant_id = public.get_user_restaurant(auth.uid())
+);
 
--- Policies for payments
-create policy "Allow staff billing settlements" on public.payments for all using (exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager', 'cashier')));
+-- Policies for payments (cashier/manager/admin restricted with tenant isolation)
+create policy "Allow staff billing settlements" on public.payments for all using (
+  public.belongs_to_restaurant(auth.uid(), restaurant_id) and 
+  exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager', 'cashier'))
+);
 
--- Policies for notifications (public inserts, staff resolves)
+-- Policies for notifications (public inserts, matching staff reads/resolves)
 create policy "Allow public service call insertions" on public.notifications for insert with check (true);
-create policy "Allow staff service call lookups" on public.notifications for all using (exists (select 1 from public.users where id = auth.uid()));
+create policy "Allow staff service call lookups" on public.notifications for all using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
 
--- Policies for user profiles (remedied recursion)
-create policy "Allow users to read profiles" on public.users for select using (auth.uid() is not null);
-create policy "Allow admin write for profiles" on public.users for all using (public.is_admin(auth.uid()));
+-- Policies for user profiles (strict tenant privacy, remedied recursion)
+create policy "Allow users to read profiles" on public.users for select using (
+  auth.uid() is not null and 
+  restaurant_id = public.get_user_restaurant(auth.uid())
+);
+create policy "Allow admin write for profiles" on public.users for all using (
+  public.is_admin(auth.uid()) and 
+  restaurant_id = public.get_user_restaurant(auth.uid())
+);
