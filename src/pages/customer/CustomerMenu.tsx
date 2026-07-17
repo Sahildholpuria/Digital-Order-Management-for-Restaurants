@@ -154,7 +154,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   };
 
+  const isSubscriptionExpired = () => {
+    if (!settings) return false;
+    const status = settings.subscriptionStatus || 'trial';
+    const expiry = settings.subscriptionExpiresAt;
+    if (status === 'expired' || status === 'suspended') return true;
+    if (expiry && new Date(expiry) < new Date()) return true;
+    return false;
+  };
+
   const handlePlaceOrder = async () => {
+    if (isSubscriptionExpired()) {
+      alert("This restaurant's ordering service is currently inactive. Please contact the staff.");
+      return;
+    }
     try {
       const placed = await placeOrder();
       setOrderSuccess(placed);
@@ -362,9 +375,14 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
         <button
           onClick={handlePlaceOrder}
-          className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-md hover:shadow-brand-500/10 flex items-center justify-center gap-1.5 text-xs"
+          disabled={isSubscriptionExpired()}
+          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs ${
+            isSubscriptionExpired()
+              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none'
+              : 'bg-brand-600 hover:bg-brand-700 text-white hover:shadow-brand-500/10'
+          }`}
         >
-          Confirm & Place Order
+          {isSubscriptionExpired() ? 'Ordering Service Inactive' : 'Confirm & Place Order'}
         </button>
       </div>
     </div>

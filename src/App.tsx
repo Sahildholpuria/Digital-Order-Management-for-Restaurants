@@ -258,8 +258,40 @@ export const App: React.FC = () => {
       { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
     ].filter(item => isRole(item.roles));
 
+    const isSubscriptionExpired = () => {
+      if (currentUser?.isSuperAdmin) return false;
+      if (!settings) return false;
+      const status = settings.subscriptionStatus || 'trial';
+      const expiry = settings.subscriptionExpiresAt;
+      if (status === 'expired' || status === 'suspended') return true;
+      if (expiry && new Date(expiry) < new Date()) return true;
+      return false;
+    };
+
     // Render active tab body
     const renderActiveTabContent = () => {
+      if (isSubscriptionExpired()) {
+        return (
+          <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto h-full">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mb-6">
+              <Shield className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-slate-805 dark:text-slate-100">Subscription Inactive</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Your subscription to <span className="font-extrabold text-brand-655">RestaurantsOS</span> has expired, been suspended, or the trial period has ended.
+            </p>
+            <div className="mt-6 bg-slate-50/50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 p-4 rounded-2xl w-full text-[11px] text-slate-400 space-y-1.5 text-left">
+              <p><strong>Restaurant ID:</strong> {settings?.id}</p>
+              <p><strong>Status:</strong> <span className="text-red-500 font-bold uppercase">{settings?.subscriptionStatus}</span></p>
+              <p><strong>Expiry Date:</strong> {settings?.subscriptionExpiresAt ? new Date(settings.subscriptionExpiresAt).toLocaleDateString() : 'N/A'}</p>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-6">
+              Please contact the system administrator at <a href="mailto:hello@restaurantsos.app" className="text-brand-655 font-bold hover:underline">hello@restaurantsos.app</a> to renew your plan.
+            </p>
+          </div>
+        );
+      }
+
       switch (activeTab) {
         case 'superadmin': return <SuperAdminDashboard />;
         case 'dashboard': return <AdminDashboard />;
