@@ -81,6 +81,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (cached) return cached;
     }
     
+    const storedStaffRest = localStorage.getItem('last_active_staff_restaurant_id');
+    if (storedStaffRest) return storedStaffRest;
+    
     const savedUser = localStorage.getItem('restaurant_current_user');
     if (savedUser) {
       try {
@@ -222,12 +225,25 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Load User Auth State (Supabase or LocalMock)
   useEffect(() => {
+    const clearState = () => {
+      setCurrentUserState(null);
+      setSettings(null);
+      setCategories([]);
+      setFoodItems([]);
+      setTables([]);
+      setOrders([]);
+      setPayments([]);
+      setNotifications([]);
+      setCurrentTable(null);
+      localStorage.removeItem('last_active_staff_restaurant_id');
+    };
+
     if (isSupabaseConfigured) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           syncSupabaseProfile(session.user);
         } else {
-          setCurrentUserState(null);
+          clearState();
           setLoading(false);
         }
       });
@@ -236,7 +252,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (session?.user) {
           syncSupabaseProfile(session.user);
         } else {
-          setCurrentUserState(null);
+          clearState();
           setLoading(false);
         }
       });
@@ -248,6 +264,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const savedUser = localStorage.getItem('restaurant_current_user');
       if (savedUser) {
         setCurrentUserState(JSON.parse(savedUser));
+      } else {
+        clearState();
       }
       setLoading(false);
     }
@@ -257,6 +275,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (currentUser?.restaurantId) {
       setRestaurantId(currentUser.restaurantId);
+      localStorage.setItem('last_active_staff_restaurant_id', currentUser.restaurantId);
     }
   }, [currentUser]);
 
@@ -297,6 +316,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Load Settings and Real-time Listeners
   useEffect(() => {
+    if (loading) return;
+
     let unsubTables: () => void = () => {};
     let unsubCategories: () => void = () => {};
     let unsubFoodItems: () => void = () => {};
@@ -376,7 +397,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubPayments();
       unsubNotifications();
     };
-  }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id]);
+  }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id, loading]);
 
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
