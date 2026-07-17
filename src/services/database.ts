@@ -474,6 +474,54 @@ export const dbService = {
       return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
+  async getTables(restaurantId: string): Promise<RestaurantTable[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('tables')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('number');
+      if (error) throw error;
+      return (data || []).map(mapTableToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_tables');
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.map(mapTableToFrontend);
+    }
+  },
+
+  async getCategories(restaurantId: string): Promise<MenuCategory[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('order', { ascending: true });
+      if (error) throw error;
+      return (data || []).map(mapCategoryToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_categories');
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.map(mapCategoryToFrontend);
+    }
+  },
+
+  async getFoodItems(restaurantId: string): Promise<FoodItem[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('food_items')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('name');
+      if (error) throw error;
+      return (data || []).map(mapFoodItemToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_foodItems');
+      const parsed = data ? JSON.parse(data) : [];
+      return parsed.map(mapFoodItemToFrontend);
+    }
+  },
+
 
   async updateSettings(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
     if (isSupabaseConfigured) {

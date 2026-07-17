@@ -219,46 +219,56 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const setts = await dbService.getSettings(restaurantId);
         setSettings(setts);
 
-        // Subscriptions
-        unsubTables = dbService.subscribeTables(restaurantId, (data) => {
-          setTables(data);
-          setTablesLoaded(true); // Mark tables as definitively loaded
-          // Sync current table status if selected
-          if (currentTable) {
-            const fresh = data.find(t => t.id === currentTable.id);
-            if (fresh) setCurrentTable(fresh);
-          }
-        });
+        // 1. Fetch tables, categories, and food items ONCE to save connection & DB budget
+        const tablesData = await dbService.getTables(restaurantId);
+        setTables(tablesData);
+        setTablesLoaded(true); // Mark tables as definitively loaded
+        if (currentTable) {
+          const fresh = tablesData.find(t => t.id === currentTable.id);
+          if (fresh) setCurrentTable(fresh);
+        }
 
-        unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
-          setCategories(data);
-        });
+        const categoriesData = await dbService.getCategories(restaurantId);
+        setCategories(categoriesData);
 
-        unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
-          setFoodItems(data);
-        });
+        const itemsData = await dbService.getFoodItems(restaurantId);
+        setFoodItems(itemsData);
 
-        unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
-          setOrders(data);
-        });
+        // 2. Optimized Subscriptions - only open WebSocket channels if necessary
+        const isStaffUser = !!currentUser;
 
-        unsubPayments = dbService.subscribePayments(restaurantId, (data) => {
-          setPayments(data);
-        });
+        if (isStaffUser) {
+          // Staff needs Live Orders, Notifications
+          unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
+            setOrders(data);
+          });
 
-        unsubNotifications = dbService.subscribeNotifications(restaurantId, (data) => {
-          setNotifications(data);
-          
-          // Audio alert / Speech Synthesis on new notification (Order/Request)
-          if (!isFirstLoad.current && data.length > prevNotificationsCount.current) {
-            const newNotify = data[0]; // assumes sorted desc
-            if (newNotify && !newNotify.isRead) {
-              triggerNotificationSoundAndSpeech(newNotify);
+          unsubNotifications = dbService.subscribeNotifications(restaurantId, (data) => {
+            setNotifications(data);
+            
+            // Audio alert / Speech Synthesis on new notification (Order/Request)
+            if (!isFirstLoad.current && data.length > prevNotificationsCount.current) {
+              const newNotify = data[0]; // assumes sorted desc
+              if (newNotify && !newNotify.isRead) {
+                triggerNotificationSoundAndSpeech(newNotify);
+              }
             }
+            prevNotificationsCount.current = data.length;
+            isFirstLoad.current = false;
+          });
+
+          // Staff Cashier/Admin/Manager needs Payments logs
+          if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier') {
+            unsubPayments = dbService.subscribePayments(restaurantId, (data) => {
+              setPayments(data);
+            });
           }
-          prevNotificationsCount.current = data.length;
-          isFirstLoad.current = false;
-        });
+        } else {
+          // Guest Customer - only needs orders subscription (to track status)
+          unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
+            setOrders(data);
+          });
+        }
 
       } catch (err) {
         console.error('Failed loading subscriptions:', err);
@@ -275,7 +285,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubPayments();
       unsubNotifications();
     };
-  }, [restaurantId, currentTable?.id, subscriptionTrigger]);
+  }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id]);
 
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
