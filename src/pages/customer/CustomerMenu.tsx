@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { translations, Language } from '../../translations';
 
 interface CustomerMenuProps {
   tableId: string;
@@ -30,6 +31,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     loading,
     tablesLoaded,
   } = useRestaurant();
+
+  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
+  const t = translations[lang];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -396,6 +400,19 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
           {/* Quick Staff Interactions */}
           <div className="flex gap-2">
+            {/* Language Switcher */}
+            <button
+              onClick={() => {
+                const nextLang = lang === 'en' ? 'hi' : 'en';
+                setLang(nextLang);
+                localStorage.setItem('customer_lang', nextLang);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{lang === 'en' ? 'हिन्दी' : 'EN'}</span>
+            </button>
+
             {(settings?.enableWaiterCall ?? true) && (
               <button
                 onClick={handleCallWaiter}
@@ -407,7 +424,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }`}
               >
                 <Bell className="w-3.5 h-3.5" />
-                <span>{waiterCalled ? 'Calling...' : 'Waiter'}</span>
+                <span>{waiterCalled ? t.waiterCalled : t.callWaiter}</span>
               </button>
             )}
             
@@ -422,17 +439,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }`}
               >
                 <Receipt className="w-3.5 h-3.5" />
-                <span>{billRequested ? 'Requested' : 'Bill'}</span>
+                <span>{billRequested ? t.billRequested : t.requestBill}</span>
               </button>
             )}
 
             {/* My Orders button with badge */}
             <button
               onClick={() => setIsOrdersOpen(true)}
-              className="relative flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50"
+              className="relative flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
             >
               <ClipboardList className="w-3.5 h-3.5" />
-              <span>Orders</span>
+              <span>{t.liveOrders}</span>
               {tableOrders.length > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-brand-600 text-white text-[9px] font-black rounded-full flex items-center justify-center">
                   {tableOrders.length}
@@ -566,14 +583,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* Left Column: Menu catalogue */}
           <div className="md:col-span-8 space-y-6">
-            {/* Modern Search Bar */}
             <div className="relative mb-5 shadow-sm rounded-2xl">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                 <Search className="w-4 h-4 text-slate-400" />
               </span>
               <input
                 type="text"
-                placeholder="Search our delicious items..."
+                placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl py-3.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium"
@@ -587,11 +603,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all whitespace-nowrap ${
                   vegOnly
                     ? 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400'
-                    : 'bg-white border-slate-200 text-slate-550 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
                 }`}
               >
                 <span className={`w-2 h-2 rounded-full bg-green-500 border border-white ${vegOnly ? 'bg-green-500' : ''}`}></span>
-                Veg Only
+                {t.vegOnly}
               </button>
               <button
                 onClick={() => setPopularOnly(!popularOnly)}
@@ -602,13 +618,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Popular Items
+                {t.popularOnly}
               </button>
             </div>
 
             {/* Category Horizontal Bar */}
             <div className="mb-6">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3">Categories</h2>
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3">{t.categories}</h2>
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <button
                   onClick={() => setSelectedCategory('all')}
@@ -618,7 +634,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                       : 'bg-white text-slate-555 border-slate-100 hover:bg-slate-55/50 dark:bg-slate-900 dark:border-slate-805 dark:text-slate-400'
                   }`}
                 >
-                  All Items
+                  {t.allItems}
                 </button>
                 {categories.map(cat => (
                   <button
@@ -639,14 +655,14 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             {/* Food Items List */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-200">Our Menu</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-md">{filteredItems.length} options</span>
+                <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-200">{t.ourMenu}</h2>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-md">{filteredItems.length} {t.options}</span>
               </div>
 
               {filteredItems.length === 0 ? (
                 <div className="bg-white/70 dark:bg-slate-900/60 rounded-3xl p-10 text-center border border-slate-200/50 dark:border-slate-800/80 backdrop-blur-md animate-scale-in">
                   <Utensils className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold">No items match your choices.</p>
+                  <p className="text-slate-555 dark:text-slate-400 text-sm font-semibold">{t.noItemsFound}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -833,7 +849,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{selectedItem.name}</h3>
-                  <span className="text-xs text-slate-400 font-semibold">Prep time: {selectedItem.preparationTime} minutes</span>
+                  <span className="text-xs text-slate-400 font-semibold">{t.preparationTime}: {selectedItem.preparationTime} {t.min}</span>
                 </div>
                 <span className={`w-4 h-4 border rounded-md flex items-center justify-center mt-1 ${
                   selectedItem.isVeg ? 'border-green-600' : 'border-red-650'
@@ -864,7 +880,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 return (
                   <div className="mb-5">
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-450 mb-2">
-                      Select Portion Size
+                      {t.selectPortion}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {variants.map(v => {
@@ -894,10 +910,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               {/* Special Instructions Field */}
               <div className="mb-6">
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
-                  Special Cooking Instructions
+                  {t.specialInstructions}
                 </label>
                 <textarea
-                  placeholder="E.g., No onion, make it spicy, well cooked, etc."
+                  placeholder={t.specialInstructionsPlaceholder}
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
                   rows={2}
@@ -924,7 +940,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   
                   return (
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-455">Item Total</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-455">{t.itemTotal}</p>
                       <p className="text-xl font-black text-slate-850 dark:text-slate-100">
                         {settings?.currency || '₹'}{(discountedItemPrice * quantity).toFixed(0)}
                       </p>
@@ -951,10 +967,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg hover:shadow-brand-500/10 mt-5 flex items-center justify-center gap-2 text-sm"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg hover:shadow-brand-500/10 mt-5 flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Add to Basket</span>
+                <span>{t.addToBasket}</span>
               </button>
             </div>
           </div>

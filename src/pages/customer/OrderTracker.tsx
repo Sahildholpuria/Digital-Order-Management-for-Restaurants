@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { Clock, Check, UtensilsCrossed, ChevronLeft, RefreshCw, Flame, CheckCircle } from 'lucide-react';
 import { OrderStatus } from '../../types';
+import { translations, Language } from '../../translations';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -19,13 +20,16 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
 
   const order = orders.find(o => o.id === orderId);
 
+  const lang = (localStorage.getItem('customer_lang') as Language) || 'en';
+  const t = translations[lang];
+
   // Status timeline nodes
   const statuses: { label: string; value: OrderStatus; desc: string }[] = [
-    { label: 'Pending', value: 'pending', desc: 'Sent to the kitchen' },
-    { label: 'Accepted', value: 'accepted', desc: 'Kitchen acknowledged' },
-    { label: 'Preparing', value: 'preparing', desc: 'Chef is cooking your dish' },
-    { label: 'Ready', value: 'ready', desc: 'Order is ready for serving' },
-    { label: 'Served', value: 'served', desc: 'Enjoy your delicious meal!' },
+    { label: t.orderReceived, value: 'pending', desc: t.orderReceivedSub },
+    { label: t.accepted, value: 'accepted', desc: t.acceptedSub },
+    { label: t.preparing, value: 'preparing', desc: t.preparingSub },
+    { label: t.ready, value: 'ready', desc: t.readySub },
+    { label: t.served, value: 'served', desc: t.servedSub },
   ];
 
   const getStatusIndex = (currentStatus: OrderStatus) => {
@@ -41,13 +45,13 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-glass border border-slate-100 dark:border-slate-800">
           <RefreshCw className="w-10 h-10 text-brand-500 animate-spin mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-205">Finding your order...</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Checking the kitchen status registers.</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-205">{t.findingOrder}</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">{t.checkingKitchen}</p>
           <button 
             onClick={() => window.location.pathname = `/menu/${tableId}`}
             className="mt-6 text-sm font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-1 mx-auto"
           >
-            <ChevronLeft className="w-4 h-4" /> Back to Menu
+            <ChevronLeft className="w-4 h-4" /> {t.backToMenu}
           </button>
         </div>
       </div>
@@ -56,6 +60,19 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
 
   // Check if order was cancelled
   const isCancelled = order.status === 'cancelled';
+
+  const getStatusText = (status: OrderStatus) => {
+    switch (status) {
+      case 'pending': return t.orderReceived;
+      case 'accepted': return t.accepted;
+      case 'preparing': return t.preparing;
+      case 'ready': return t.ready;
+      case 'served': return t.served;
+      case 'completed': return t.orderCompleted;
+      case 'cancelled': return t.orderCancelled;
+      default: return (status as string).toUpperCase();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-955 pb-20">
@@ -69,7 +86,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
           </button>
           <div>
             <h1 className="text-base font-bold text-slate-800 dark:text-slate-100 font-sans">
-              Track Order Status
+              {t.trackOrderStatus}
             </h1>
             <p className="text-xs text-slate-500">{order.orderNumber}</p>
           </div>
@@ -83,12 +100,12 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
             {/* Timeline Status Card */}
             {isCancelled ? (
               <div className="bg-red-50 dark:bg-red-955/20 text-red-750 dark:text-red-400 p-5 rounded-3xl border border-red-100 dark:border-red-900/30">
-                <p className="font-bold text-sm">This order was cancelled by the restaurant.</p>
-                <p className="text-xs mt-1">Please connect with the waiter or staff if you have any questions.</p>
+                <p className="font-bold text-sm">{t.orderCancelled}</p>
+                <p className="text-xs mt-1">{t.orderCancelledSubtitle}</p>
               </div>
             ) : (
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-glass border border-slate-100 dark:border-slate-800">
-                <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-6 text-sm">Cooking Progress</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-6 text-sm">{t.cookingTimeline}</h3>
                 
                 <div className="relative pl-8 space-y-8">
                   {/* Vertical line connector */}
@@ -148,11 +165,11 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-glass border border-slate-100 dark:border-slate-800">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-xs text-slate-455 uppercase tracking-wider font-bold mb-1">Status Report</p>
+                  <p className="text-xs text-slate-455 uppercase tracking-wider font-bold mb-1">{t.statusReport}</p>
                   <h2 className={`text-2xl font-black ${
                     isCancelled ? 'text-red-500' : 'text-brand-600 dark:text-brand-400'
                   }`}>
-                    {isCancelled ? 'Order Cancelled' : order.status.toUpperCase()}
+                    {getStatusText(order.status)}
                   </h2>
                 </div>
                 
@@ -167,7 +184,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
               {!isCancelled && (
                 <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/40">
                   <Clock className="w-5 h-5 text-brand-500" />
-                  <span>Est. Preparation: <strong className="text-slate-700 dark:text-slate-300">~15-20 Mins</strong></span>
+                  <span>{t.estPrep}: <strong className="text-slate-700 dark:text-slate-300">~15-20 {t.mins}</strong></span>
                 </div>
               )}
             </div>
@@ -176,7 +193,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-glass border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <UtensilsCrossed className="w-5 h-5 text-slate-400" />
-                <h3 className="font-bold text-slate-805 dark:text-slate-200 text-sm">Order Summary</h3>
+                <h3 className="font-bold text-slate-805 dark:text-slate-200 text-sm">{t.orderSummary}</h3>
               </div>
 
               <div className="space-y-4">
@@ -200,15 +217,15 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
 
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-4 space-y-2 text-xs text-slate-500">
                   <div className="flex justify-between">
-                    <span>Subtotal</span>
+                    <span>{t.subtotal}</span>
                     <span>{settings?.currency || '₹'}{order.subtotal.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Tax & Service Charge</span>
+                    <span>{t.tax}</span>
                     <span>{settings?.currency || '₹'}{order.tax.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-slate-800 dark:text-slate-200 pt-2 border-t border-slate-150 dark:border-slate-800/40">
-                    <span>Total Paid/Payable</span>
+                    <span>{t.grandTotal}</span>
                     <span>{settings?.currency || '₹'}{order.grandTotal.toFixed(0)}</span>
                   </div>
                 </div>
@@ -217,9 +234,9 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
 
             <button 
               onClick={() => window.location.pathname = `/menu/${tableId}`}
-              className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:border dark:border-slate-800 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 font-semibold py-4 px-6 rounded-2xl transition-all text-sm"
+              className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:border dark:border-slate-800 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 font-semibold py-4 px-6 rounded-2xl transition-all text-sm cursor-pointer"
             >
-              Add More Items to Order
+              {t.addMoreItems}
             </button>
           </div>
         </div>

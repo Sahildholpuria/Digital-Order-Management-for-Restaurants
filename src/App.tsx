@@ -30,12 +30,17 @@ import {
   Menu, 
   X,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Globe
 } from 'lucide-react';
+import { translations, Language } from './translations';
 
 export const App: React.FC = () => {
   const { currentUser, logoutUser, loading, settings } = useRestaurant();
   const { theme, toggleTheme } = useTheme();
+
+  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('admin_lang') as Language) || 'en');
+  const t = translations[lang];
 
   // Navigation Routing States
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -322,7 +327,7 @@ export const App: React.FC = () => {
                     }`}
                   >
                     <item.icon className="w-4.5 h-4.5" />
-                    <span>{item.label}</span>
+                    <span>{t[item.id as keyof typeof t] || item.label}</span>
                   </button>
                 );
               })}
@@ -349,6 +354,19 @@ export const App: React.FC = () => {
               )}
             </button>
 
+            {/* Language Toggle */}
+            <button 
+              onClick={() => {
+                const nextLang = lang === 'en' ? 'hi' : 'en';
+                setLang(nextLang);
+                localStorage.setItem('admin_lang', nextLang);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <Globe className="w-4.5 h-4.5 text-brand-500" />
+              <span>{lang === 'en' ? 'हिन्दी (Hindi)' : 'English (EN)'}</span>
+            </button>
+
             {/* User Logged Details */}
             <div className="bg-slate-50/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-800/50 p-3 rounded-2xl text-xs space-y-1">
               <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate">{currentUser.name}</p>
@@ -360,10 +378,10 @@ export const App: React.FC = () => {
                 await logoutUser();
                 navigateTo('/');
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all cursor-pointer"
             >
               <LogOut className="w-4.5 h-4.5" />
-              <span>Log Out</span>
+              <span>{t.logOut}</span>
             </button>
           </div>
         </aside>
