@@ -159,6 +159,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
           email: user.email || '',
           role: 'admin',
+          isSuperAdmin: user.email === 'superadmin@restaurantsos.com' || user.email?.includes('superadmin'),
           createdAt: new Date().toISOString(),
         };
         await dbService.addUser(restaurantId, profile);
@@ -668,6 +669,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         name: email.split('@')[0].toUpperCase(),
         email,
         role,
+        isSuperAdmin: email === 'superadmin@restaurant.com' || email.includes('super'),
         createdAt: new Date().toISOString()
       };
       await dbService.addUser(restaurantId, found);

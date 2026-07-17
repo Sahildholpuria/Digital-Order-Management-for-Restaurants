@@ -1,0 +1,484 @@
+import React, { useState, useEffect } from 'react';
+import { dbService } from '../../services/database';
+import { RestaurantSettings } from '../../types';
+import { 
+  Building, 
+  Plus, 
+  CheckCircle, 
+  AlertCircle, 
+  Calendar, 
+  Search, 
+  X, 
+  Award, 
+  ShieldCheck, 
+  TrendingUp,
+  RefreshCw
+} from 'lucide-react';
+
+export const SuperAdminDashboard: React.FC = () => {
+  const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRest, setSelectedRest] = useState<RestaurantSettings | null>(null);
+
+  // New restaurant form states
+  const [restId, setRestId] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [planType, setPlanType] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
+  const [status, setStatus] = useState<'trial' | 'active' | 'expired'>('trial');
+  const [expiresAt, setExpiresAt] = useState('');
+
+  // Edit subscription states
+  const [editPlan, setEditPlan] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
+  const [editStatus, setEditStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
+
+  const fetchRestaurants = async () => {
+    setLoading(true);
+    try {
+      const data = await dbService.getAllRestaurants();
+      setRestaurants(data);
+    } catch (err) {
+      console.error('Failed fetching restaurants:', err);
+    } fillly: {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
+
+  const handleOnboardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restId || !name) return;
+
+    try {
+      const newRest: Partial<RestaurantSettings> = {
+        id: restId.trim().toLowerCase().replace(/\s+/g, '-'),
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        planType,
+        subscriptionStatus: status,
+        subscriptionExpiresAt: expiresAt ? new Date(expiresAt).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      await dbService.createRestaurant(newRest);
+      setIsModalOpen(false);
+      // Reset form
+      setRestId('');
+      setName('');
+      setEmail('');
+      setPhone('');
+      setPlanType('starter');
+      setStatus('trial');
+      setExpiresAt('');
+      
+      await fetchRestaurants();
+    } catch (err) {
+      alert('Error creating restaurant: ' + err);
+    }
+  };
+
+  const handleEditClick = (rest: RestaurantSettings) => {
+    setSelectedRest(rest);
+    setEditPlan(rest.planType || 'starter');
+    setEditStatus(rest.subscriptionStatus || 'trial');
+    if (rest.subscriptionExpiresAt) {
+      const date = new Date(rest.subscriptionExpiresAt);
+      setEditExpiresAt(date.toISOString().split('T')[0]);
+    } else {
+      setEditExpiresAt('');
+    }
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRest) return;
+
+    try {
+      const updates: Partial<RestaurantSettings> = {
+        planType: editPlan,
+        subscriptionStatus: editStatus,
+        subscriptionExpiresAt: editExpiresAt ? new Date(editExpiresAt).toISOString() : undefined
+      };
+
+      await dbService.updateRestaurantSubscription(selectedRest.id, updates);
+      setIsEditModalOpen(false);
+      await fetchRestaurants();
+    } catch (err) {
+      alert('Error updating subscription: ' + err);
+    }
+  };
+
+  // Filtered list
+  const filtered = restaurants.filter(r => 
+    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Statistics
+  const totalCount = restaurants.length;
+  const activeCount = restaurants.filter(r => r.subscriptionStatus === 'active').length;
+  const trialCount = restaurants.filter(r => r.subscriptionStatus === 'trial').length;
+  const expiredCount = restaurants.filter(r => r.subscriptionStatus === 'expired' || r.subscriptionStatus === 'suspended').length;
+
+  return (
+    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-brand-600 to-indigo-600 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/10">
+        <div>
+          <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold w-fit mb-2 backdrop-blur-md">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Super Admin Central Control</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tight">SaaS Tenant Manager</h1>
+          <p className="text-brand-100 text-sm mt-1">Manage restaurant subscription billing lifecycle, plans, and onboard settings.</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={fetchRestaurants}
+            className="bg-white/10 hover:bg-white/20 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center"
+            title="Refresh database"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-550 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Onboard Restaurant</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grid Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
+            <Building className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Total Onboarded</p>
+            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{totalCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Active Pro</p>
+            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{activeCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <Calendar className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Free Trials</p>
+            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{trialCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Expired / Suspended</p>
+            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{expiredCount}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-sm overflow-hidden">
+        {/* Search Header */}
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <h2 className="text-base font-black text-slate-850 dark:text-slate-100 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-brand-500" />
+            <span>Onboarded Restaurants list</span>
+          </h2>
+          <div className="relative w-full sm:w-72 shadow-sm rounded-2xl">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Search className="w-4 h-4 text-slate-400" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search by restaurant name or slug..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-800 dark:text-slate-100"
+            />
+          </div>
+        </div>
+
+        {/* Table Body */}
+        {loading ? (
+          <div className="py-20 text-center text-slate-400 dark:text-slate-500 font-bold">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3" />
+            <p className="text-xs">Loading onboarding directories...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <Building className="w-14 h-14 text-slate-200 dark:text-slate-800 mx-auto mb-4 stroke-[1.2]" />
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">No Restaurants Found</h3>
+            <p className="text-xs text-slate-400 mt-1">Try refining your search terms or onboard a new client.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                  <th className="px-6 py-4">Name & Slug</th>
+                  <th className="px-6 py-4">Contact Info</th>
+                  <th className="px-6 py-4">Plan Type</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Expiry Date</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+                {filtered.map(r => {
+                  const statusColors: Record<string, string> = {
+                    trial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
+                    active: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                    expired: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                    suspended: 'bg-slate-50 text-slate-505 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                  };
+
+                  const planLabels: Record<string, string> = {
+                    starter: 'Starter Plan',
+                    pro_6m: 'Pro 6-Month',
+                    pro_1y: 'Pro 1-Year'
+                  };
+
+                  return (
+                    <tr key={r.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-extrabold text-slate-800 dark:text-slate-200">{r.name}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest">{r.id}</div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                        <div>{r.email || 'No email registered'}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{r.phone || 'No phone'}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                          <Award className="w-3.5 h-3.5 text-brand-500" />
+                          {planLabels[r.planType || 'starter']}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${statusColors[r.subscriptionStatus || 'trial']}`}>
+                          {r.subscriptionStatus || 'trial'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                        {r.subscriptionExpiresAt ? (
+                          new Date(r.subscriptionExpiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
+                        ) : (
+                          'Lifetime / Lifetime'
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleEditClick(r)}
+                          className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                        >
+                          Modify Plan
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Onboard Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Onboard New Restaurant</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleOnboardSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Unique Slug (ID)</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. bistro-delhi"
+                  value={restId}
+                  onChange={(e) => setRestId(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Restaurant Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. The Grand Bistro"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Email</label>
+                  <input
+                    type="email"
+                    placeholder="name@restaurant.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Phone</label>
+                  <input
+                    type="text"
+                    placeholder="+91 XXXXX XXXXX"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Initial Plan</label>
+                  <select
+                    value={planType}
+                    onChange={(e) => setPlanType(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="starter">Starter Plan</option>
+                    <option value="pro_6m">Pro 6-Month</option>
+                    <option value="pro_1y">Pro 1-Year</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Subscription Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="trial">Free Trial</option>
+                    <option value="active">Active Plan</option>
+                    <option value="expired">Expired</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Plan Expiry Date</label>
+                <input
+                  type="date"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-6 text-xs cursor-pointer"
+              >
+                Onboard Tenant
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && selectedRest && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Modify Subscription</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase tracking-widest">{selectedRest.name} ({selectedRest.id})</p>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Selected Plan</label>
+                <select
+                  value={editPlan}
+                  onChange={(e) => setEditPlan(e.target.value as any)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                >
+                  <option value="starter">Starter Plan</option>
+                  <option value="pro_6m">Pro 6-Month</option>
+                  <option value="pro_1y">Pro 1-Year</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Billing Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                >
+                  <option value="trial">Free Trial</option>
+                  <option value="active">Active Plan</option>
+                  <option value="expired">Expired</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Billing Expiry Date</label>
+                <input
+                  type="date"
+                  value={editExpiresAt}
+                  onChange={(e) => setEditExpiresAt(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-6 text-xs cursor-pointer"
+              >
+                Apply Changes
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

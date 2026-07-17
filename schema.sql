@@ -31,6 +31,9 @@ create table public.restaurants (
   opening_hours text,
   closing_hours text,
   theme_color text default '#6366F1',
+  subscription_status text check (subscription_status in ('trial', 'active', 'expired', 'suspended')) default 'trial' not null,
+  subscription_expires_at timestamp with time zone default timezone('utc'::text, now() + interval '30 days') not null,
+  plan_type text check (plan_type in ('starter', 'pro_6m', 'pro_1y')) default 'starter' not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -41,6 +44,7 @@ create table public.users (
   name text not null,
   email text not null,
   role text check (role in ('admin', 'manager', 'cashier', 'kitchen', 'waiter')) not null,
+  is_super_admin boolean default false not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

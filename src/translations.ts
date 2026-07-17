@@ -62,6 +62,7 @@ export const translations = {
     
     // Common / Admin
     dashboard: "Dashboard",
+    superadmin: "Super Admin",
     liveOrders: "Live Orders",
     tableQR: "Table & QR",
     menuList: "Menu List",
@@ -153,6 +154,7 @@ export const translations = {
     
     // Common / Admin
     dashboard: "डैशबोर्ड",
+    superadmin: "सुपर एडमिन",
     liveOrders: "सक्रिय ऑर्डर",
     tableQR: "टेबल और क्यूआर",
     menuList: "मेन्यू सूची",

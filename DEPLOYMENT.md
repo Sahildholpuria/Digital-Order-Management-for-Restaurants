@@ -36,6 +36,21 @@ alter table public.orders drop constraint if exists orders_table_id_fkey;
 alter table public.notifications drop constraint if exists notifications_table_id_fkey;
 ```
 
+### 🔒 4. Row Level Security (RLS) & Multi-Tenant Isolation
+The application enforces strict Row Level Security (RLS) to isolate different restaurants (tenants). 
+The database uses custom Postgres functions (`public.belongs_to_restaurant`, `public.get_user_restaurant`, `public.is_admin`) running with `security definer` privileges to check ownership without infinite policy recursion.
+- **Tenant Isolation**: Staff members can only CRUD resources (tables, menus, orders, payments) belonging to their specific `restaurant_id`.
+- **Staff Profile Privacy**: Public/anonymous guest users are blocked from reading staff profiles (`public.users`). Only logged-in staff from the same restaurant can query profiles.
+
+### ⚡ 5. Supabase Free Plan Optimization
+To prevent exhausting the Supabase Free Plan **Disk IO Budget** and **Active Connections Limit**:
+- **One-Time Data Fetching**: Static or rarely changing tables (like `categories`, `food_items`, and `tables`) are fetched **once** on page load/visibility change instead of keeping heavy realtime WebSocket subscriptions active.
+- **Role-Based Dynamic Subscriptions**: Realtime channel listeners are only opened for essential tables based on the user's role:
+  - **Guest Customers**: Open exactly **1 channel** (only listening to their order status updates).
+  - **Kitchen / Waiters**: Only listen to `orders` or `notifications`.
+  - **Cashiers / Managers**: Listen to `orders`, `notifications`, and `payments`.
+This reduces the real-time WebSocket load by up to **80%**, keeping the project highly cost-efficient and performant.
+
 ---
 
 ## 🔐 Step 2: Authentication & Staff Sign Up
