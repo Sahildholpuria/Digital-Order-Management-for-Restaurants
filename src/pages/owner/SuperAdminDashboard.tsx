@@ -37,6 +37,13 @@ export const SuperAdminDashboard: React.FC = () => {
   const [editStatus, setEditStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
   const [editExpiresAt, setEditExpiresAt] = useState('');
 
+  // New staff user form states
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [userFullName, setUserFullName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userRole, setUserRole] = useState<'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter'>('admin');
+  const [userRestaurantId, setUserRestaurantId] = useState('');
+
   const fetchRestaurants = async () => {
     setLoading(true);
     try {
@@ -117,6 +124,24 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
+  const handleCreateUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userFullName || !userEmail || !userRestaurantId) {
+      alert('Please fill out all fields.');
+      return;
+    }
+    try {
+      await dbService.createStaffUser(userEmail.trim(), userFullName.trim(), userRole, userRestaurantId);
+      setIsUserModalOpen(false);
+      setUserFullName('');
+      setUserEmail('');
+      setUserRole('admin');
+      alert(`Staff user created successfully! Default login password is "ChangeMe@123".`);
+    } catch (err: any) {
+      alert('Error creating user: ' + (err.message || err));
+    }
+  };
+
   // Filtered list
   const filtered = restaurants.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -151,8 +176,22 @@ export const SuperAdminDashboard: React.FC = () => {
             <RefreshCw className="w-5 h-5" />
           </button>
           <button
+            onClick={() => {
+              if (restaurants.length === 0) {
+                alert('Please onboard at least one restaurant first!');
+                return;
+              }
+              setUserRestaurantId(restaurants[0].id);
+              setIsUserModalOpen(true);
+            }}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer backdrop-blur-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Staff User</span>
+          </button>
+          <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-550 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer"
+            className="flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Onboard Restaurant</span>
@@ -474,6 +513,89 @@ export const SuperAdminDashboard: React.FC = () => {
                 className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-6 text-xs cursor-pointer"
               >
                 Apply Changes
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-855 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Create Staff User</h3>
+              <button onClick={() => setIsUserModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUserSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Staff Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Rahul Sharma"
+                  value={userFullName}
+                  onChange={(e) => setUserFullName(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="rahul@restaurant.com"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Assign Restaurant</label>
+                  <select
+                    value={userRestaurantId}
+                    onChange={(e) => setUserRestaurantId(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    {restaurants.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} ({r.id})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Staff Role</label>
+                  <select
+                    value={userRole}
+                    onChange={(e) => setUserRole(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="admin">Administrator</option>
+                    <option value="manager">Store Manager</option>
+                    <option value="cashier">Cashier Staff</option>
+                    <option value="kitchen">Kitchen Chef</option>
+                    <option value="waiter">Waiter Staff</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-850/50 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800/80">
+                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">🔒 Security Info</p>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  The user will be created with starting login password: <span className="font-mono font-bold text-brand-600 bg-brand-500/10 px-1.5 py-0.5 rounded">ChangeMe@123</span>. They can change it in settings once logged in.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer"
+              >
+                Create Staff Account
               </button>
             </form>
           </div>

@@ -1,4 +1,4 @@
-import { isSupabaseConfigured, supabase } from './supabase';
+import { isSupabaseConfigured, supabase, signUpClient } from './supabase';
 import {
   RestaurantSettings,
   UserProfile,
@@ -677,6 +677,38 @@ export const dbService = {
       const users = await this.getUsers(restaurantId);
       users.push(user);
       localStorage.setItem('restaurant_users', JSON.stringify(users));
+      notifyLocalSubscribers();
+    }
+  },
+
+  async createStaffUser(email: string, name: string, role: string, restaurantId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await signUpClient.auth.signUp({
+        email,
+        password: 'ChangeMe@123',
+        options: {
+          data: {
+            full_name: name,
+            restaurant_id: restaurantId,
+            role: role
+          }
+        }
+      });
+      if (error) throw error;
+    } else {
+      const dataKey = 'restaurant_users';
+      const existing = localStorage.getItem(dataKey);
+      const list = existing ? JSON.parse(existing) : [];
+      list.push({
+        id: `mock-user-${Date.now()}`,
+        restaurant_id: restaurantId,
+        name,
+        email,
+        role,
+        is_super_admin: false,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem(dataKey, JSON.stringify(list));
       notifyLocalSubscribers();
     }
   },
