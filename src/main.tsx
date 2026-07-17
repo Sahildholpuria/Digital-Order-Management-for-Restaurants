@@ -4,15 +4,12 @@ import './index.css';
 import App from './App.tsx';
 import { ThemeProvider } from './context/ThemeContext';
 import { RestaurantProvider } from './context/RestaurantContext';
-import { WorkspaceProvider } from './context/WorkspaceContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <RestaurantProvider>
-        <WorkspaceProvider>
-          <App />
-        </WorkspaceProvider>
+        <App />
       </RestaurantProvider>
     </ThemeProvider>
   </StrictMode>

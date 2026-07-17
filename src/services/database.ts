@@ -72,9 +72,6 @@ const mapUserToFrontend = (row: any): UserProfile => ({
   name: row.name,
   email: row.email,
   role: row.role,
-  restaurantId: row.restaurant_id || '',
-  accessibleRestaurants: row.accessible_restaurants || [],
-  activeRestaurantId: row.active_restaurant_id || '',
   createdAt: row.created_at,
 });
 
@@ -477,38 +474,6 @@ export const dbService = {
       return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
-
-  async getSubscriptionDetails(restaurantId: string): Promise<any> {
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .single();
-      if (error) {
-        return {
-          plan: 'free',
-          maxTables: 5,
-          maxStaff: 2,
-          isSuspended: false
-        };
-      }
-      return {
-        plan: data.plan,
-        maxTables: data.max_tables,
-        maxStaff: data.max_staff,
-        isSuspended: new Date(data.expiry_date).getTime() < Date.now() || data.status === 'cancelled'
-      };
-    } else {
-      return {
-        plan: 'pro',
-        maxTables: 100,
-        maxStaff: 20,
-        isSuspended: false
-      };
-    }
-  },
-
   async getTables(restaurantId: string): Promise<RestaurantTable[]> {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
@@ -615,8 +580,6 @@ export const dbService = {
         .insert({
           id: user.id,
           restaurant_id: restaurantId,
-          accessible_restaurants: user.accessibleRestaurants || [restaurantId],
-          active_restaurant_id: user.activeRestaurantId || restaurantId,
           name: user.name,
           email: user.email,
           role: user.role,
