@@ -70,7 +70,36 @@ interface RestaurantContextType {
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [restaurantId, setRestaurantId] = useState<string>('demo-restaurant');
+  const [restaurantId, setRestaurantId] = useState<string>(() => {
+    const path = window.location.pathname;
+    const menuMatch = path.match(/^\/menu\/([^/]+)$/);
+    const trackerMatch = path.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+    const tableId = menuMatch?.[1] || trackerMatch?.[1];
+    
+    if (tableId) {
+      const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+      if (cached) return cached;
+    }
+    
+    const savedUser = localStorage.getItem('restaurant_current_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u.restaurantId) return u.restaurantId;
+      } catch (e) {}
+    }
+    
+    return 'demo-restaurant';
+  });
+  const [isResolvingId, setIsResolvingId] = useState<boolean>(() => {
+    const path = window.location.pathname;
+    const isMenuRoute = path.match(/^\/menu\/([^/]+)$/) || path.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+    if (!isMenuRoute) return false;
+    
+    const tableId = isMenuRoute[1];
+    const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+    return !cached;
+  });
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
@@ -239,17 +268,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const tableId = menuMatch?.[1] || trackerMatch?.[1];
       
       if (tableId) {
-        setLoading(true);
+        const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+        if (cached) {
+          setRestaurantId(cached);
+          setIsResolvingId(false);
+          return;
+        }
+        
+        setIsResolvingId(true);
         try {
           const resolvedId = await dbService.getRestaurantIdByTableId(tableId);
           if (resolvedId) {
+            sessionStorage.setItem(`resolved_rest_${tableId}`, resolvedId);
             setRestaurantId(resolvedId);
           }
         } catch (err) {
           console.error('Failed to resolve restaurant from table URL:', err);
         } finally {
-          setLoading(false);
+          setIsResolvingId(false);
         }
+      } else {
+        setIsResolvingId(false);
       }
     };
     
@@ -749,7 +788,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       cart,
       currentTable,
       currentUser,
-      loading,
+      loading: loading || isResolvingId,
       tablesLoaded,
       restaurantId,
       isFirebase: isSupabaseConfigured,
