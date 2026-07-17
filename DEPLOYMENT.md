@@ -1,20 +1,20 @@
-# 🚀 Deployment & Hosting Guide
+# 🚀 Deployment, Hosting & SaaS Provisioning Guide
 
-This document provides a detailed, step-by-step guide to hosting, deploying, and configuring the **Digital Order Management for Restaurants** SaaS application.
+This document provides a detailed, step-by-step guide to hosting, deploying, and configuring the **Digital Order Management for Restaurants** multi-tenant SaaS application.
 
 ---
 
 ## 🏗️ Technical Stack Overview
 - **Frontend**: React (TypeScript) + Vite + Tailwind CSS
-- **Database & Sync**: Supabase (PostgreSQL with Real-time replication)
+- **Database & Sync**: Supabase (PostgreSQL with Row Level Security and Real-time replication)
 - **PDF Exporter**: jsPDF
-- **Hosting**: Vercel (recommended) or Netlify, Cloudflare Pages, Nginx.
+- **Hosting**: Vercel (recommended) or Netlify, Cloudflare Pages, Nginx VPS.
 
 ---
 
-## 🛠️ Step 1: Database Setup (Supabase)
+## 🛠️ Step 1: Database Setup (Supabase SaaS Schema)
 
-The application uses Supabase to handle real-time sync across customer tables, the kitchen display (KDS), waiter consoles, and the cashier POS terminal.
+The application uses Supabase to handle real-time sync across customer tables, the kitchen display (KDS), waiter consoles, and the cashier POS terminal, backed by strict Row Level Security (RLS) policies.
 
 ### 1. Create a Supabase Project
 1. Go to [Supabase](https://supabase.com) and sign in.
@@ -22,28 +22,37 @@ The application uses Supabase to handle real-time sync across customer tables, t
 3. Choose a project name, database password, and region.
 4. Wait for the database to finish provisioning (approx. 2 minutes).
 
-### 2. Configure Database Tables & Policies
+### 2. Configure Database Tables, RLS Policies & Procedures
 1. In your Supabase dashboard, navigate to the **SQL Editor** tab on the left menu.
 2. Click **New query**.
 3. Paste the contents of the `schema.sql` file located in the root of this project.
-4. Run the query. This sets up all tables, triggers, and Row Level Security (RLS) policies.
-
-### ⚠️ 3. Crucial Step: Drop Foreign Key Constraints
-If you allow dynamic tables, drop foreign key constraints on `table_id` fields to prevent order/notification insertions from failing when tables are deleted or restructured.
-Run the following SQL in the SQL Editor:
-```sql
-alter table public.orders drop constraint if exists orders_table_id_fkey;
-alter table public.notifications drop constraint if exists notifications_table_id_fkey;
-```
+4. Run the query. This sets up all SaaS tables: `restaurants`, `subscriptions`, `users`, `branches`, `tables`, `categories`, `food_items`, `orders`, `payments`, `notifications`, along with RLS helper functions, security policies, and the onboarding transaction procedure.
 
 ---
 
-## 🔐 Step 2: Authentication & Staff Sign Up
+## 🔐 Step 2: Onboarding & Authentication Flow
 
-The system synchronizes staff user profiles with Supabase Auth.
-1. When a user registers via Supabase Auth (Sign Up), the `on_auth_user_created` trigger in `schema.sql` automatically populates the `public.users` profile table.
-2. By default, the first user created is assigned the `'admin'` role.
-3. You can manage roles (`admin`, `manager`, `cashier`, `kitchen`, `waiter`) directly in the `public.users` table within the **Table Editor** on Supabase.
+The system synchronizes staff user profiles with Supabase Auth and workspace states.
+
+### 1. Automated Workspace Onboarding (Super Admin)
+To provision a brand new restaurant workspace:
+1. Register the restaurant owner as a new user inside your **Supabase Auth** dashboard and copy their User ID (UUID).
+2. Go to the SQL Editor or call via RPC the `onboard_new_restaurant` function:
+   ```sql
+   select public.onboard_new_restaurant(
+     'restaurant-slug-id',     -- Unique slug/ID
+     'The Grand Bistro',       -- Restaurant Name
+     'pro',                    -- Plan ('free', 'starter', 'pro', 'enterprise')
+     'owner-supabase-uuid',    -- Auth UUID of the owner
+     'Owner Name',             -- Owner's name
+     'owner@email.com'         -- Owner's email
+   );
+   ```
+   *This automatically provisions the restaurant, subscriptions metadata, primary branch, owner staff profile, seeds 10 default tables with printable QR configurations, and sets up a default menu category in a single transaction.*
+
+### 2. Staff Profile Synchronization
+1. When a new staff user registers or is invited via auth, the database trigger `on_auth_user_created` automatically inserts them into `public.users` mapping to the default restaurant workspace.
+2. Managers can manage roles (`owner`, `manager`, `cashier`, `kitchen`, `waiter`) directly in the **Users** setting tab in their workspace.
 
 ---
 
@@ -144,7 +153,7 @@ Follow the prompts to enable automatic HTTPS redirection.
 If you are uploading to a traditional cPanel or shared hosting service:
 
 1. Run `npm run build` on your local machine.
-2. Compress the contents of the `/dist` folder into a `.zip` file (do not zip the `/dist` folder itself, zip only its *contents*).
+2. Compress the contents of the `/dist` folder into a `.zip` file.
 3. Log into your hosting provider's File Manager and upload the zip to your target folder (e.g., `public_html` for your primary domain).
 4. Extract the zip file in that folder.
 5. Create or append to a `.htaccess` file in that folder to ensure React Router client-side routes work when refreshed:
@@ -185,9 +194,3 @@ To run and verify the codebase locally:
    ```bash
    npm run build
    ```
-
----
-
-## 🧹 Step 7: Data Retention & Cleanup Policies
-- **Order History Pruning**: The application contains a built-in background cleaner (`cleanupExpiredOrders` in `database.ts`). Upon dashboard login, any completed orders older than **30 days** are permanently deleted from the database.
-- **Completed Orders Removal**: Completed orders automatically fade out of the customer's active menu page (`CustomerMenu.tsx`) after **2 minutes** via dynamic `localStorage` tracking.

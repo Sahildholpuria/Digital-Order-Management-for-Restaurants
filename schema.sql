@@ -339,9 +339,17 @@ begin
   insert into public.branches (id, restaurant_id, name)
   values (v_branch_id, p_restaurant_id, 'Main Branch');
 
-  -- 4. Create User Profile & Set active workspace
+  -- 4. Create User Profile & Set active workspace (upsert using ON CONFLICT to prevent auth trigger duplicate key race condition)
   insert into public.users (id, restaurant_id, accessible_restaurants, active_restaurant_id, name, email, role, status)
-  values (p_owner_uuid, p_restaurant_id, array[p_restaurant_id], p_restaurant_id, p_owner_name, p_owner_email, 'owner', 'active');
+  values (p_owner_uuid, p_restaurant_id, array[p_restaurant_id], p_restaurant_id, p_owner_name, p_owner_email, 'owner', 'active')
+  on conflict (id) do update set
+    restaurant_id = EXCLUDED.restaurant_id,
+    accessible_restaurants = EXCLUDED.accessible_restaurants,
+    active_restaurant_id = EXCLUDED.active_restaurant_id,
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    status = EXCLUDED.status;
 
   -- 5. Seed 10 Default Tables with unique QR tracking endpoints
   for i in 1..10 loop
