@@ -383,6 +383,11 @@ export const App: React.FC = () => {
               <LogOut className="w-4.5 h-4.5" />
               <span>{t.logOut}</span>
             </button>
+            <div className="text-center pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/50">
+              <span className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase block">
+                Build by RestaurantsOS Pvt. Ltd
+              </span>
+            </div>
           </div>
         </aside>
 
