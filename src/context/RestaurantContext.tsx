@@ -149,20 +149,39 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const syncSupabaseProfile = async (user: any) => {
     try {
-      const users = await dbService.getUsers(restaurantId);
-      const found = users.find(u => u.id === user.id);
-      if (found) {
-        setCurrentUserState(found);
+      // Query directly by user ID — avoids relying on context restaurantId
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        // Profile found — map to frontend shape
+        const profile: UserProfile = {
+          id: data.id,
+          restaurantId: data.restaurant_id,
+          name: data.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
+          email: data.email || user.email || '',
+          role: data.role || 'admin',
+          isSuperAdmin: data.is_super_admin || false,
+          createdAt: data.created_at || new Date().toISOString(),
+        };
+        setCurrentUserState(profile);
       } else {
+        // Profile genuinely missing (e.g. legacy account) — only insert then
         const profile: UserProfile = {
           id: user.id,
+          restaurantId: 'demo-restaurant',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
           email: user.email || '',
           role: 'admin',
-          isSuperAdmin: user.email === 'superadmin@restaurantsos.com' || user.email?.includes('superadmin'),
+          isSuperAdmin: false,
           createdAt: new Date().toISOString(),
         };
-        await dbService.addUser(restaurantId, profile);
+        await dbService.addUser('demo-restaurant', profile);
         setCurrentUserState(profile);
       }
     } catch (err) {

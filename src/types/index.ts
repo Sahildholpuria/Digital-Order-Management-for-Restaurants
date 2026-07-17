@@ -24,6 +24,7 @@ export type UserRole = 'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter';
 
 export interface UserProfile {
   id: string;
+  restaurantId?: string;
   name: string;
   email: string;
   role: UserRole;
