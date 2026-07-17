@@ -1,6 +1,6 @@
-# Restaurant Order Management System (SaaS)
+# Digital Order Management for Restaurants
 
-A modern, production-ready, and highly aesthetic QR-based self-ordering and POS dashboard system designed for both single-location diners and multi-branch restaurant chains. 
+A modern, production-ready, and highly aesthetic QR-based self-ordering and POS dashboard system designed for both single-location diners and multi-branch restaurant chains.
 
 Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, and **Supabase** (with an intelligent real-time fallback mock engine).
 
@@ -11,11 +11,14 @@ Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, a
 ### 1. Customer Self-Ordering (QR Flow)
 - **Zero Friction**: Customers scan a table-specific QR Code (e.g. `/menu/table-3`) and browse menus instantly without login.
 - **Dietary & Taste Selectors**: Veg/Non-veg indicators, custom spicy level rankings, and special cooking instruction drawers.
+- **Multi-Language Selector**: High-fidelity translation switcher (English & Hindi) covering the entire customer interface.
+- **Portion Selection (Half/Full)**: Support for custom portion variants (e.g. `Half` or `Full` sizes with independent pricing) encoded directly into dish descriptions (using format: `||variants:Half=150;Full=280`).
 - **Cart Manager**: Slick slide-up mobile cart drawer with real-time tax/discount parameters and quantity controls.
-- **Real-Time Tracker**: Progress timeline tracking preparation states (Pending &rarr; Accepted &rarr; Preparing &rarr; Ready &rarr; Served) using real-time sync.
+- **Real-Time Tracker**: Progress timeline tracking preparation states (Pending &rarr; Accepted &rarr; Preparing &rarr; Ready &rarr; Served).
+- **Auto-Removal Timeout**: Settled completed orders are automatically hidden from the active customer view exactly **2 minutes** after payment completion, keeping the screen clean for next guests.
 
 ### 2. Live Order POS Console
-- **Kitchen Notifications**: Plays chime audio and uses browser **Speech Synthesis (Web Speech API)** to speak incoming tickets ("*New order received from Table 4*").
+- **Loud & Smooth Audio Notifications**: High-volume, smooth oscillator 4-note bell chime sequence synthesized on-device (via Web Audio API) paired with browser **Speech Synthesis (Web Speech API)** to speak incoming tickets ("*New order received from Table 4*").
 - **Kanban Board**: Drag/stage boards separating orders into New Pending, In-Kitchen cooking, and Ready/Serving.
 - **Order Editor**: Modifies quantities, items, and comments on orders before final settlements.
 
@@ -39,7 +42,8 @@ Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, a
 
 ### 7. Staff Roles & Reports
 - **Role Permissions**: Visual controls and interface filtering for Admin, Store Manager, Cashier, Kitchen Staff, and Waiter.
-- **Analytics Widgets**: Peak dining hour curves, bestselling item shares, category metrics, and weekly revenue.
+- **Analytics Dashboard**: Deep charts displaying peak dining hour heat maps, bestselling item distributions, category revenue shares, and weekly revenue trends.
+- **Historical Reports**: Downloadable list of 30-day order history logs in CSV or PDF formats before auto-deletion scheduler runs.
 - **Data Export**: Exposes transactional reports downloadable as CSV.
 
 ---
