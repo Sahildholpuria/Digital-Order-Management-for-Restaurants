@@ -263,7 +263,7 @@ export const App: React.FC = () => {
     };
 
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col md:flex-row animate-fade-in">
+      <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col md:flex-row animate-fade-in">
         
         {/* Mobile Header Bar */}
         <header className="md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
@@ -284,7 +284,7 @@ export const App: React.FC = () => {
         </header>
 
         {/* Sidebar Frame */}
-        <aside className={`fixed md:sticky top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 md:translate-x-0 backdrop-blur-xl ${
+        <aside className={`fixed md:sticky md:top-0 md:h-screen md:overflow-y-auto top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 md:translate-x-0 backdrop-blur-xl ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
           <div className="space-y-8">
@@ -387,7 +387,7 @@ export const App: React.FC = () => {
         </aside>
 
         {/* Content Container */}
-        <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
+        <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
           {renderActiveTabContent()}
         </main>
 
