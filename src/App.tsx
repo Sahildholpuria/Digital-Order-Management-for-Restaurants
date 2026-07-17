@@ -394,7 +394,7 @@ export const App: React.FC = () => {
           <span>QR SaaS Platform Suite</span>
         </div>
         <h1 className="text-4xl sm:text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
-          Restaurant Order Management
+          Digital Order Management for Restaurants
         </h1>
         <p className="text-slate-550 dark:text-slate-400 max-w-md mx-auto text-sm sm:text-base font-medium font-sans">
           A production-ready POS terminal, KDS displays, and table QR-code menus.
