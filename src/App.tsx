@@ -13,6 +13,8 @@ import { ReportsManager } from './pages/owner/ReportsManager';
 import { SettingsManager } from './pages/owner/SettingsManager';
 import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
 import { WaiterDashboard } from './pages/waiter/WaiterDashboard';
+import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
+import { SuperAdminDashboard } from './pages/super-admin/SuperAdminDashboard';
 
 import { 
   TrendingUp, 
@@ -32,15 +34,22 @@ import {
   Sparkles,
   ArrowRight,
   Globe,
+  Building,
   Shield
 } from 'lucide-react';
 import { translations, Language } from './translations';
-import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
-import { SubscriptionGuard } from './components/SubscriptionGuard';
-import { SuperAdminDashboard } from './pages/super-admin/Dashboard';
 
 export const App: React.FC = () => {
-  const { currentUser, logoutUser, loading, settings } = useRestaurant();
+  const { 
+    currentUser, 
+    logoutUser, 
+    loading, 
+    settings,
+    workspaces,
+    activeWorkspace,
+    isSuperAdmin,
+    setShowWorkspaceSwitcher
+  } = useRestaurant();
   const { theme, toggleTheme } = useTheme();
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('admin_lang') as Language) || 'en');
@@ -101,7 +110,7 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center animate-fade-in">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex items-center justify-center animate-fade-in">
         <div className="text-center space-y-4">
           <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto shadow-md"></div>
           <p className="text-sm font-bold tracking-wide text-slate-500 dark:text-slate-400">Bootstrapping Bistro System...</p>
@@ -134,7 +143,7 @@ export const App: React.FC = () => {
     if (!currentUser) {
       return <Login onSuccess={() => navigateTo('/kitchen')} />;
     }
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'kitchen') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'kitchen' && currentUser.role !== 'owner') {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
@@ -147,30 +156,20 @@ export const App: React.FC = () => {
         </div>
       );
     }
-    return (
-      <div className="relative">
-        <button 
-          onClick={() => navigateTo('/')}
-          className="absolute top-4 left-4 bg-slate-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 transition-colors shadow-lg"
-        >
-          &larr; Exit KDS
-        </button>
-        <KitchenDisplay />
-      </div>
-    );
+    return <KitchenDisplay />;
   }
 
-  // Waiter direct display access
-  if (currentPath === '/waiter' || currentHash === '#waiter') {
+  // Super Admin direct portal access
+  if (currentPath === '/super-admin') {
     if (!currentUser) {
-      return <Login onSuccess={() => navigateTo('/waiter')} />;
+      return <Login onSuccess={() => navigateTo('/super-admin')} />;
     }
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'waiter') {
+    if (!isSuperAdmin) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
             <h2 className="text-2xl font-black text-red-500 mb-2 font-sans tracking-tight">Access Denied</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">You do not have the required permissions to view the Waiter Console.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Only Super Admins can access the SaaS Master Control Dashboard.</p>
             <button onClick={() => navigateTo('/')} className="bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-6 rounded-xl text-xs transition-colors">
               Go Home
             </button>
@@ -179,25 +178,23 @@ export const App: React.FC = () => {
       );
     }
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh p-6 relative">
-        <button 
-          onClick={() => navigateTo('/')}
-          className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 transition-all shadow-sm"
-        >
-          &larr; Exit Console
-        </button>
-        <WaiterDashboard />
-      </div>
+      <>
+        <SuperAdminDashboard />
+        <WorkspaceSwitcher />
+      </>
     );
   }
 
-  // Staff Login Rerouting
-  if (currentPath === '/login' || currentHash === '#login') {
+  // Staff Portal Login Access
+  if (currentPath === '/login') {
     if (currentUser) {
-      navigateTo('/admin');
-    } else {
-      return <Login onSuccess={() => navigateTo('/admin')} />;
+      if (isSuperAdmin) {
+        navigateTo('/super-admin');
+      } else {
+        navigateTo('/admin');
+      }
     }
+    return <Login onSuccess={() => navigateTo(isSuperAdmin ? '/super-admin' : '/admin')} />;
   }
 
   // ==========================================
@@ -209,10 +206,7 @@ export const App: React.FC = () => {
     }
 
     // Role-based rendering filters
-    const isRole = (roles: string[]) => {
-      const mappedRole = currentUser.role === 'owner' ? 'admin' : currentUser.role;
-      return roles.includes(mappedRole) || currentUser.role === 'super_admin';
-    };
+    const isRole = (roles: string[]) => roles.includes(currentUser.role);
 
     // KDS redirect for kitchen staff
     if (currentUser.role === 'kitchen') {
@@ -246,40 +240,36 @@ export const App: React.FC = () => {
 
     // Sidebar items based on role permissions
     const sidebarItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager'] },
-      { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
-      { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager'] },
-      { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin', 'manager'] },
-      { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
-      { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
-      { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
-      { id: 'superAdmin', label: 'Platform Admin', icon: Shield, roles: ['super_admin'] }
+      { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager', 'owner'] },
+      { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier', 'owner'] },
+      { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager', 'owner'] },
+      { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin', 'manager', 'owner'] },
+      { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier', 'owner'] },
+      { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin', 'owner'] },
+      { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin', 'owner'] },
     ].filter(item => isRole(item.roles));
+
+    // Append Super Admin control panel link if logged in as platform owner
+    if (isSuperAdmin) {
+      sidebarItems.push({ id: 'super-admin', label: 'Platform Admin', icon: Shield, roles: ['admin', 'owner'] });
+    }
 
     // Render active tab body
     const renderActiveTabContent = () => {
-      let content = <AdminDashboard />;
       switch (activeTab) {
-        case 'dashboard': content = <AdminDashboard />; break;
-        case 'orders': content = content = <OrdersManager />; break;
-        case 'tables': content = <TablesManager />; break;
-        case 'menu': content = <MenuManager />; break;
-        case 'billing': content = <BillingManager />; break;
-        case 'reports': content = <ReportsManager />; break;
-        case 'settings': content = <SettingsManager />; break;
-        case 'superAdmin': content = <SuperAdminDashboard />; break;
-        default: content = <AdminDashboard />;
+        case 'dashboard': return <AdminDashboard />;
+        case 'orders': return <OrdersManager />;
+        case 'tables': return <TablesManager />;
+        case 'menu': return <MenuManager />;
+        case 'billing': return <BillingManager />;
+        case 'reports': return <ReportsManager />;
+        case 'settings': return <SettingsManager />;
+        default: return <AdminDashboard />;
       }
-      
-      // Super admin is exempt from subscription limits
-      if (activeTab === 'superAdmin' || currentUser.role === 'super_admin') {
-        return content;
-      }
-      return <SubscriptionGuard>{content}</SubscriptionGuard>;
     };
 
     return (
-      <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col md:flex-row animate-fade-in">
+      <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-955 bg-mesh flex flex-col md:flex-row animate-fade-in">
         
         {/* Mobile Header Bar */}
         <header className="md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
@@ -305,39 +295,51 @@ export const App: React.FC = () => {
         }`}>
           <div className="space-y-8">
             {/* Sidebar Top / Brand logo */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
-                  <ChefHat className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">POS Portal</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{currentUser.role}</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-brand-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                    <ChefHat className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">POS Portal</h2>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{currentUser.role}</p>
+                  </div>
                 </div>
               </div>
 
-              <button 
-                onClick={() => setMobileSidebarOpen(false)}
-                className="md:hidden p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {/* Workspace Switcher Trigger dropdown widget */}
+              {workspaces.length > 1 && (
+                <button
+                  onClick={() => setShowWorkspaceSwitcher(true)}
+                  className="w-full flex items-center justify-between bg-slate-50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800/50 p-2.5 rounded-2xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  <span className="font-extrabold flex items-center gap-1.5 truncate max-w-[130px]">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: activeWorkspace?.themeColor || '#6366F1' }} />
+                    {activeWorkspace?.name || 'Switch Workspace'}
+                  </span>
+                  <span className="text-[9px] font-black uppercase text-brand-600 bg-brand-50 dark:bg-brand-950/40 px-1.5 py-0.5 rounded-full">
+                    Change
+                  </span>
+                </button>
+              )}
             </div>
 
-            {/* Workspace switcher */}
-            <WorkspaceSwitcher />
-
-            {/* Sidebar Menus */}
-            <nav className="space-y-1">
-              {sidebarItems.map(item => {
+            {/* Sidebar Navigation */}
+            <nav className="space-y-1.5">
+              {sidebarItems.map((item) => {
                 const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => {
-                      setActiveTab(item.id);
-                      setMobileSidebarOpen(false);
-                      navigateTo('/admin');
+                      if (item.id === 'super-admin') {
+                        navigateTo('/super-admin');
+                      } else {
+                        setActiveTab(item.id);
+                        setMobileSidebarOpen(false);
+                        navigateTo('/admin');
+                      }
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 ${
                       isActive
@@ -380,10 +382,10 @@ export const App: React.FC = () => {
                 setLang(nextLang);
                 localStorage.setItem('admin_lang', nextLang);
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
             >
-              <Globe className="w-4.5 h-4.5 text-brand-500" />
-              <span>{lang === 'en' ? 'हिन्दी (Hindi)' : 'English (EN)'}</span>
+              <Globe className="w-4.5 h-4.5 text-slate-400" />
+              <span>{lang === 'en' ? 'हिन्दी (Hindi)' : 'English'}</span>
             </button>
 
             {/* User Logged Details */}
@@ -414,6 +416,8 @@ export const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
           {renderActiveTabContent()}
         </main>
+
+        <WorkspaceSwitcher />
 
       </div>
     );
@@ -448,7 +452,7 @@ export const App: React.FC = () => {
         
         {/* Owner POS terminal Card */}
         <div 
-          onClick={() => navigateTo(currentUser ? '/admin' : '/login')}
+          onClick={() => navigateTo(currentUser ? (isSuperAdmin ? '/super-admin' : '/admin') : '/login')}
           className="bg-white/75 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
         >
           <div>
@@ -469,25 +473,21 @@ export const App: React.FC = () => {
 
         {/* Quick Direct links row */}
         <div className="bg-white/40 dark:bg-slate-900/20 p-4 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 flex flex-wrap gap-4 items-center justify-center text-xs font-bold text-slate-500">
-          <span>Direct Access Consoles:</span>
-          <button onClick={() => navigateTo('/kitchen')} className="text-amber-500 hover:text-amber-600 flex items-center gap-1 transition-colors">
-            <ChefHat className="w-3.5 h-3.5" /> Kitchen KDS
-          </button>
-          <span className="text-slate-300">|</span>
-          <button onClick={() => navigateTo('/waiter')} className="text-pink-500 hover:text-pink-600 flex items-center gap-1 transition-colors">
-            <User className="w-3.5 h-3.5" /> Waiter Console
-          </button>
+          <button onClick={() => navigateTo('/kitchen')} className="hover:text-brand-500 transition-colors cursor-pointer">Kitchen Display Console</button>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <button onClick={() => navigateTo('/menu/t1')} className="hover:text-brand-500 transition-colors cursor-pointer">Demo Customer Menu</button>
         </div>
-
       </main>
 
-      {/* Footer copyright */}
-      <footer className="max-w-4xl mx-auto w-full text-center text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-        <p>&copy; {new Date().getFullYear()} {settings?.name || 'The Grand Bistro'} SaaS Terminal. Apple inspired minimal design.</p>
+      <footer className="text-center z-10">
+        <p className="text-xs text-slate-450 dark:text-slate-500 font-medium">
+          © 2026 RestaurantsOS Pvt. Ltd. All rights reserved.
+        </p>
       </footer>
+
+      <WorkspaceSwitcher />
 
     </div>
   );
 };
-
 export default App;
