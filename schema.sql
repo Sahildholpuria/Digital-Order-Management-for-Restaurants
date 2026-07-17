@@ -276,7 +276,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Security helper to get a user's primary restaurant_id
+-- Security helper to get a user's primary restaurant_id (RECURSION-FREE)
 create or replace function public.get_user_restaurant(user_id uuid)
 returns uuid as $$
 begin
@@ -284,39 +284,35 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Security helper to verify tenant membership
-create or replace function public.belongs_to_restaurant(user_id uuid, rest_id uuid)
-returns boolean as $$
+-- Security helper to get a user's role (RECURSION-FREE)
+create or replace function public.get_user_role(user_id uuid)
+returns text as $$
 begin
-  return (
-    public.is_super_admin(user_id) or
-    exists (
-      select 1 from public.restaurant_users
-      where id = user_id and restaurant_id = rest_id and status = 'active'
-    )
-  );
+  return (select role from public.restaurant_users where id = user_id limit 1);
 end;
 $$ language plpgsql security definer;
 
--- Super Admin Bypass policies
+-- Super Admin read policy
 create policy "Super Admin read all" on public.super_admins for select using (public.is_super_admin(auth.uid()));
 
 -- Restaurants Policies
 create policy "Allow public read for settings" on public.restaurants for select using (true);
 create policy "Allow admins write for settings" on public.restaurants for all using (
   public.is_super_admin(auth.uid()) or
-  (exists (select 1 from public.restaurant_users where id = auth.uid() and restaurant_id = id and role in ('owner', 'admin')))
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Restaurant Settings Policies
 create policy "Allow public read for configurations" on public.restaurant_settings for select using (true);
 create policy "Allow staff write for configurations" on public.restaurant_settings for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Subscriptions Policies
 create policy "Allow staff read for subscription status" on public.restaurant_subscriptions for select using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 create policy "Allow super admin to manage subscriptions" on public.restaurant_subscriptions for all using (
   public.is_super_admin(auth.uid())
@@ -324,69 +320,83 @@ create policy "Allow super admin to manage subscriptions" on public.restaurant_s
 
 -- Branches Policies
 create policy "Allow staff to access branches" on public.branches for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
--- Users Profiles Policies
+-- Users Profiles Policies (RECURSION-FREE)
 create policy "Allow staff to read active profiles" on public.restaurant_users for select using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  id = auth.uid() or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 create policy "Allow admins to manage staff" on public.restaurant_users for all using (
   public.is_super_admin(auth.uid()) or
-  (exists (select 1 from public.restaurant_users where id = auth.uid() and restaurant_id = restaurant_id and role in ('owner', 'admin')))
+  (
+    restaurant_id = public.get_user_restaurant(auth.uid()) and
+    public.get_user_role(auth.uid()) in ('owner', 'admin')
+  )
 );
 
 -- Tables Policies
 create policy "Allow public read for table status" on public.tables for select using (true);
 create policy "Allow staff to manage tables" on public.tables for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Categories Policies
 create policy "Allow public read for menu list categories" on public.menu_categories for select using (true);
 create policy "Allow manager to edit categories" on public.menu_categories for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Menu Items Policies
 create policy "Allow public read for catalogue dishes" on public.menu_items for select using (true);
 create policy "Allow manager to edit dishes" on public.menu_items for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Orders Policies
 create policy "Allow public to place orders" on public.orders for insert with check (true);
 create policy "Allow public to track orders" on public.orders for select using (true);
 create policy "Allow staff to manage orders" on public.orders for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Order Items Policies
 create policy "Allow public to add order items" on public.order_items for insert with check (true);
 create policy "Allow public to view order items" on public.order_items for select using (true);
 create policy "Allow staff to manage order items" on public.order_items for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Payments Policies
 create policy "Allow cashier to view/manage billing" on public.payments for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Customers Policies
 create policy "Allow staff to lookup customer records" on public.customers for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Inventory Policies
 create policy "Allow staff to check stock" on public.inventory for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- Notifications Policies
 create policy "Allow public alerts trigger" on public.notifications for insert with check (true);
 create policy "Allow staff alerts management" on public.notifications for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id)
+  public.is_super_admin(auth.uid()) or
+  restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
 -- 5. ATOMIC ONBOARDING TRANSACTION FUNCTION
