@@ -67,7 +67,100 @@ npx vercel --prod --yes
 
 ---
 
-## 🖥️ Step 4: Local Setup & Verification
+## 🌐 Step 4: Self-Hosting on a Linux VPS (Nginx)
+
+If you wish to host this application on your own virtual private server (e.g., AWS EC2, DigitalOcean Droplet, Linode, Hostinger VPS) using Nginx, follow these steps:
+
+### 1. Build the Production Files Locally or on the VPS
+Ensure you have the production environment variables configured. Run:
+```bash
+npm install
+npm run build
+```
+This will compile the TypeScript code and generate a static production folder called `/dist` in your project root.
+
+### 2. Install Nginx on your VPS
+Log into your server via SSH and run:
+```bash
+sudo apt update
+sudo apt install nginx -y
+```
+
+### 3. Upload Production Files
+Copy the contents of the local `/dist` folder to your server's web root directory (usually `/var/www/html` or a custom directory like `/var/www/restaurant-pos`):
+```bash
+# Uploading via SCP from your local machine
+scp -r ./dist/* username@your-server-ip:/var/www/html/
+```
+
+### 4. Configure Nginx Server Block (Handling Client-Side Routing)
+Create or edit your site's Nginx configuration file (e.g., `/etc/nginx/sites-available/default`):
+```bash
+sudo nano /etc/nginx/sites-available/default
+```
+
+Update the configuration to configure the static file directory and ensure that **React Router client-side routing** falls back to `index.html`:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    root /var/www/html;
+    index index.html;
+
+    # Support React Client-side Router redirection
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets for better performance
+    location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|cur|gz|svg|svgz|mp4|ogg|ogv|webm|htc)$ {
+        expires 1M;
+        access_log off;
+        add_header Cache-Control "public";
+    }
+
+    error_page 404 /index.html;
+}
+```
+
+Test and reload Nginx:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 5. Setup SSL (HTTPS) with Let's Encrypt
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+Follow the prompts to enable automatic HTTPS redirection.
+
+---
+
+## 📁 Step 5: Hosting on Shared Hosting (cPanel / Hostinger)
+
+If you are uploading to a traditional cPanel or shared hosting service:
+
+1. Run `npm run build` on your local machine.
+2. Compress the contents of the `/dist` folder into a `.zip` file (do not zip the `/dist` folder itself, zip only its *contents*).
+3. Log into your hosting provider's File Manager and upload the zip to your target folder (e.g., `public_html` for your primary domain).
+4. Extract the zip file in that folder.
+5. Create or append to a `.htaccess` file in that folder to ensure React Router client-side routes work when refreshed:
+   ```apache
+   <IfModule mod_rewrite.c>
+     RewriteEngine On
+     RewriteBase /
+     RewriteRule ^index\.html$ - [L]
+     RewriteCond %{REQUEST_FILENAME} !-f
+     RewriteCond %{REQUEST_FILENAME} !-d
+     RewriteCond %{REQUEST_FILENAME} !-l
+     RewriteRule . /index.html [L]
+   </IfModule>
+   ```
+
+## 🖥️ Step 6: Local Setup & Verification
 
 To run and verify the codebase locally:
 
@@ -95,6 +188,6 @@ To run and verify the codebase locally:
 
 ---
 
-## 🧹 Step 5: Data Retention & Cleanup Policies
+## 🧹 Step 7: Data Retention & Cleanup Policies
 - **Order History Pruning**: The application contains a built-in background cleaner (`cleanupExpiredOrders` in `database.ts`). Upon dashboard login, any completed orders older than **30 days** are permanently deleted from the database.
 - **Completed Orders Removal**: Completed orders automatically fade out of the customer's active menu page (`CustomerMenu.tsx`) after **2 minutes** via dynamic `localStorage` tracking.

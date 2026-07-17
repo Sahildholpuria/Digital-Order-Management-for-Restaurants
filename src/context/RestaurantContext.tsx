@@ -308,11 +308,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       const t = audioCtx.currentTime;
 
-      // 4-note ascending bell sequence: C5 → E5 → G5 → C6
-      playNote(523.25, t + 0.0,  0.35, 0.55); // C5
-      playNote(659.25, t + 0.22, 0.35, 0.55); // E5
-      playNote(783.99, t + 0.44, 0.35, 0.55); // G5
-      playNote(1046.5, t + 0.66, 0.55, 0.65); // C6 - held longer for a satisfying ring
+      // 4-note ascending bell sequence: C5 → E5 → G5 → C6 (Louder version)
+      playNote(523.25, t + 0.0,  0.35, 0.95); // C5
+      playNote(659.25, t + 0.22, 0.35, 0.95); // E5
+      playNote(783.99, t + 0.44, 0.35, 0.95); // G5
+      playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6 - held longer for a satisfying ring
 
       // Speech Synthesis Voice Announcement
       if ('speechSynthesis' in window) {
