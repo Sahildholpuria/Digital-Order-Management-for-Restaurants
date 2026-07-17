@@ -38,6 +38,9 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     enableWaiterCall,
     enableBillRequest,
     enableSoundNotification,
+    subscriptionStatus: row.subscription_status || 'trial',
+    subscriptionExpiresAt: row.subscription_expires_at,
+    planType: row.plan_type || 'starter',
     createdAt: row.created_at || row.createdAt,
   };
 };
@@ -55,6 +58,9 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.currency !== undefined && { currency: model.currency }),
     ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
     ...(model.closingHours !== undefined && { closing_hours: model.closingHours }),
+    ...(model.subscriptionStatus !== undefined && { subscription_status: model.subscriptionStatus }),
+    ...(model.subscriptionExpiresAt !== undefined && { subscription_expires_at: model.subscriptionExpiresAt }),
+    ...(model.planType !== undefined && { plan_type: model.planType }),
   };
 
   if (model.themeColor !== undefined) {
@@ -72,6 +78,7 @@ const mapUserToFrontend = (row: any): UserProfile => ({
   name: row.name,
   email: row.email,
   role: row.role,
+  isSuperAdmin: !!row.is_super_admin,
   createdAt: row.created_at,
 });
 
@@ -539,6 +546,86 @@ export const dbService = {
       const updated = { ...current, ...updates };
       localStorage.setItem('restaurant_settings', JSON.stringify(updated));
       notifyLocalSubscribers();
+    }
+  },
+
+  async getAllRestaurants(): Promise<RestaurantSettings[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(mapSettingsToFrontend);
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      if (!data) {
+        const defaultList = [{
+          id: 'demo-restaurant',
+          name: 'The Grand Bistro',
+          theme_color: '#6366F1|true|true|true|en',
+          subscription_status: 'trial',
+          plan_type: 'starter',
+          created_at: new Date().toISOString()
+        }];
+        localStorage.setItem('super_admin_restaurants', JSON.stringify(defaultList));
+        return defaultList.map(mapSettingsToFrontend);
+      }
+      return JSON.parse(data).map(mapSettingsToFrontend);
+    }
+  },
+
+  async createRestaurant(restaurant: Partial<RestaurantSettings>): Promise<void> {
+    if (isSupabaseConfigured) {
+      const dbRow = mapSettingsToDb(restaurant);
+      dbRow.created_at = new Date().toISOString();
+      dbRow.subscription_status = restaurant.subscriptionStatus || 'trial';
+      dbRow.subscription_expires_at = restaurant.subscriptionExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      dbRow.plan_type = restaurant.planType || 'starter';
+      const { error } = await supabase
+        .from('restaurants')
+        .insert(dbRow);
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      const list = data ? JSON.parse(data) : [];
+      const newRest = {
+        ...DEFAULT_SETTINGS,
+        ...restaurant,
+        id: restaurant.id || `rest-${Date.now()}`,
+        subscriptionStatus: restaurant.subscriptionStatus || 'trial',
+        planType: restaurant.planType || 'starter',
+        subscriptionExpiresAt: restaurant.subscriptionExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      list.push(newRest);
+      localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
+      notifyLocalSubscribers();
+    }
+  },
+
+  async updateRestaurantSubscription(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
+    if (isSupabaseConfigured) {
+      const dbRow = mapSettingsToDb(updates);
+      const { error } = await supabase
+        .from('restaurants')
+        .update(dbRow)
+        .eq('id', restaurantId);
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      const list = data ? JSON.parse(data) : [];
+      const index = list.findIndex((r: any) => r.id === restaurantId);
+      if (index > -1) {
+        list[index] = { ...list[index], ...updates };
+        localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
+        if (restaurantId === 'demo-restaurant') {
+          const currentSettings = localStorage.getItem('restaurant_settings');
+          const current = currentSettings ? JSON.parse(currentSettings) : {};
+          localStorage.setItem('restaurant_settings', JSON.stringify({ ...current, ...updates }));
+        }
+        notifyLocalSubscribers();
+      }
     }
   },
 

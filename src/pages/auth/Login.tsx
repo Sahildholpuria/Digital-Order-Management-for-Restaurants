@@ -28,6 +28,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
 
   // Mock roles for easy testing
   const mockRoles = [
+    { role: 'superadmin', label: 'Super Admin (SaaS Owner)', desc: 'Central subscription & tenant manager', color: 'bg-brand-600' },
     { role: 'admin', label: 'Administrator', desc: 'Full system control & reports', color: 'bg-indigo-500' },
     { role: 'manager', label: 'Store Manager', desc: 'Menu and order overrides', color: 'bg-emerald-500' },
     { role: 'kitchen', label: 'Kitchen Chef', desc: 'KDS display screen access', color: 'bg-orange-500' },
@@ -66,8 +67,9 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
   const handleMockRoleLogin = async (role: string) => {
     setLoading(true);
     try {
-      const mockEmail = `${role}@restaurant.com`;
-      await loginMockUser(mockEmail, role as any);
+      const mockEmail = role === 'superadmin' ? 'superadmin@restaurant.com' : `${role}@restaurant.com`;
+      const actualRole = role === 'superadmin' ? 'admin' : role;
+      await loginMockUser(mockEmail, actualRole as any);
       onSuccess();
     } catch (err) {
       setError('Mock login failed.');

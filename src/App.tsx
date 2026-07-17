@@ -31,8 +31,10 @@ import {
   X,
   Sparkles,
   ArrowRight,
-  Globe
+  Globe,
+  Shield
 } from 'lucide-react';
+import { SuperAdminDashboard } from './pages/owner/SuperAdminDashboard';
 import { translations, Language } from './translations';
 
 export const App: React.FC = () => {
@@ -66,7 +68,7 @@ export const App: React.FC = () => {
       setCurrentHash(window.location.hash);
       
       const hash = window.location.hash.replace('#', '');
-      const validTabs = ['dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
+      const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
       if (validTabs.includes(hash)) {
         setActiveTab(hash);
       }
@@ -80,6 +82,13 @@ export const App: React.FC = () => {
       window.removeEventListener('hashchange', handleLocationChange);
     };
   }, []);
+
+  // Automatically switch to superadmin tab if Super Admin logs in
+  useEffect(() => {
+    if (currentUser?.isSuperAdmin && activeTab !== 'superadmin') {
+      setActiveTab('superadmin');
+    }
+  }, [currentUser]);
 
   // Persist tab change to URL hash and localStorage
   useEffect(() => {
@@ -239,6 +248,7 @@ export const App: React.FC = () => {
 
     // Sidebar items based on role permissions
     const sidebarItems = [
+      ...(currentUser?.isSuperAdmin ? [{ id: 'superadmin', label: 'Super Admin', icon: Shield, roles: ['admin'] }] : []),
       { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager'] },
       { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
       { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager'] },
@@ -251,6 +261,7 @@ export const App: React.FC = () => {
     // Render active tab body
     const renderActiveTabContent = () => {
       switch (activeTab) {
+        case 'superadmin': return <SuperAdminDashboard />;
         case 'dashboard': return <AdminDashboard />;
         case 'orders': return <OrdersManager />;
         case 'tables': return <TablesManager />;
@@ -258,7 +269,7 @@ export const App: React.FC = () => {
         case 'billing': return <BillingManager />;
         case 'reports': return <ReportsManager />;
         case 'settings': return <SettingsManager />;
-        default: return <AdminDashboard />;
+        default: return currentUser?.isSuperAdmin ? <SuperAdminDashboard /> : <AdminDashboard />;
       }
     };
 
