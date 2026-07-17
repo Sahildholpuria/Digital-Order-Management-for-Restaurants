@@ -154,10 +154,10 @@ begin
   insert into public.users (id, restaurant_id, name, email, role)
   values (
     new.id,
-    'demo-restaurant',
+    coalesce(new.raw_user_meta_data->>'restaurant_id', 'demo-restaurant'),
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
-    'admin' -- default first user role
+    coalesce(new.raw_user_meta_data->>'role', 'admin')
   );
   return new;
 end;

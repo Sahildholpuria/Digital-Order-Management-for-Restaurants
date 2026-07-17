@@ -683,18 +683,29 @@ export const dbService = {
 
   async createStaffUser(email: string, name: string, role: string, restaurantId: string): Promise<void> {
     if (isSupabaseConfigured) {
-      const { data, error } = await signUpClient.auth.signUp({
-        email,
-        password: 'ChangeMe@123',
-        options: {
-          data: {
-            full_name: name,
-            restaurant_id: restaurantId,
-            role: role
-          }
-        }
+      // Use the Edge Function which uses admin.createUser() — no confirmation email sent
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-staff-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          email,
+          name,
+          role,
+          restaurant_id: restaurantId,
+          password: 'ChangeMe@123'
+        })
       });
-      if (error) throw error;
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create staff user');
     } else {
       const dataKey = 'restaurant_users';
       const existing = localStorage.getItem(dataKey);
