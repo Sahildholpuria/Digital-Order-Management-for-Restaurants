@@ -801,6 +801,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       </main>
 
+      <footer className="py-6 text-center border-t border-slate-100 dark:border-slate-800/50 mt-12 bg-white/30 dark:bg-slate-900/10 backdrop-blur-sm">
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase">
+          Build by <span className="text-brand-655 dark:text-brand-400 font-extrabold">RestaurantsOS Pvt. Ltd</span>
+        </p>
+      </footer>
+
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
         <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-150/60 dark:border-slate-800/80 p-4 shadow-glass max-w-md mx-auto rounded-t-3xl animate-slide-up md:hidden">

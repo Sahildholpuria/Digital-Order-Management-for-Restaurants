@@ -17,13 +17,16 @@ export interface RestaurantSettings {
   createdAt: any;
 }
 
-export type UserRole = 'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter';
+export type UserRole = 'super_admin' | 'admin' | 'owner' | 'manager' | 'cashier' | 'kitchen' | 'waiter';
 
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  restaurantId?: string;
+  accessibleRestaurants?: string[];
+  activeRestaurantId?: string;
   createdAt: any;
 }
 

@@ -31,9 +31,13 @@ import {
   X,
   Sparkles,
   ArrowRight,
-  Globe
+  Globe,
+  Shield
 } from 'lucide-react';
 import { translations, Language } from './translations';
+import { WorkspaceSwitcher } from './components/WorkspaceSwitcher';
+import { SubscriptionGuard } from './components/SubscriptionGuard';
+import { SuperAdminDashboard } from './pages/super-admin/Dashboard';
 
 export const App: React.FC = () => {
   const { currentUser, logoutUser, loading, settings } = useRestaurant();
@@ -205,7 +209,10 @@ export const App: React.FC = () => {
     }
 
     // Role-based rendering filters
-    const isRole = (roles: string[]) => roles.includes(currentUser.role);
+    const isRole = (roles: string[]) => {
+      const mappedRole = currentUser.role === 'owner' ? 'admin' : currentUser.role;
+      return roles.includes(mappedRole) || currentUser.role === 'super_admin';
+    };
 
     // KDS redirect for kitchen staff
     if (currentUser.role === 'kitchen') {
@@ -246,20 +253,29 @@ export const App: React.FC = () => {
       { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
       { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
       { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
+      { id: 'superAdmin', label: 'Platform Admin', icon: Shield, roles: ['super_admin'] }
     ].filter(item => isRole(item.roles));
 
     // Render active tab body
     const renderActiveTabContent = () => {
+      let content = <AdminDashboard />;
       switch (activeTab) {
-        case 'dashboard': return <AdminDashboard />;
-        case 'orders': return <OrdersManager />;
-        case 'tables': return <TablesManager />;
-        case 'menu': return <MenuManager />;
-        case 'billing': return <BillingManager />;
-        case 'reports': return <ReportsManager />;
-        case 'settings': return <SettingsManager />;
-        default: return <AdminDashboard />;
+        case 'dashboard': content = <AdminDashboard />; break;
+        case 'orders': content = content = <OrdersManager />; break;
+        case 'tables': content = <TablesManager />; break;
+        case 'menu': content = <MenuManager />; break;
+        case 'billing': content = <BillingManager />; break;
+        case 'reports': content = <ReportsManager />; break;
+        case 'settings': content = <SettingsManager />; break;
+        case 'superAdmin': content = <SuperAdminDashboard />; break;
+        default: content = <AdminDashboard />;
       }
+      
+      // Super admin is exempt from subscription limits
+      if (activeTab === 'superAdmin' || currentUser.role === 'super_admin') {
+        return content;
+      }
+      return <SubscriptionGuard>{content}</SubscriptionGuard>;
     };
 
     return (
@@ -307,6 +323,9 @@ export const App: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Workspace switcher */}
+            <WorkspaceSwitcher />
 
             {/* Sidebar Menus */}
             <nav className="space-y-1">
@@ -383,6 +402,11 @@ export const App: React.FC = () => {
               <LogOut className="w-4.5 h-4.5" />
               <span>{t.logOut}</span>
             </button>
+            <div className="text-center pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/50">
+              <span className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase block">
+                Build by RestaurantsOS Pvt. Ltd
+              </span>
+            </div>
           </div>
         </aside>
 
