@@ -28,11 +28,10 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
 
   // Mock roles for easy testing
   const mockRoles = [
-    { role: 'super-admin', email: 'admin@saasbistro.com', label: 'Super Admin', desc: 'SaaS Platform Control', color: 'bg-indigo-650' },
-    { role: 'admin', email: 'admin@restaurant.com', label: 'Administrator', desc: 'Full system control & reports', color: 'bg-brand-500' },
-    { role: 'manager', email: 'manager@restaurant.com', label: 'Store Manager', desc: 'Menu and order overrides', color: 'bg-emerald-500' },
-    { role: 'kitchen', email: 'kitchen@restaurant.com', label: 'Kitchen Chef', desc: 'KDS display screen access', color: 'bg-orange-500' },
-    { role: 'waiter', email: 'waiter@restaurant.com', label: 'Waiter Staff', desc: 'Table requests & ordering', color: 'bg-pink-500' },
+    { role: 'admin', label: 'Administrator', desc: 'Full system control & reports', color: 'bg-indigo-500' },
+    { role: 'manager', label: 'Store Manager', desc: 'Menu and order overrides', color: 'bg-emerald-500' },
+    { role: 'kitchen', label: 'Kitchen Chef', desc: 'KDS display screen access', color: 'bg-orange-500' },
+    { role: 'waiter', label: 'Waiter Staff', desc: 'Table requests & ordering', color: 'bg-pink-500' },
   ];
 
   const handleSupabaseLogin = async (e: React.FormEvent) => {
@@ -63,10 +62,12 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     }
   };
 
-  const handleMockRoleLogin = async (mock: typeof mockRoles[0]) => {
+
+  const handleMockRoleLogin = async (role: string) => {
     setLoading(true);
     try {
-      await loginMockUser(mock.email, (mock.role === 'super-admin' ? 'owner' : mock.role) as any);
+      const mockEmail = `${role}@restaurant.com`;
+      await loginMockUser(mockEmail, role as any);
       onSuccess();
     } catch (err) {
       setError('Mock login failed.');
@@ -179,7 +180,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
               {mockRoles.map((r) => (
                 <button
                   key={r.role}
-                  onClick={() => handleMockRoleLogin(r)}
+                  onClick={() => handleMockRoleLogin(r.role)}
                   className="w-full text-left bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-850 p-4 rounded-2xl transition-all duration-200 flex items-center gap-4 group"
                 >
                   <span className={`w-3.5 h-3.5 rounded-full ${r.color} group-hover:scale-110 transition-transform`} />

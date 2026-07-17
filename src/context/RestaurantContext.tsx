@@ -14,31 +14,7 @@ import {
   OrderStatus,
   TableStatus,
   UserRole,
-  RestaurantWorkspace,
-  SubscriptionPlan,
 } from '../types';
-
-const DEFAULT_WORKSPACES: RestaurantWorkspace[] = [
-  {
-    id: 'c08eb195-236b-4b20-9118-18e388d7adfe',
-    name: 'The Grand SaaS Bistro',
-    logoUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=60',
-    themeColor: '#6366F1',
-    plan: 'professional',
-    status: 'active',
-    role: 'owner',
-  },
-  {
-    id: 'a9b2d2a4-f726-4444-8888-bf29c8cd2b1a',
-    name: 'Burger & Co',
-    logoUrl: '',
-    themeColor: '#EC4899',
-    plan: 'starter',
-    status: 'active',
-    role: 'owner',
-  }
-];
-
 
 interface RestaurantContextType {
   settings: RestaurantSettings | null;
@@ -58,15 +34,6 @@ interface RestaurantContextType {
   setRestaurantId: (id: string) => void;
   setCurrentTableById: (tableId: string) => void;
   setCurrentUser: (user: UserProfile | null) => void;
-  
-  // SaaS Multi-Tenant Additions
-  workspaces: RestaurantWorkspace[];
-  activeWorkspace: RestaurantWorkspace | null;
-  isSuperAdmin: boolean;
-  subscription: SubscriptionPlan | null;
-  showWorkspaceSwitcher: boolean;
-  setShowWorkspaceSwitcher: (show: boolean) => void;
-  switchWorkspace: (workspaceId: string) => Promise<void>;
   
   // Cart Actions
   addToCart: (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string) => void;
@@ -103,7 +70,7 @@ interface RestaurantContextType {
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [restaurantId, setRestaurantId] = useState<string>(() => localStorage.getItem('workspace_selected') || 'c08eb195-236b-4b20-9118-18e388d7adfe');
+  const [restaurantId, setRestaurantId] = useState<string>('demo-restaurant');
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
@@ -117,13 +84,6 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
-
-  // SaaS States
-  const [workspaces, setWorkspaces] = useState<RestaurantWorkspace[]>([]);
-  const [activeWorkspace, setActiveWorkspace] = useState<RestaurantWorkspace | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
-  const [subscription, setSubscription] = useState<SubscriptionPlan | null>(null);
-  const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState<boolean>(false);
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
@@ -138,13 +98,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         
+        // Play tiny silent sound every 10 seconds to keep the process running in the background
         interval = setInterval(() => {
           if (!audioCtx) return;
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.connect(gain);
           gain.connect(audioCtx.destination);
-          gain.gain.setValueAtTime(0, audioCtx.currentTime); // SILENT
+          gain.gain.setValueAtTime(0, audioCtx.currentTime); // SILENT (0 volume)
           osc.start();
           osc.stop(audioCtx.currentTime + 0.05);
         }, 10000);
@@ -153,6 +114,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     };
 
+    // Trigger on first user interaction to bypass browser autoplay policies
     const handleInteraction = () => {
       startKeepAlive();
       window.removeEventListener('click', handleInteraction);
@@ -164,6 +126,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     window.addEventListener('keydown', handleInteraction);
     window.addEventListener('touchstart', handleInteraction);
 
+    // Force complete database re-sync when tab gains focus or visibility
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setSubscriptionTrigger(t => t + 1);
@@ -186,92 +149,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const syncSupabaseProfile = async (user: any) => {
     try {
-      const superAdminCheck = await dbService.checkSuperAdmin(user.id);
-      setIsSuperAdmin(superAdminCheck);
-
-      const userWorkspaces = await dbService.getUserWorkspaces(user.id);
-      setWorkspaces(userWorkspaces);
-
-      if (userWorkspaces.length > 0) {
-        // Resolve active workspace
-        let selectedWorkspace = userWorkspaces.find(w => w.id === restaurantId);
-        if (!selectedWorkspace) {
-          selectedWorkspace = userWorkspaces[0];
-        }
-        setRestaurantId(selectedWorkspace.id);
-        setActiveWorkspace(selectedWorkspace);
-        localStorage.setItem('workspace_selected', selectedWorkspace.id);
-
-        const users = await dbService.getUsers(selectedWorkspace.id);
-        const found = users.find(u => u.id === user.id);
-        if (found) {
-          setCurrentUserState(found);
-        } else {
-          const profile: UserProfile = {
-            id: user.id,
-            restaurantId: selectedWorkspace.id,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
-            email: user.email || '',
-            role: selectedWorkspace.role || 'admin',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          };
-          await dbService.addUser(selectedWorkspace.id, profile);
-          setCurrentUserState(profile);
-        }
-
-        const subData = await dbService.getSubscription(selectedWorkspace.id);
-        setSubscription(subData);
-
-        if (userWorkspaces.length > 1 && !localStorage.getItem('workspace_selected_once')) {
-          setShowWorkspaceSwitcher(true);
-        }
+      const users = await dbService.getUsers(restaurantId);
+      const found = users.find(u => u.id === user.id);
+      if (found) {
+        setCurrentUserState(found);
       } else {
-        if (!superAdminCheck) {
-          // Auto-onboard default workspace for new signups
-          const newRestId = await dbService.superCreateRestaurant(
-            `${user.user_metadata?.full_name || 'My'} Restaurant`,
-            'professional',
-            user.email,
-            user.user_metadata?.full_name || 'Owner'
-          );
-          
-          const profile: UserProfile = {
-            id: user.id,
-            restaurantId: newRestId,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Owner',
-            email: user.email || '',
-            role: 'owner',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-          };
-          await dbService.addUser(newRestId, profile);
-
-          const refetchedWorkspaces = await dbService.getUserWorkspaces(user.id);
-          setWorkspaces(refetchedWorkspaces);
-          if (refetchedWorkspaces[0]) {
-            setRestaurantId(refetchedWorkspaces[0].id);
-            setActiveWorkspace(refetchedWorkspaces[0]);
-            setCurrentUserState(profile);
-            localStorage.setItem('workspace_selected', refetchedWorkspaces[0].id);
-            const subData = await dbService.getSubscription(refetchedWorkspaces[0].id);
-            setSubscription(subData);
-          }
-        } else {
-          // Super admin without direct membership gets defaults
-          const defaultRestId = 'c08eb195-236b-4b20-9118-18e388d7adfe';
-          setRestaurantId(defaultRestId);
-          localStorage.setItem('workspace_selected', defaultRestId);
-          setCurrentUserState({
-            id: user.id,
-            restaurantId: defaultRestId,
-            name: 'Super Admin',
-            email: user.email,
-            role: 'owner',
-            status: 'active',
-            createdAt: new Date().toISOString()
-          });
-        }
+        const profile: UserProfile = {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
+          email: user.email || '',
+          role: 'admin',
+          createdAt: new Date().toISOString(),
+        };
+        await dbService.addUser(restaurantId, profile);
+        setCurrentUserState(profile);
       }
     } catch (err) {
       console.error('Error syncing user profile:', err);
@@ -307,16 +198,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } else {
       const savedUser = localStorage.getItem('restaurant_current_user');
       if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUserState(parsed);
-        setIsSuperAdmin(parsed.email === 'admin@saasbistro.com');
-        setWorkspaces(DEFAULT_WORKSPACES);
-        const selected = DEFAULT_WORKSPACES.find((w: RestaurantWorkspace) => w.id === restaurantId) || DEFAULT_WORKSPACES[0];
-        setActiveWorkspace(selected);
-        
-        dbService.getSubscription(selected.id).then(subData => {
-          setSubscription(subData);
-        });
+        setCurrentUserState(JSON.parse(savedUser));
       }
       setLoading(false);
     }
@@ -376,7 +258,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           });
 
           // Staff Cashier/Admin/Manager needs Payments logs
-          if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier' || currentUser.role === 'owner') {
+          if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier') {
             unsubPayments = dbService.subscribePayments(restaurantId, (data) => {
               setPayments(data);
             });
@@ -405,148 +287,151 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id]);
 
-  // Workspace Switch Action
-  const switchWorkspace = async (workspaceId: string) => {
-    setLoading(true);
-    setRestaurantId(workspaceId);
-    localStorage.setItem('workspace_selected', workspaceId);
-    localStorage.setItem('workspace_selected_once', 'true');
-    
-    const selected = workspaces.find(w => w.id === workspaceId);
-    if (selected) {
-      setActiveWorkspace(selected);
-    }
-    
-    // Reset local data states to clear memory context between tenant switches
-    setTables([]);
-    setCategories([]);
-    setFoodItems([]);
-    setOrders([]);
-    setPayments([]);
-    setNotifications([]);
-    setTablesLoaded(false);
-
-    if (currentUser) {
-      const users = await dbService.getUsers(workspaceId);
-      const found = users.find(u => u.email === currentUser.email);
-      if (found) {
-        setCurrentUserState(found);
-      } else {
-        // Handle admin mapping
-        const profile: UserProfile = {
-          ...currentUser,
-          restaurantId: workspaceId,
-          role: selected?.role || 'admin',
-        };
-        setCurrentUserState(profile);
-      }
-    }
-    const subData = await dbService.getSubscription(workspaceId);
-    setSubscription(subData);
-    setShowWorkspaceSwitcher(false);
-    setLoading(false);
-  };
-
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
-    if (!settings?.enableSoundNotification) return;
-
-    // Web Audio Synthesizer: Louder 4-note chime sequence
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const audio = new AudioCtx();
-        const now = audio.currentTime;
-        const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5 ascending chord
+      const soundEnabled = settings?.enableSoundNotification ?? true;
+      if (!soundEnabled) return;
+
+      // Rich 4-note ascending chime with smooth fade-in/out envelopes
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      const playNote = (freq: number, startTime: number, duration: number, peakGain: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
         
-        notes.forEach((freq, idx) => {
-          const osc = audio.createOscillator();
-          const gain = audio.createGain();
-          osc.connect(gain);
-          gain.connect(audio.destination);
-          
-          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
-          
-          // Amplified peaks
-          gain.gain.setValueAtTime(0, now + idx * 0.15);
-          gain.gain.linearRampToValueAtTime(0.95, now + idx * 0.15 + 0.02);
-          gain.gain.setValueAtTime(1.0, now + idx * 0.15 + 0.1);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.5);
-          
-          osc.start(now + idx * 0.15);
-          osc.stop(now + idx * 0.15 + 0.5);
-        });
+        // Smoother waveform for a bell-like tone
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        
+        // Smooth fade-in → sustain → fade-out envelope (avoids harsh clicks)
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.04); // fast attack
+        gain.gain.setValueAtTime(peakGain, startTime + duration * 0.6); // sustain
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration); // smooth decay
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration + 0.05);
+      };
+
+      const t = audioCtx.currentTime;
+
+      // 4-note ascending bell sequence: C5 → E5 → G5 → C6 (Louder version)
+      playNote(523.25, t + 0.0,  0.35, 0.95); // C5
+      playNote(659.25, t + 0.22, 0.35, 0.95); // E5
+      playNote(783.99, t + 0.44, 0.35, 0.95); // G5
+      playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6 - held longer for a satisfying ring
+
+      // Speech Synthesis Voice Announcement
+      if ('speechSynthesis' in window) {
+        const tableCleanName = n.tableName.replace(/Table\s*/i, '');
+        let speechMessage = '';
+
+        if (n.type === 'new_order') {
+          speechMessage = `New order received from Table ${tableCleanName}.`;
+        } else if (n.type === 'call_waiter') {
+          speechMessage = `Table ${tableCleanName} is requesting a waiter.`;
+        } else if (n.type === 'request_bill') {
+          speechMessage = `Table ${tableCleanName} requested the bill.`;
+        } else {
+          speechMessage = `New message from Table ${tableCleanName}.`;
+        }
+
+        // Delay speech slightly so chime plays first
+        setTimeout(() => {
+          const speech = new SpeechSynthesisUtterance(speechMessage);
+          speech.rate = 0.78;   // Slower for clarity
+          speech.pitch = 1.05;  // Slightly higher for a warm restaurant tone
+          speech.volume = 1.0;  // Max volume
+          speech.lang = 'en-US';
+
+          // Prefer a high-quality natural voice
+          const voices = window.speechSynthesis.getVoices();
+          const preferredVoice =
+            voices.find(v => v.name.includes('Samantha')) ||     // macOS premium
+            voices.find(v => v.name.includes('Google US English')) || // Chrome
+            voices.find(v => v.name.includes('Microsoft Aria')) ||    // Edge
+            voices.find(v => v.lang === 'en-US' && v.localService) || // any local en-US
+            voices.find(v => v.lang.startsWith('en'));                 // any English
+
+          if (preferredVoice) speech.voice = preferredVoice;
+
+          window.speechSynthesis.cancel(); // clear any queued speech
+          window.speechSynthesis.speak(speech);
+        }, 900); // let the chime finish before speaking
       }
     } catch (e) {
-      console.warn('Synth chime trigger failed:', e);
-    }
-
-    // Voice announcement (Text-to-Speech)
-    if ('speechSynthesis' in window) {
-      setTimeout(() => {
-        const synth = window.speechSynthesis;
-        let speakText = '';
-        if (n.type === 'new_order') {
-          speakText = `New order received from ${n.tableName}.`;
-        } else if (n.type === 'call_waiter') {
-          speakText = `${n.tableName} is calling a waiter.`;
-        } else if (n.type === 'request_bill') {
-          speakText = `${n.tableName} requested the bill.`;
-        }
-        
-        if (speakText && synth) {
-          synth.cancel(); // cancel pending speech queues
-          const utterance = new SpeechSynthesisUtterance(speakText);
-          utterance.volume = 1.0;
-          utterance.rate = 1.0;
-          
-          const voices = synth.getVoices();
-          const selectedVoice = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('en-GB') || v.lang.includes('en-US'));
-          if (selectedVoice) utterance.voice = selectedVoice;
-          
-          synth.speak(utterance);
-        }
-      }, 700);
+      console.warn('Notification audio/speech synthesis blocked by browser:', e);
     }
   };
 
-  // Cart Actions
+  const setCurrentTableById = (tableId: string) => {
+    const table = tables.find(t => t.id === tableId);
+    if (table) {
+      setCurrentTable(table);
+    } else {
+      // Create temporary local table state if not loaded yet
+      setCurrentTable({
+        id: tableId,
+        number: tableId.replace('table-', ''),
+        capacity: 4,
+        status: 'available',
+        qrCodeUrl: '',
+        updatedAt: new Date().toISOString()
+      });
+    }
+  };
+
+  const setCurrentUser = (user: UserProfile | null) => {
+    setCurrentUserState(user);
+    if (!isSupabaseConfigured) {
+      if (user) {
+        localStorage.setItem('restaurant_current_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('restaurant_current_user');
+      }
+    }
+  };
+
+  // CART LOGIC
   const addToCart = (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string) => {
     setCart(prev => {
-      // Unique item composite key: itemId + variant
-      const compositeId = selectedVariantName ? `${item.id}-${selectedVariantName}` : item.id;
-      const existing = prev.find(i => i.itemId === compositeId);
-      
-      const itemPrice = selectedVariantName && item.description.includes('||variants:')
-        ? (() => {
-            const match = item.description.match(/\|\|variants:(.*)/);
-            if (match && match[1]) {
-              const vars = match[1].split(';').reduce((acc: any, vStr) => {
-                const [n, p] = vStr.split('=');
-                if (n && p) acc[n.trim()] = parseFloat(p);
-                return acc;
-              }, {});
-              return vars[selectedVariantName] ?? item.price;
-            }
-            return item.price;
-          })()
-        : item.price;
+      let finalName = item.name;
+      let finalPrice = item.price;
+      let uniqueId = item.id;
 
-      const itemName = selectedVariantName ? `${item.name} (${selectedVariantName})` : item.name;
+      if (selectedVariantName && item.description && item.description.includes('||variants:')) {
+        const [, variantsStr] = item.description.split('||variants:');
+        const variants = variantsStr.split(';').map(v => {
+          const [name, price] = v.split('=');
+          return { name, price: Number(price) };
+        });
+        const matched = variants.find(v => v.name === selectedVariantName);
+        if (matched) {
+          finalName = `${item.name} (${matched.name})`;
+          finalPrice = matched.price;
+          uniqueId = `${item.id}-${matched.name}`;
+        }
+      }
 
+      const discountedPrice = finalPrice * (1 - (item.discountPercentage || 0) / 100);
+
+      const existing = prev.find(i => i.itemId === uniqueId);
       if (existing) {
         return prev.map(i =>
-          i.itemId === compositeId
+          i.itemId === uniqueId
             ? { ...i, quantity: i.quantity + quantity, specialInstructions: instructions || i.specialInstructions }
             : i
         );
       }
       return [...prev, {
-        itemId: compositeId,
-        name: itemName,
-        price: itemPrice,
+        itemId: uniqueId,
+        name: finalName,
+        price: discountedPrice,
         quantity,
-        specialInstructions: instructions
+        specialInstructions: instructions,
       }];
     });
   };
@@ -565,58 +450,80 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const clearCart = () => setCart([]);
 
-  const getCartSubtotal = () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const getCartTax = () => getCartSubtotal() * ((settings?.taxPercentage || 18) / 100);
-  const getCartGrandTotal = () => getCartSubtotal() + getCartTax();
+  const getCartSubtotal = () => {
+    return cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  };
 
-  // Database actions
-  const placeOrder = async (instructions?: string) => {
-    if (!currentTable) throw new Error('No table selected');
-    
+  const getCartTax = () => {
+    const taxRate = settings ? settings.taxPercentage : 18;
+    return getCartSubtotal() * (taxRate / 100);
+  };
+
+  const getCartGrandTotal = () => {
+    return getCartSubtotal() + getCartTax();
+  };
+
+  // PLACE ORDER
+  const placeOrder = async (instructions?: string): Promise<RestaurantOrder> => {
+    if (cart.length === 0) throw new Error('Cart is empty');
+    if (!currentTable) throw new Error('Table not assigned');
+
+    const taxRate = settings ? settings.taxPercentage : 18;
+    const subtotal = getCartSubtotal();
+    const tax = subtotal * (taxRate / 100);
+    const grandTotal = subtotal + tax;
+    const orderNum = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+
     const newOrder: RestaurantOrder = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(),
-      restaurantId,
-      orderNumber: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      orderNumber: orderNum,
       tableId: currentTable.id,
-      tableName: currentTable.number,
-      items: cart,
-      subtotal: getCartSubtotal(),
-      tax: getCartTax(),
+      tableName: `Table ${currentTable.number}`,
+      items: cart.map(c => ({
+        ...c,
+        specialInstructions: c.specialInstructions || instructions || '',
+      })),
+      subtotal,
+      tax,
       discount: 0,
-      grandTotal: getCartGrandTotal(),
+      grandTotal,
       status: 'pending',
       createdAt: new Date().toISOString(),
       elapsedTimeStart: new Date().toISOString(),
     };
 
-    if (instructions) {
-      newOrder.items = newOrder.items.map(item => ({
-        ...item,
-        specialInstructions: item.specialInstructions 
-          ? `${item.specialInstructions} | General: ${instructions}` 
-          : instructions
-      }));
-    }
-
+    // Save order to database
     await dbService.saveOrder(restaurantId, newOrder);
     
-    // Trigger notification
-    const nId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString();
-    const newNotify: RestaurantNotification = {
-      id: nId,
-      restaurantId,
-      type: 'new_order',
-      tableId: currentTable.id,
-      tableName: currentTable.number,
-      orderId: newOrder.id,
-      message: `Table ${currentTable.number} placed a new order containing ${cart.length} item(s)`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    await dbService.addNotification(restaurantId, newNotify);
-    
-    // Log Activity
-    await dbService.logActivity(restaurantId, currentUser?.id || 'guest', 'place_order', `Placed order ${newOrder.orderNumber}`);
+    // Update table status to occupied — only possible when a staff session is active.
+    // Customer sessions are anonymous (no auth.uid) so this call is skipped to
+    // avoid an RLS violation that would abort the entire order placement.
+    try {
+      await dbService.saveTable(restaurantId, {
+        ...currentTable,
+        status: 'occupied',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (_) {
+      // Silently ignore — staff can update table status manually from the dashboard
+    }
+
+    // Add alert notification for kitchen/staff
+    try {
+      const notification: RestaurantNotification = {
+        id: `notify-${Date.now()}`,
+        type: 'new_order',
+        tableId: currentTable.id,
+        tableName: `Table ${currentTable.number}`,
+        orderId: newOrder.id,
+        message: `New order ${orderNum} received from Table ${currentTable.number}.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+      await dbService.addNotification(restaurantId, notification);
+    } catch (_) {
+      // Notification failure must not block the customer's order confirmation
+    }
 
     clearCart();
     return newOrder;
@@ -624,41 +531,55 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const callWaiter = async () => {
     if (!currentTable) return;
-    const nId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString();
-    const newNotify: RestaurantNotification = {
-      id: nId,
-      restaurantId,
+    const notification: RestaurantNotification = {
+      id: `notify-${Date.now()}`,
       type: 'call_waiter',
       tableId: currentTable.id,
-      tableName: currentTable.number,
-      message: `Table ${currentTable.number} is calling a waiter`,
+      tableName: `Table ${currentTable.number}`,
+      message: `Table ${currentTable.number} is requesting a waiter.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    await dbService.addNotification(restaurantId, newNotify);
+    await dbService.addNotification(restaurantId, notification);
   };
 
   const requestBill = async () => {
     if (!currentTable) return;
-    const nId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString();
-    const newNotify: RestaurantNotification = {
-      id: nId,
-      restaurantId,
+    const notification: RestaurantNotification = {
+      id: `notify-${Date.now()}`,
       type: 'request_bill',
       tableId: currentTable.id,
-      tableName: currentTable.number,
-      message: `Table ${currentTable.number} requested the bill`,
+      tableName: `Table ${currentTable.number}`,
+      message: `Table ${currentTable.number} is requesting the bill.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    await dbService.addNotification(restaurantId, newNotify);
+    await dbService.addNotification(restaurantId, notification);
   };
 
+  // STAFF OPERATIONS
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    const updated = { ...order, status };
-    await dbService.saveOrder(restaurantId, updated);
+    
+    const updatedOrder = { ...order, status };
+    // If order was served or completed, we might reset table status
+    await dbService.saveOrder(restaurantId, updatedOrder);
+
+    // If order completed or cancelled, release the table status if no other active order
+    if (status === 'completed' || status === 'cancelled') {
+      const activeTableOrders = orders.filter(o => o.tableId === order.tableId && o.id !== order.id && !['completed', 'cancelled'].includes(o.status));
+      if (activeTableOrders.length === 0) {
+        const table = tables.find(t => t.id === order.tableId);
+        if (table && table.status === 'occupied') {
+          await dbService.saveTable(restaurantId, {
+            ...table,
+            status: 'available',
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    }
   };
 
   const saveOrder = async (order: RestaurantOrder) => {
@@ -668,14 +589,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const updateTableStatus = async (tableId: string, status: TableStatus) => {
     const table = tables.find(t => t.id === tableId);
     if (!table) return;
-    const updated = { ...table, status };
-    await dbService.saveTable(restaurantId, updated);
+    await dbService.saveTable(restaurantId, {
+      ...table,
+      status,
+      updatedAt: new Date().toISOString()
+    });
   };
 
   const addTable = async (table: RestaurantTable) => {
-    if (subscription && tables.length >= subscription.maxTables) {
-      throw new Error(`Workspace plan (${subscription.plan.toUpperCase()}) limit reached. Max tables: ${subscription.maxTables}. Upgrade subscription to add more tables.`);
-    }
     await dbService.saveTable(restaurantId, table);
     setTables(prev => {
       const exists = prev.some(t => t.id === table.id);
@@ -726,7 +647,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const addPaymentRecord = async (payment: PaymentRecord) => {
-    await dbService.addPaymentRecord(restaurantId, payment);
+    await dbService.addPayment(restaurantId, payment);
   };
 
   const markNotificationRead = async (id: string) => {
@@ -739,67 +660,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // MOCK AUTH
   const loginMockUser = async (email: string, role: UserRole): Promise<UserProfile> => {
-    const mockId = 'c08eb195-236b-4b20-9118-18e388d7adfe';
-    const users = await dbService.getUsers(mockId);
+    const users = await dbService.getUsers(restaurantId);
     let found = users.find(u => u.email === email && u.role === role);
     if (!found) {
       found = {
         id: `mock-user-${Date.now()}`,
-        restaurantId: mockId,
         name: email.split('@')[0].toUpperCase(),
         email,
         role,
-        status: 'active',
         createdAt: new Date().toISOString()
       };
-      await dbService.addUser(mockId, found);
+      await dbService.addUser(restaurantId, found);
     }
-    
-    setWorkspaces(DEFAULT_WORKSPACES);
-    setActiveWorkspace(DEFAULT_WORKSPACES[0]);
-    setRestaurantId(DEFAULT_WORKSPACES[0].id);
-    localStorage.setItem('workspace_selected', DEFAULT_WORKSPACES[0].id);
-
-    const subData = await dbService.getSubscription(DEFAULT_WORKSPACES[0].id);
-    setSubscription(subData);
-
-    const adminCheck = email === 'admin@saasbistro.com';
-    setIsSuperAdmin(adminCheck);
-
-    setCurrentUserState(found);
-    localStorage.setItem('restaurant_current_user', JSON.stringify(found));
+    setCurrentUser(found);
     return found;
   };
 
   const logoutUser = async () => {
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
-    }
-    
-    setCurrentUserState(null);
-    setWorkspaces([]);
-    setActiveWorkspace(null);
-    setSubscription(null);
-    setIsSuperAdmin(false);
-    localStorage.removeItem('restaurant_current_user');
-    localStorage.removeItem('workspace_selected');
-    localStorage.removeItem('workspace_selected_once');
-    setRestaurantId('c08eb195-236b-4b20-9118-18e388d7adfe');
-  };
-
-  const setCurrentTableById = async (tableId: string) => {
-    const found = tables.find(t => t.id === tableId);
-    if (found) {
-      setCurrentTable(found);
-    }
-  };
-
-  const setCurrentUser = (user: UserProfile | null) => {
-    setCurrentUserState(user);
-    if (user) {
-      localStorage.setItem('restaurant_current_user', JSON.stringify(user));
     } else {
-      localStorage.removeItem('restaurant_current_user');
+      setCurrentUser(null);
     }
   };
 
@@ -822,13 +703,6 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setRestaurantId,
       setCurrentTableById,
       setCurrentUser,
-      workspaces,
-      activeWorkspace,
-      isSuperAdmin,
-      subscription,
-      showWorkspaceSwitcher,
-      setShowWorkspaceSwitcher,
-      switchWorkspace,
       addToCart,
       removeFromCart,
       updateCartQuantity,
@@ -878,4 +752,3 @@ export const useRestaurant = () => {
   }
   return context;
 };
-export default RestaurantContext;

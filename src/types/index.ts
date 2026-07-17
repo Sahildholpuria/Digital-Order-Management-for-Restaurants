@@ -17,15 +17,13 @@ export interface RestaurantSettings {
   createdAt: any;
 }
 
-export type UserRole = 'owner' | 'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter' | 'staff' | 'store';
+export type UserRole = 'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter';
 
 export interface UserProfile {
   id: string;
-  restaurantId?: string;
   name: string;
   email: string;
   role: UserRole;
-  status?: 'active' | 'suspended';
   createdAt: any;
 }
 
@@ -33,8 +31,6 @@ export type TableStatus = 'available' | 'occupied' | 'reserved';
 
 export interface RestaurantTable {
   id: string;
-  restaurantId?: string;
-  branchId?: string;
   number: string;
   capacity: number;
   status: TableStatus;
@@ -44,7 +40,6 @@ export interface RestaurantTable {
 
 export interface MenuCategory {
   id: string;
-  restaurantId?: string;
   name: string;
   order: number;
   createdAt: any;
@@ -52,7 +47,6 @@ export interface MenuCategory {
 
 export interface FoodItem {
   id: string;
-  restaurantId?: string;
   name: string;
   image: string;
   description: string;
@@ -80,8 +74,6 @@ export type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'serv
 
 export interface RestaurantOrder {
   id: string;
-  restaurantId?: string;
-  branchId?: string;
   orderNumber: string;
   tableId: string;
   tableName: string;
@@ -102,7 +94,6 @@ export interface RestaurantOrder {
 
 export interface PaymentRecord {
   id: string;
-  restaurantId?: string;
   orderId: string;
   orderNumber: string;
   tableName: string;
@@ -118,56 +109,11 @@ export type NotificationType = 'new_order' | 'call_waiter' | 'request_bill';
 
 export interface RestaurantNotification {
   id: string;
-  restaurantId?: string;
   type: NotificationType;
   tableId: string;
   tableName: string;
   orderId?: string;
   message: string;
   isRead: boolean;
-  createdAt: any;
-}
-
-// ==========================================
-// SAAS MULTI-TENANT WORKSPACE TYPES
-// ==========================================
-
-export interface RestaurantWorkspace {
-  id: string;
-  name: string;
-  logoUrl?: string;
-  themeColor: string;
-  plan: 'free' | 'starter' | 'professional' | 'enterprise';
-  status: 'active' | 'suspended';
-  role: UserRole;
-}
-
-export interface SubscriptionPlan {
-  restaurantId: string;
-  plan: 'free' | 'starter' | 'professional' | 'enterprise';
-  startsAt: any;
-  endsAt: any;
-  status: 'active' | 'expired' | 'trialing';
-  maxTables: number;
-  maxStaff: number;
-  maxBranches: number;
-}
-
-export interface InventoryItem {
-  id: string;
-  restaurantId?: string;
-  itemName: string;
-  quantity: number;
-  unit: string;
-  minStockLevel: number;
-  updatedAt: any;
-}
-
-export interface ActivityLog {
-  id: string;
-  restaurantId?: string;
-  userId: string;
-  action: string;
-  details?: string;
   createdAt: any;
 }
