@@ -207,9 +207,23 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Helper function to check if user is a Super Admin
+create or replace function public.is_super_admin(user_id uuid)
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.users
+    where id = user_id and is_super_admin = true
+  );
+end;
+$$ language plpgsql security definer;
+
 -- Policies for settings (tenant configuration)
 create policy "Allow public read for settings" on public.restaurants for select using (true);
-create policy "Allow admin write for settings" on public.restaurants for all using (public.is_admin(auth.uid()) and id = public.get_user_restaurant(auth.uid()));
+create policy "Allow admin write for settings" on public.restaurants for all using (
+  (public.is_admin(auth.uid()) and id = public.get_user_restaurant(auth.uid()))
+  or public.is_super_admin(auth.uid())
+);
 
 -- Policies for tables (staff write restricted)
 create policy "Allow public read for tables" on public.tables for select using (true);
@@ -250,10 +264,10 @@ create policy "Allow staff service call lookups" on public.notifications for all
 
 -- Policies for user profiles (strict tenant privacy, remedied recursion)
 create policy "Allow users to read profiles" on public.users for select using (
-  auth.uid() is not null and 
-  restaurant_id = public.get_user_restaurant(auth.uid())
+  (auth.uid() is not null and restaurant_id = public.get_user_restaurant(auth.uid()))
+  or public.is_super_admin(auth.uid())
 );
 create policy "Allow admin write for profiles" on public.users for all using (
-  public.is_admin(auth.uid()) and 
-  restaurant_id = public.get_user_restaurant(auth.uid())
+  (public.is_admin(auth.uid()) and restaurant_id = public.get_user_restaurant(auth.uid()))
+  or public.is_super_admin(auth.uid())
 );
