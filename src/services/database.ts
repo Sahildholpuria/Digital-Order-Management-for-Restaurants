@@ -481,6 +481,25 @@ export const dbService = {
       return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
+  async getRestaurantIdByTableId(tableId: string): Promise<string | null> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('tables')
+        .select('restaurant_id')
+        .eq('id', tableId)
+        .maybeSingle();
+      if (error) return null;
+      return data?.restaurant_id || null;
+    } else {
+      const data = localStorage.getItem('restaurant_tables');
+      if (data) {
+        const list = JSON.parse(data);
+        const table = list.find((t: any) => t.id === tableId);
+        return table?.restaurant_id || null;
+      }
+      return null;
+    }
+  },
   async getTables(restaurantId: string): Promise<RestaurantTable[]> {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase

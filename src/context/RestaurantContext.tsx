@@ -224,6 +224,38 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [restaurantId]);
 
+  // Sync restaurantId with logged-in user's profile restaurantId
+  useEffect(() => {
+    if (currentUser?.restaurantId) {
+      setRestaurantId(currentUser.restaurantId);
+    }
+  }, [currentUser]);
+
+  // Resolve restaurantId from URL tableId for guest customers
+  useEffect(() => {
+    const resolveRestaurantFromUrl = async () => {
+      const menuMatch = window.location.pathname.match(/^\/menu\/([^/]+)$/);
+      const trackerMatch = window.location.pathname.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+      const tableId = menuMatch?.[1] || trackerMatch?.[1];
+      
+      if (tableId) {
+        setLoading(true);
+        try {
+          const resolvedId = await dbService.getRestaurantIdByTableId(tableId);
+          if (resolvedId) {
+            setRestaurantId(resolvedId);
+          }
+        } catch (err) {
+          console.error('Failed to resolve restaurant from table URL:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    resolveRestaurantFromUrl();
+  }, [window.location.pathname]);
+
   // Load Settings and Real-time Listeners
   useEffect(() => {
     let unsubTables: () => void = () => {};
