@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../../services/database';
 import { RestaurantSettings, UserProfile } from '../../types';
+import { useRestaurant } from '../../context/RestaurantContext';
 import { 
   Building, 
   Plus, 
@@ -14,10 +15,12 @@ import {
   TrendingUp,
   RefreshCw,
   Users,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
+  const { setRestaurantId } = useRestaurant();
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<'restaurants' | 'users'>('restaurants');
@@ -36,10 +39,20 @@ export const SuperAdminDashboard: React.FC = () => {
   const [status, setStatus] = useState<'trial' | 'active' | 'expired'>('trial');
   const [expiresAt, setExpiresAt] = useState('');
 
-  // Edit subscription states
+  // Edit subscription/details states
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [editPlan, setEditPlan] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
   const [editStatus, setEditStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
   const [editExpiresAt, setEditExpiresAt] = useState('');
+
+  // Edit staff user states
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [editUserFullName, setEditUserFullName] = useState('');
+  const [editUserRole, setEditUserRole] = useState<'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter'>('admin');
+  const [editUserRestaurantId, setEditUserRestaurantId] = useState('');
 
   // New staff user form states
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -127,6 +140,9 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const handleEditClick = (rest: RestaurantSettings) => {
     setSelectedRest(rest);
+    setEditName(rest.name || '');
+    setEditEmail(rest.email || '');
+    setEditPhone(rest.phone || '');
     setEditPlan(rest.planType || 'starter');
     setEditStatus(rest.subscriptionStatus || 'trial');
     if (rest.subscriptionExpiresAt) {
@@ -144,6 +160,9 @@ export const SuperAdminDashboard: React.FC = () => {
 
     try {
       const updates: Partial<RestaurantSettings> = {
+        name: editName.trim(),
+        email: editEmail.trim(),
+        phone: editPhone.trim(),
         planType: editPlan,
         subscriptionStatus: editStatus,
         subscriptionExpiresAt: editExpiresAt ? new Date(editExpiresAt).toISOString() : undefined
@@ -152,9 +171,38 @@ export const SuperAdminDashboard: React.FC = () => {
       await dbService.updateRestaurantSubscription(selectedRest.id, updates);
       setIsEditModalOpen(false);
       await fetchAllData();
+      alert('Restaurant details updated successfully.');
     } catch (err) {
-      alert('Error updating subscription: ' + err);
+      alert('Error updating restaurant: ' + err);
     }
+  };
+
+  const handleEditUserClick = (u: UserProfile) => {
+    setSelectedUser(u);
+    setEditUserFullName(u.name || '');
+    setEditUserRole(u.role || 'admin');
+    setEditUserRestaurantId(u.restaurantId || '');
+    setIsEditUserModalOpen(true);
+  };
+
+  const handleEditUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    try {
+      await dbService.updateUserByAdmin(selectedUser.id, editUserFullName.trim(), editUserRole, editUserRestaurantId);
+      setIsEditUserModalOpen(false);
+      await fetchAllData();
+      alert('Staff user profile updated successfully.');
+    } catch (err: any) {
+      alert('Error updating user profile: ' + (err.message || err));
+    }
+  };
+
+  const handleAccessPortal = (restaurantId: string) => {
+    setRestaurantId(restaurantId);
+    localStorage.setItem('last_active_staff_restaurant_id', restaurantId);
+    window.location.hash = '#dashboard';
   };
 
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
@@ -412,10 +460,18 @@ export const SuperAdminDashboard: React.FC = () => {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => handleEditClick(r)}
-                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer animate-fade-in"
+                              onClick={() => handleAccessPortal(r.id)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              title="Access POS Portal"
                             >
-                              Modify Plan
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Portal</span>
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(r)}
+                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                            >
+                              Edit
                             </button>
                             <button
                               onClick={() => handleDeleteRestaurant(r.id, r.name)}
@@ -506,13 +562,21 @@ export const SuperAdminDashboard: React.FC = () => {
                           {u.isSuperAdmin ? (
                             <span className="text-[10px] text-slate-400 italic">Protected</span>
                           ) : (
-                            <button
-                              onClick={() => handleDeleteUser(u.id, u.name)}
-                              className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Delete</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleEditUserClick(u)}
+                                className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id, u.name)}
+                                className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 p-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center"
+                                title="Delete Staff"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -638,8 +702,8 @@ export const SuperAdminDashboard: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Modify Subscription</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase tracking-widest">{selectedRest.name} ({selectedRest.id})</p>
+                <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Edit Restaurant Details</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase tracking-widest">ID: {selectedRest.id}</p>
               </div>
               <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200">
                 <X className="w-5 h-5" />
@@ -648,30 +712,67 @@ export const SuperAdminDashboard: React.FC = () => {
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Selected Plan</label>
-                <select
-                  value={editPlan}
-                  onChange={(e) => setEditPlan(e.target.value as any)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
-                >
-                  <option value="starter">Starter Plan</option>
-                  <option value="pro_6m">Pro 6-Month</option>
-                  <option value="pro_1y">Pro 1-Year</option>
-                </select>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Restaurant Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. The Grand Bistro"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100"
+                />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Billing Status</label>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
-                >
-                  <option value="trial">Free Trial</option>
-                  <option value="active">Active Plan</option>
-                  <option value="expired">Expired</option>
-                  <option value="suspended">Suspended</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Email</label>
+                  <input
+                    type="email"
+                    placeholder="name@restaurant.com"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Phone</label>
+                  <input
+                    type="text"
+                    placeholder="+91 XXXXX XXXXX"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Selected Plan</label>
+                  <select
+                    value={editPlan}
+                    onChange={(e) => setEditPlan(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="starter">Starter Plan</option>
+                    <option value="pro_6m">Pro 6-Month</option>
+                    <option value="pro_1y">Pro 1-Year</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Billing Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="trial">Free Trial</option>
+                    <option value="active">Active Plan</option>
+                    <option value="expired">Expired</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -680,7 +781,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   type="date"
                   value={editExpiresAt}
                   onChange={(e) => setEditExpiresAt(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  className="w-full bg-slate-50 dark:bg-slate-850/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
                 />
               </div>
 
@@ -772,6 +873,80 @@ export const SuperAdminDashboard: React.FC = () => {
                 className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer"
               >
                 Create Staff Account
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditUserModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-855 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Edit Staff Account</h3>
+              <button onClick={() => setIsEditUserModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUserSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Staff Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Rahul Sharma"
+                  value={editUserFullName}
+                  onChange={(e) => setEditUserFullName(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Email Address (Read-Only)</label>
+                <input
+                  type="email"
+                  disabled
+                  value={selectedUser.email}
+                  className="w-full bg-slate-150 dark:bg-slate-800 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Assign Restaurant</label>
+                  <select
+                    value={editUserRestaurantId}
+                    onChange={(e) => setEditUserRestaurantId(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    {restaurants.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} ({r.id})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Staff Role</label>
+                  <select
+                    value={editUserRole}
+                    onChange={(e) => setEditUserRole(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="admin">Administrator</option>
+                    <option value="manager">Store Manager</option>
+                    <option value="cashier">Cashier Staff</option>
+                    <option value="kitchen">Kitchen Chef</option>
+                    <option value="waiter">Waiter Staff</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer"
+              >
+                Apply Changes
               </button>
             </form>
           </div>

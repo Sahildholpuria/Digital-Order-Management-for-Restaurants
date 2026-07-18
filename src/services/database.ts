@@ -791,6 +791,37 @@ export const dbService = {
     }
   },
 
+  async updateUserByAdmin(userId: string, name: string, role: string, restaurantId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name,
+          role,
+          restaurant_id: restaurantId
+        })
+        .eq('id', userId);
+      if (error) throw error;
+    } else {
+      const dataKey = 'restaurant_users';
+      const existing = localStorage.getItem(dataKey);
+      if (existing) {
+        const list = JSON.parse(existing);
+        const index = list.findIndex((u: any) => u.id === userId);
+        if (index > -1) {
+          list[index] = {
+            ...list[index],
+            name,
+            role,
+            restaurant_id: restaurantId
+          };
+          localStorage.setItem(dataKey, JSON.stringify(list));
+          notifyLocalSubscribers();
+        }
+      }
+    }
+  },
+
   async deleteRestaurant(restaurantId: string): Promise<void> {
     if (isSupabaseConfigured) {
       const { error } = await supabase

@@ -38,7 +38,7 @@ import { SuperAdminDashboard } from './pages/owner/SuperAdminDashboard';
 import { translations, Language } from './translations';
 
 export const App: React.FC = () => {
-  const { currentUser, logoutUser, loading, settings } = useRestaurant();
+  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId } = useRestaurant();
   const { theme, toggleTheme } = useTheme();
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('admin_lang') as Language) || 'en');
@@ -83,10 +83,14 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Automatically switch to superadmin tab if Super Admin logs in
+  // Automatically switch to superadmin tab on login if Super Admin
   useEffect(() => {
-    if (currentUser?.isSuperAdmin && activeTab !== 'superadmin') {
-      setActiveTab('superadmin');
+    if (currentUser?.isSuperAdmin) {
+      const hash = window.location.hash.replace('#', '');
+      const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
+      if (!validTabs.includes(hash)) {
+        setActiveTab('superadmin');
+      }
     }
   }, [currentUser]);
 
@@ -436,6 +440,24 @@ export const App: React.FC = () => {
 
         {/* Content Container */}
         <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
+          {currentUser?.isSuperAdmin && restaurantId !== 'demo-restaurant' && (
+            <div className="bg-amber-550/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 px-6 py-3 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 animate-fade-in text-xs font-bold shadow-sm">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                <span>Active Portal View: Impersonating restaurant "{settings?.name || restaurantId}"</span>
+              </span>
+              <button 
+                onClick={() => {
+                  setRestaurantId('demo-restaurant');
+                  localStorage.removeItem('last_active_staff_restaurant_id');
+                  setActiveTab('superadmin');
+                }}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-md"
+              >
+                Return to Super Admin Panel
+              </button>
+            </div>
+          )}
           {renderActiveTabContent()}
         </main>
 
