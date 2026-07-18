@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export const ReportsManager: React.FC = () => {
-  const { payments, orders, foodItems, categories, settings } = useRestaurant();
+  const { payments, orders, foodItems, categories, settings, showToast } = useRestaurant();
 
   const currency = settings?.currency || '₹';
 
@@ -367,7 +367,7 @@ export const ReportsManager: React.FC = () => {
   // ==========================================
   const handleExportCSV = () => {
     if (payments.length === 0) {
-      alert('No payment records to export.');
+      showToast('No payment records to export.', 'info');
       return;
     }
 

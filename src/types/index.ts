@@ -14,6 +14,9 @@ export interface RestaurantSettings {
   enableWaiterCall: boolean;   // show/hide Waiter button on customer menu
   enableBillRequest: boolean;  // show/hide Bill button on customer menu
   enableSoundNotification: boolean; // turn order/request sound chime + voice announcement ON/OFF
+  subscriptionStatus?: 'trial' | 'active' | 'expired' | 'suspended';
+  subscriptionExpiresAt?: any;
+  planType?: 'starter' | 'pro_6m' | 'pro_1y';
   createdAt: any;
 }
 
@@ -21,9 +24,11 @@ export type UserRole = 'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter';
 
 export interface UserProfile {
   id: string;
+  restaurantId?: string;
   name: string;
   email: string;
   role: UserRole;
+  isSuperAdmin?: boolean;
   createdAt: any;
 }
 
@@ -116,4 +121,17 @@ export interface RestaurantNotification {
   message: string;
   isRead: boolean;
   createdAt: any;
+}
+
+export interface ToastConfig {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
+export interface ConfirmModalConfig {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
 }

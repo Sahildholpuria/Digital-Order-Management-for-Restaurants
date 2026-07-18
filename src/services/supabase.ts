@@ -10,3 +10,15 @@ export const supabase = createClient(
   supabaseUrl || 'https://demo-placeholder-project.supabase.co',
   supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key'
 );
+
+export const signUpClient = createClient(
+  supabaseUrl || 'https://demo-placeholder-project.supabase.co',
+  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  }
+);

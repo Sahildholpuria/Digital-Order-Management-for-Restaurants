@@ -30,6 +30,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     tables,
     loading,
     tablesLoaded,
+    showToast,
   } = useRestaurant();
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
@@ -51,7 +52,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
 
-  // Load/manage order completion timestamps to auto-remove completed orders after 5 minutes
+  // Load/manage order completion/cancellation timestamps to auto-remove completed/cancelled orders after 2 minutes
   const [completedTimestamps, setCompletedTimestamps] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem('completed_orders_timestamps');
@@ -61,13 +62,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   });
 
-  // Track and save completed orders' completion times
+  // Track and save completed/cancelled orders' finalized times
   useEffect(() => {
     let updated = false;
     const newTimestamps = { ...completedTimestamps };
 
     orders.forEach(o => {
-      if (o.status === 'completed' && !newTimestamps[o.id]) {
+      if ((o.status === 'completed' || o.status === 'cancelled') && !newTimestamps[o.id]) {
         newTimestamps[o.id] = new Date().toISOString();
         updated = true;
       }
@@ -79,7 +80,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   }, [orders, completedTimestamps]);
 
-  // Periodic tick to trigger recalculation of expired completed orders every 10 seconds
+  // Periodic tick to trigger recalculation of expired completed/cancelled orders every 10 seconds
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
@@ -88,15 +89,15 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // All orders placed at this table in this session, filtering out completed ones after 2 minutes
+  // All orders placed at this table in this session, filtering out completed/cancelled ones after 2 minutes
   const tableOrders = orders
     .filter(o => {
       if (o.tableId !== tableId) return false;
-      if (o.status === 'completed') {
-        const completedAtStr = completedTimestamps[o.id] || o.createdAt;
-        const completedAt = new Date(completedAtStr).getTime();
+      if (o.status === 'completed' || o.status === 'cancelled') {
+        const finalizedAtStr = completedTimestamps[o.id] || o.createdAt;
+        const finalizedAt = new Date(finalizedAtStr).getTime();
         const now = new Date().getTime();
-        const diffMs = now - completedAt;
+        const diffMs = now - finalizedAt;
         const twoMinutesMs = 2 * 60 * 1000;
         if (diffMs > twoMinutesMs) {
           return false;
@@ -154,7 +155,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   };
 
+  const isSubscriptionExpired = () => {
+    if (!settings) return false;
+    const status = settings.subscriptionStatus || 'trial';
+    const expiry = settings.subscriptionExpiresAt;
+    if (status === 'expired' || status === 'suspended') return true;
+    if (expiry && new Date(expiry) < new Date()) return true;
+    return false;
+  };
+
   const handlePlaceOrder = async () => {
+    if (isSubscriptionExpired()) {
+      showToast("This restaurant's ordering service is currently inactive. Please contact the staff.", 'error');
+      return;
+    }
     try {
       const placed = await placeOrder();
       setOrderSuccess(placed);
@@ -167,7 +181,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         origin: { y: 0.6 }
       });
     } catch (err) {
-      alert('Failed to place order. Please try again.');
+      showToast('Failed to place order. Please try again.', 'error');
     }
   };
 
@@ -362,9 +376,14 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
         <button
           onClick={handlePlaceOrder}
-          className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-md hover:shadow-brand-500/10 flex items-center justify-center gap-1.5 text-xs"
+          disabled={isSubscriptionExpired()}
+          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs ${
+            isSubscriptionExpired()
+              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none'
+              : 'bg-brand-600 hover:bg-brand-700 text-white hover:shadow-brand-500/10'
+          }`}
         >
-          Confirm & Place Order
+          {isSubscriptionExpired() ? 'Ordering Service Inactive' : 'Confirm & Place Order'}
         </button>
       </div>
     </div>
@@ -399,7 +418,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           </div>
 
           {/* Quick Staff Interactions */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             {/* Language Switcher */}
             <button
               onClick={() => {
@@ -407,7 +426,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 setLang(nextLang);
                 localStorage.setItem('customer_lang', nextLang);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              title="Change Language"
             >
               <Globe className="w-3.5 h-3.5" />
               <span>{lang === 'en' ? 'हिन्दी' : 'EN'}</span>
@@ -417,14 +437,15 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <button
                 onClick={handleCallWaiter}
                 disabled={waiterCalled}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
                   waiterCalled 
                     ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
                     : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
                 }`}
+                title={waiterCalled ? "Waiter Called" : "Call Waiter"}
               >
                 <Bell className="w-3.5 h-3.5" />
-                <span>{waiterCalled ? t.waiterCalled : t.callWaiter}</span>
+                <span className="hidden sm:inline">{waiterCalled ? t.waiterCalled : t.callWaiter}</span>
               </button>
             )}
             
@@ -432,26 +453,28 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <button
                 onClick={handleRequestBill}
                 disabled={billRequested}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
                   billRequested 
                     ? 'bg-green-600 border-green-600 text-white shadow-sm'
                     : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
                 }`}
+                title={billRequested ? "Bill Requested" : "Request Bill"}
               >
                 <Receipt className="w-3.5 h-3.5" />
-                <span>{billRequested ? t.billRequested : t.requestBill}</span>
+                <span className="hidden sm:inline">{billRequested ? t.billRequested : t.requestBill}</span>
               </button>
             )}
 
             {/* My Orders button with badge */}
             <button
               onClick={() => setIsOrdersOpen(true)}
-              className="relative flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+              className="relative flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+              title="Live Orders"
             >
               <ClipboardList className="w-3.5 h-3.5" />
-              <span>{t.liveOrders}</span>
+              <span className="hidden sm:inline">{t.liveOrders}</span>
               {tableOrders.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-brand-600 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-600 text-white text-[8px] font-black rounded-full flex items-center justify-center">
                   {tableOrders.length}
                 </span>
               )}

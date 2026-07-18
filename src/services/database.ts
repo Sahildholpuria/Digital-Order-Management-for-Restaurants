@@ -1,4 +1,4 @@
-import { isSupabaseConfigured, supabase } from './supabase';
+import { isSupabaseConfigured, supabase, signUpClient } from './supabase';
 import {
   RestaurantSettings,
   UserProfile,
@@ -38,6 +38,9 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     enableWaiterCall,
     enableBillRequest,
     enableSoundNotification,
+    subscriptionStatus: row.subscription_status || 'trial',
+    subscriptionExpiresAt: row.subscription_expires_at,
+    planType: row.plan_type || 'starter',
     createdAt: row.created_at || row.createdAt,
   };
 };
@@ -55,6 +58,9 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.currency !== undefined && { currency: model.currency }),
     ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
     ...(model.closingHours !== undefined && { closing_hours: model.closingHours }),
+    ...(model.subscriptionStatus !== undefined && { subscription_status: model.subscriptionStatus }),
+    ...(model.subscriptionExpiresAt !== undefined && { subscription_expires_at: model.subscriptionExpiresAt }),
+    ...(model.planType !== undefined && { plan_type: model.planType }),
   };
 
   if (model.themeColor !== undefined) {
@@ -72,6 +78,7 @@ const mapUserToFrontend = (row: any): UserProfile => ({
   name: row.name,
   email: row.email,
   role: row.role,
+  isSuperAdmin: !!row.is_super_admin,
   createdAt: row.created_at,
 });
 
@@ -474,6 +481,77 @@ export const dbService = {
       return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
+  subscribeSettings(restaurantId: string, callback: (settings: RestaurantSettings) => void) {
+    if (isSupabaseConfigured) {
+      const fetchSettings = async () => {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('id', restaurantId)
+          .maybeSingle();
+        if (!error && data) {
+          callback(mapSettingsToFrontend(data));
+        }
+      };
+
+      fetchSettings();
+
+      const channel = supabase
+        .channel(`public:restaurants:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'restaurants', 
+          filter: `id=eq.${restaurantId}` 
+        }, () => {
+          fetchSettings();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      const emitData = () => {
+        const data = localStorage.getItem('restaurant_settings');
+        callback(data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS));
+      };
+
+      emitData();
+
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'restaurant_settings') emitData();
+      };
+      const handleCustomChange = () => emitData();
+
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('restaurant-db-update', handleCustomChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('restaurant-db-update', handleCustomChange);
+      };
+    }
+  },
+  async getRestaurantIdByTableId(tableId: string): Promise<string | null> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('tables')
+        .select('restaurant_id')
+        .eq('id', tableId)
+        .maybeSingle();
+      if (error) return null;
+      return data?.restaurant_id || null;
+    } else {
+      const data = localStorage.getItem('restaurant_tables');
+      if (data) {
+        const list = JSON.parse(data);
+        const table = list.find((t: any) => t.id === tableId);
+        return table?.restaurant_id || null;
+      }
+      return null;
+    }
+  },
   async getTables(restaurantId: string): Promise<RestaurantTable[]> {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
@@ -542,6 +620,86 @@ export const dbService = {
     }
   },
 
+  async getAllRestaurants(): Promise<RestaurantSettings[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(mapSettingsToFrontend);
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      if (!data) {
+        const defaultList = [{
+          id: 'demo-restaurant',
+          name: 'The Grand Bistro',
+          theme_color: '#6366F1|true|true|true|en',
+          subscription_status: 'trial',
+          plan_type: 'starter',
+          created_at: new Date().toISOString()
+        }];
+        localStorage.setItem('super_admin_restaurants', JSON.stringify(defaultList));
+        return defaultList.map(mapSettingsToFrontend);
+      }
+      return JSON.parse(data).map(mapSettingsToFrontend);
+    }
+  },
+
+  async createRestaurant(restaurant: Partial<RestaurantSettings>): Promise<void> {
+    if (isSupabaseConfigured) {
+      const dbRow = mapSettingsToDb(restaurant);
+      dbRow.created_at = new Date().toISOString();
+      dbRow.subscription_status = restaurant.subscriptionStatus || 'trial';
+      dbRow.subscription_expires_at = restaurant.subscriptionExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      dbRow.plan_type = restaurant.planType || 'starter';
+      const { error } = await supabase
+        .from('restaurants')
+        .insert(dbRow);
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      const list = data ? JSON.parse(data) : [];
+      const newRest = {
+        ...DEFAULT_SETTINGS,
+        ...restaurant,
+        id: restaurant.id || `rest-${Date.now()}`,
+        subscriptionStatus: restaurant.subscriptionStatus || 'trial',
+        planType: restaurant.planType || 'starter',
+        subscriptionExpiresAt: restaurant.subscriptionExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      list.push(newRest);
+      localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
+      notifyLocalSubscribers();
+    }
+  },
+
+  async updateRestaurantSubscription(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
+    if (isSupabaseConfigured) {
+      const dbRow = mapSettingsToDb(updates);
+      const { error } = await supabase
+        .from('restaurants')
+        .update(dbRow)
+        .eq('id', restaurantId);
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      const list = data ? JSON.parse(data) : [];
+      const index = list.findIndex((r: any) => r.id === restaurantId);
+      if (index > -1) {
+        list[index] = { ...list[index], ...updates };
+        localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
+        if (restaurantId === 'demo-restaurant') {
+          const currentSettings = localStorage.getItem('restaurant_settings');
+          const current = currentSettings ? JSON.parse(currentSettings) : {};
+          localStorage.setItem('restaurant_settings', JSON.stringify({ ...current, ...updates }));
+        }
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
   // 2. STAFF / USER MANAGEMENT
   async getUsers(restaurantId: string): Promise<UserProfile[]> {
     if (isSupabaseConfigured) {
@@ -594,6 +752,49 @@ export const dbService = {
     }
   },
 
+  async createStaffUser(email: string, name: string, role: string, restaurantId: string, password?: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      // Use the Edge Function which uses admin.createUser() — no confirmation email sent
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-staff-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          email,
+          name,
+          role,
+          restaurant_id: restaurantId,
+          password: password || 'ChangeMe@123'
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create staff user');
+    } else {
+      const dataKey = 'restaurant_users';
+      const existing = localStorage.getItem(dataKey);
+      const list = existing ? JSON.parse(existing) : [];
+      list.push({
+        id: `mock-user-${Date.now()}`,
+        restaurant_id: restaurantId,
+        name,
+        email,
+        role,
+        is_super_admin: false,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem(dataKey, JSON.stringify(list));
+      notifyLocalSubscribers();
+    }
+  },
+
   async deleteUser(restaurantId: string, userId: string): Promise<void> {
     if (isSupabaseConfigured) {
       const { error } = await supabase
@@ -607,6 +808,87 @@ export const dbService = {
       const updated = users.filter(u => u.id !== userId);
       localStorage.setItem('restaurant_users', JSON.stringify(updated));
       notifyLocalSubscribers();
+    }
+  },
+
+  async getAllUsers(): Promise<UserProfile[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*');
+      if (error) throw error;
+      return (data || []).map(mapUserToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_users');
+      return data ? JSON.parse(data).map(mapUserToFrontend) : [];
+    }
+  },
+
+  async deleteUserByAdmin(userId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+      if (error) throw error;
+    } else {
+      const dataKey = 'restaurant_users';
+      const existing = localStorage.getItem(dataKey);
+      if (existing) {
+        const list = JSON.parse(existing);
+        const updated = list.filter((u: any) => u.id !== userId);
+        localStorage.setItem(dataKey, JSON.stringify(updated));
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
+  async updateUserByAdmin(userId: string, name: string, role: string, restaurantId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name,
+          role,
+          restaurant_id: restaurantId
+        })
+        .eq('id', userId);
+      if (error) throw error;
+    } else {
+      const dataKey = 'restaurant_users';
+      const existing = localStorage.getItem(dataKey);
+      if (existing) {
+        const list = JSON.parse(existing);
+        const index = list.findIndex((u: any) => u.id === userId);
+        if (index > -1) {
+          list[index] = {
+            ...list[index],
+            name,
+            role,
+            restaurant_id: restaurantId
+          };
+          localStorage.setItem(dataKey, JSON.stringify(list));
+          notifyLocalSubscribers();
+        }
+      }
+    }
+  },
+
+  async deleteRestaurant(restaurantId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('restaurants')
+        .delete()
+        .eq('id', restaurantId);
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      if (data) {
+        const list = JSON.parse(data);
+        const updated = list.filter((r: any) => r.id !== restaurantId);
+        localStorage.setItem('super_admin_restaurants', JSON.stringify(updated));
+        notifyLocalSubscribers();
+      }
     }
   },
 
@@ -686,6 +968,26 @@ export const dbService = {
       }
       localStorage.setItem('restaurant_tables', JSON.stringify(tables));
       notifyLocalSubscribers();
+    }
+  },
+
+  async updateTableStatus(restaurantId: string, tableId: string, status: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.rpc('update_table_status', {
+        p_table_id: tableId,
+        p_status: status
+      });
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('restaurant_tables');
+      const tables: RestaurantTable[] = data ? JSON.parse(data) : [];
+      const index = tables.findIndex(t => t.id === tableId);
+      if (index > -1) {
+        tables[index].status = status as any;
+        tables[index].updatedAt = new Date().toISOString();
+        localStorage.setItem('restaurant_tables', JSON.stringify(tables));
+        notifyLocalSubscribers();
+      }
     }
   },
 
@@ -975,22 +1277,43 @@ export const dbService = {
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase
+      // 1. Delete orders older than 30 days
+      const { error: ordersError } = await supabase
         .from('orders')
         .delete()
         .eq('restaurant_id', restaurantId)
         .lt('created_at', thirtyDaysAgoStr);
-      if (error) {
-        console.error('Error cleaning up old orders:', error);
+      if (ordersError) {
+        console.error('Error cleaning up old orders:', ordersError);
+      }
+
+      // 2. Delete payment transactions older than 30 days
+      const { error: paymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('restaurant_id', restaurantId)
+        .lt('created_at', thirtyDaysAgoStr);
+      if (paymentsError) {
+        console.error('Error cleaning up old payments:', paymentsError);
       }
     } else {
+      // LocalStorage orders cleanup
       const data = localStorage.getItem('restaurant_orders');
       if (data) {
         const orders: RestaurantOrder[] = JSON.parse(data);
         const filtered = orders.filter(o => new Date(o.createdAt).getTime() >= thirtyDaysAgo.getTime());
         localStorage.setItem('restaurant_orders', JSON.stringify(filtered));
-        notifyLocalSubscribers();
       }
+
+      // LocalStorage payments cleanup
+      const paymentsData = localStorage.getItem('restaurant_payments');
+      if (paymentsData) {
+        const paymentsList: PaymentRecord[] = JSON.parse(paymentsData);
+        const filtered = paymentsList.filter(p => new Date(p.createdAt).getTime() >= thirtyDaysAgo.getTime());
+        localStorage.setItem('restaurant_payments', JSON.stringify(filtered));
+      }
+      
+      notifyLocalSubscribers();
     }
   },
 

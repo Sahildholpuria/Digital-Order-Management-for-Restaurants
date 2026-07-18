@@ -14,6 +14,8 @@ import {
   OrderStatus,
   TableStatus,
   UserRole,
+  ToastConfig,
+  ConfirmModalConfig,
 } from '../types';
 
 interface RestaurantContextType {
@@ -65,12 +67,52 @@ interface RestaurantContextType {
   // Auth Helpers
   loginMockUser: (email: string, role: UserRole) => Promise<UserProfile>;
   logoutUser: () => Promise<void>;
+
+  // Toast & Modal Helper State API
+  toasts: ToastConfig[];
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  removeToast: (id: string) => void;
+  confirmModal: ConfirmModalConfig;
+  askConfirmation: (title: string, message: string, onConfirm: () => void) => void;
+  closeConfirmation: () => void;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [restaurantId, setRestaurantId] = useState<string>('demo-restaurant');
+  const [restaurantId, setRestaurantId] = useState<string>(() => {
+    const path = window.location.pathname;
+    const menuMatch = path.match(/^\/menu\/([^/]+)$/);
+    const trackerMatch = path.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+    const tableId = menuMatch?.[1] || trackerMatch?.[1];
+    
+    if (tableId) {
+      const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+      if (cached) return cached;
+    }
+    
+    const storedStaffRest = localStorage.getItem('last_active_staff_restaurant_id');
+    if (storedStaffRest) return storedStaffRest;
+    
+    const savedUser = localStorage.getItem('restaurant_current_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u.restaurantId) return u.restaurantId;
+      } catch (e) {}
+    }
+    
+    return 'demo-restaurant';
+  });
+  const [isResolvingId, setIsResolvingId] = useState<boolean>(() => {
+    const path = window.location.pathname;
+    const isMenuRoute = path.match(/^\/menu\/([^/]+)$/) || path.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+    if (!isMenuRoute) return false;
+    
+    const tableId = isMenuRoute[1];
+    const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+    return !cached;
+  });
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
@@ -84,6 +126,45 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
+
+  // Toast & Modal popup states
+  const [toasts, setToasts] = useState<ToastConfig[]>([]);
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalConfig>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    
+    // Auto-remove toast after 4 seconds
+    setTimeout(() => {
+      removeToast(id);
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const askConfirmation = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        closeConfirmation();
+      },
+    });
+  };
+
+  const closeConfirmation = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
@@ -149,19 +230,40 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const syncSupabaseProfile = async (user: any) => {
     try {
-      const users = await dbService.getUsers(restaurantId);
-      const found = users.find(u => u.id === user.id);
-      if (found) {
-        setCurrentUserState(found);
+      // Query directly by user ID — avoids relying on context restaurantId
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        // Profile found — map to frontend shape
+        const profile: UserProfile = {
+          id: data.id,
+          restaurantId: data.restaurant_id,
+          name: data.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
+          email: data.email || user.email || '',
+          role: data.role || 'admin',
+          isSuperAdmin: data.is_super_admin || false,
+          createdAt: data.created_at || new Date().toISOString(),
+        };
+        setCurrentUserState(profile);
       } else {
+        // Profile genuinely missing (e.g. legacy account) — only insert then
+        const isSuper = user.email === 'superadmin@restaurant.com' || user.email?.includes('super') || false;
         const profile: UserProfile = {
           id: user.id,
+          restaurantId: 'demo-restaurant',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
           email: user.email || '',
           role: 'admin',
+          isSuperAdmin: isSuper,
           createdAt: new Date().toISOString(),
         };
-        await dbService.addUser(restaurantId, profile);
+        await dbService.addUser('demo-restaurant', profile);
         setCurrentUserState(profile);
       }
     } catch (err) {
@@ -173,12 +275,25 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Load User Auth State (Supabase or LocalMock)
   useEffect(() => {
+    const clearState = () => {
+      setCurrentUserState(null);
+      setSettings(null);
+      setCategories([]);
+      setFoodItems([]);
+      setTables([]);
+      setOrders([]);
+      setPayments([]);
+      setNotifications([]);
+      setCurrentTable(null);
+      localStorage.removeItem('last_active_staff_restaurant_id');
+    };
+
     if (isSupabaseConfigured) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           syncSupabaseProfile(session.user);
         } else {
-          setCurrentUserState(null);
+          clearState();
           setLoading(false);
         }
       });
@@ -187,7 +302,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (session?.user) {
           syncSupabaseProfile(session.user);
         } else {
-          setCurrentUserState(null);
+          clearState();
           setLoading(false);
         }
       });
@@ -199,13 +314,61 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const savedUser = localStorage.getItem('restaurant_current_user');
       if (savedUser) {
         setCurrentUserState(JSON.parse(savedUser));
+      } else {
+        clearState();
       }
       setLoading(false);
     }
   }, [restaurantId]);
 
+  // Sync restaurantId with logged-in user's profile restaurantId
+  useEffect(() => {
+    if (currentUser?.restaurantId) {
+      setRestaurantId(currentUser.restaurantId);
+      localStorage.setItem('last_active_staff_restaurant_id', currentUser.restaurantId);
+    }
+  }, [currentUser]);
+
+  // Resolve restaurantId from URL tableId for guest customers
+  useEffect(() => {
+    const resolveRestaurantFromUrl = async () => {
+      const menuMatch = window.location.pathname.match(/^\/menu\/([^/]+)$/);
+      const trackerMatch = window.location.pathname.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+      const tableId = menuMatch?.[1] || trackerMatch?.[1];
+      
+      if (tableId) {
+        const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+        if (cached) {
+          setRestaurantId(cached);
+          setIsResolvingId(false);
+          return;
+        }
+        
+        setIsResolvingId(true);
+        try {
+          const resolvedId = await dbService.getRestaurantIdByTableId(tableId);
+          if (resolvedId) {
+            sessionStorage.setItem(`resolved_rest_${tableId}`, resolvedId);
+            setRestaurantId(resolvedId);
+          }
+        } catch (err) {
+          console.error('Failed to resolve restaurant from table URL:', err);
+        } finally {
+          setIsResolvingId(false);
+        }
+      } else {
+        setIsResolvingId(false);
+      }
+    };
+    
+    resolveRestaurantFromUrl();
+  }, [window.location.pathname]);
+
   // Load Settings and Real-time Listeners
   useEffect(() => {
+    if (loading) return;
+
+    let unsubSettings: () => void = () => {};
     let unsubTables: () => void = () => {};
     let unsubCategories: () => void = () => {};
     let unsubFoodItems: () => void = () => {};
@@ -216,25 +379,33 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const loadData = async () => {
       try {
         await dbService.cleanupExpiredOrders(restaurantId);
-        const setts = await dbService.getSettings(restaurantId);
-        setSettings(setts);
 
-        // 1. Fetch tables, categories, and food items ONCE to save connection & DB budget
-        const tablesData = await dbService.getTables(restaurantId);
-        setTables(tablesData);
-        setTablesLoaded(true); // Mark tables as definitively loaded
-        if (currentTable) {
-          const fresh = tablesData.find(t => t.id === currentTable.id);
-          if (fresh) setCurrentTable(fresh);
-        }
+        // 1. Subscribe to settings dynamically
+        unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
+          setSettings(data);
+        });
 
-        const categoriesData = await dbService.getCategories(restaurantId);
-        setCategories(categoriesData);
+        // 2. Subscribe to tables dynamically
+        unsubTables = dbService.subscribeTables(restaurantId, (data) => {
+          setTables(data);
+          setTablesLoaded(true);
+          if (currentTable) {
+            const fresh = data.find(t => t.id === currentTable.id);
+            if (fresh) setCurrentTable(fresh);
+          }
+        });
 
-        const itemsData = await dbService.getFoodItems(restaurantId);
-        setFoodItems(itemsData);
+        // 3. Subscribe to categories dynamically
+        unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
+          setCategories(data);
+        });
 
-        // 2. Optimized Subscriptions - only open WebSocket channels if necessary
+        // 4. Subscribe to food items dynamically
+        unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
+          setFoodItems(data);
+        });
+
+        // 5. Optimized Subscriptions - only open WebSocket channels if necessary
         const isStaffUser = !!currentUser;
 
         if (isStaffUser) {
@@ -278,6 +449,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadData();
 
     return () => {
+      unsubSettings();
       unsubTables();
       unsubCategories();
       unsubFoodItems();
@@ -285,7 +457,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubPayments();
       unsubNotifications();
     };
-  }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id]);
+  }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id, loading]);
 
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
@@ -451,16 +623,19 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const clearCart = () => setCart([]);
 
   const getCartSubtotal = () => {
-    return cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const sum = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    return Math.round(sum * 100) / 100;
   };
 
   const getCartTax = () => {
     const taxRate = settings ? settings.taxPercentage : 18;
-    return getCartSubtotal() * (taxRate / 100);
+    const tax = getCartSubtotal() * (taxRate / 100);
+    return Math.round(tax * 100) / 100;
   };
 
   const getCartGrandTotal = () => {
-    return getCartSubtotal() + getCartTax();
+    const total = getCartSubtotal() + getCartTax();
+    return Math.round(total * 100) / 100;
   };
 
   // PLACE ORDER
@@ -470,8 +645,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const taxRate = settings ? settings.taxPercentage : 18;
     const subtotal = getCartSubtotal();
-    const tax = subtotal * (taxRate / 100);
-    const grandTotal = subtotal + tax;
+    const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const grandTotal = Math.round((subtotal + tax) * 100) / 100;
     const orderNum = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newOrder: RestaurantOrder = {
@@ -499,11 +674,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Customer sessions are anonymous (no auth.uid) so this call is skipped to
     // avoid an RLS violation that would abort the entire order placement.
     try {
-      await dbService.saveTable(restaurantId, {
-        ...currentTable,
-        status: 'occupied',
-        updatedAt: new Date().toISOString()
-      });
+      await dbService.updateTableStatus(restaurantId, currentTable.id, 'occupied');
     } catch (_) {
       // Silently ignore — staff can update table status manually from the dashboard
     }
@@ -572,11 +743,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (activeTableOrders.length === 0) {
         const table = tables.find(t => t.id === order.tableId);
         if (table && table.status === 'occupied') {
-          await dbService.saveTable(restaurantId, {
-            ...table,
-            status: 'available',
-            updatedAt: new Date().toISOString()
-          });
+          await dbService.updateTableStatus(restaurantId, table.id, 'available');
         }
       }
     }
@@ -587,13 +754,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const updateTableStatus = async (tableId: string, status: TableStatus) => {
-    const table = tables.find(t => t.id === tableId);
-    if (!table) return;
-    await dbService.saveTable(restaurantId, {
-      ...table,
-      status,
-      updatedAt: new Date().toISOString()
-    });
+    await dbService.updateTableStatus(restaurantId, tableId, status);
   };
 
   const addTable = async (table: RestaurantTable) => {
@@ -668,6 +829,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         name: email.split('@')[0].toUpperCase(),
         email,
         role,
+        isSuperAdmin: email === 'superadmin@restaurant.com' || email.includes('super'),
         createdAt: new Date().toISOString()
       };
       await dbService.addUser(restaurantId, found);
@@ -696,7 +858,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       cart,
       currentTable,
       currentUser,
-      loading,
+      loading: loading || isResolvingId,
       tablesLoaded,
       restaurantId,
       isFirebase: isSupabaseConfigured,
@@ -728,6 +890,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       clearAllNotifications,
       loginMockUser,
       logoutUser,
+      toasts,
+      showToast,
+      removeToast,
+      confirmModal,
+      askConfirmation,
+      closeConfirmation,
     }}>
       {settings?.themeColor && (
         <style dangerouslySetInnerHTML={{ __html: `

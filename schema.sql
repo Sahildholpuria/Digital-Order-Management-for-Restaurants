@@ -31,6 +31,9 @@ create table public.restaurants (
   opening_hours text,
   closing_hours text,
   theme_color text default '#6366F1',
+  subscription_status text check (subscription_status in ('trial', 'active', 'expired', 'suspended')) default 'trial' not null,
+  subscription_expires_at timestamp with time zone default timezone('utc'::text, now() + interval '30 days') not null,
+  plan_type text check (plan_type in ('starter', 'pro_6m', 'pro_1y')) default 'starter' not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -41,6 +44,7 @@ create table public.users (
   name text not null,
   email text not null,
   role text check (role in ('admin', 'manager', 'cashier', 'kitchen', 'waiter')) not null,
+  is_super_admin boolean default false not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -146,14 +150,24 @@ on conflict (id) do nothing;
 -- 5. PROFILE SYNC TRIGGER (Creates user profile row automatically on Supabase Auth Sign Up)
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  target_restaurant_id text;
 begin
+  target_restaurant_id := coalesce(new.raw_user_meta_data->>'restaurant_id', 'demo-restaurant');
+  
+  -- Ensure the restaurant exists to satisfy the foreign key constraint
+  insert into public.restaurants (id, name, theme_color)
+  values (target_restaurant_id, 'My Restaurant', '#6366F1')
+  on conflict (id) do nothing;
+
+  -- Now insert the user safely
   insert into public.users (id, restaurant_id, name, email, role)
   values (
     new.id,
-    'demo-restaurant',
+    target_restaurant_id,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
-    'admin' -- default first user role
+    coalesce(new.raw_user_meta_data->>'role', 'admin')
   );
   return new;
 end;
@@ -203,9 +217,23 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Helper function to check if user is a Super Admin
+create or replace function public.is_super_admin(user_id uuid)
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.users
+    where id = user_id and is_super_admin = true
+  );
+end;
+$$ language plpgsql security definer;
+
 -- Policies for settings (tenant configuration)
 create policy "Allow public read for settings" on public.restaurants for select using (true);
-create policy "Allow admin write for settings" on public.restaurants for all using (public.is_admin(auth.uid()) and id = public.get_user_restaurant(auth.uid()));
+create policy "Allow admin write for settings" on public.restaurants for all using (
+  (public.is_admin(auth.uid()) and id = public.get_user_restaurant(auth.uid()))
+  or public.is_super_admin(auth.uid())
+);
 
 -- Policies for tables (staff write restricted)
 create policy "Allow public read for tables" on public.tables for select using (true);
@@ -246,10 +274,39 @@ create policy "Allow staff service call lookups" on public.notifications for all
 
 -- Policies for user profiles (strict tenant privacy, remedied recursion)
 create policy "Allow users to read profiles" on public.users for select using (
-  auth.uid() is not null and 
-  restaurant_id = public.get_user_restaurant(auth.uid())
+  (auth.uid() is not null and restaurant_id = public.get_user_restaurant(auth.uid()))
+  or public.is_super_admin(auth.uid())
 );
 create policy "Allow admin write for profiles" on public.users for all using (
-  public.is_admin(auth.uid()) and 
-  restaurant_id = public.get_user_restaurant(auth.uid())
+  (public.is_admin(auth.uid()) and restaurant_id = public.get_user_restaurant(auth.uid()))
+  or public.is_super_admin(auth.uid())
 );
+
+-- Secure RPC function to update table status (bypassing RLS safely)
+create or replace function public.update_table_status(p_table_id text, p_status text)
+returns void as $$
+begin
+  if p_status not in ('available', 'occupied', 'reserved') then
+    raise exception 'Invalid table status: %', p_status;
+  end if;
+  
+  update public.tables
+  set status = p_status, updated_at = now()
+  where id = p_table_id;
+end;
+$$ language plpgsql security definer;
+
+-- Indexes for performance and scalability (tenant isolation and queries speed)
+create index if not exists idx_users_restaurant_id on public.users(restaurant_id);
+create index if not exists idx_tables_restaurant_id on public.tables(restaurant_id);
+create index if not exists idx_categories_restaurant_id on public.categories(restaurant_id);
+create index if not exists idx_food_items_restaurant_id on public.food_items(restaurant_id);
+create index if not exists idx_food_items_category_id on public.food_items(category_id);
+create index if not exists idx_orders_restaurant_id on public.orders(restaurant_id);
+create index if not exists idx_orders_table_id on public.orders(table_id);
+create index if not exists idx_orders_status on public.orders(status);
+create index if not exists idx_orders_created_at on public.orders(created_at desc);
+create index if not exists idx_payments_restaurant_id on public.payments(restaurant_id);
+create index if not exists idx_payments_created_at on public.payments(created_at desc);
+create index if not exists idx_notifications_restaurant_id on public.notifications(restaurant_id);
+create index if not exists idx_notifications_is_read on public.notifications(is_read);

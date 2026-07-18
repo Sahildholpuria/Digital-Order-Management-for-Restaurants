@@ -19,7 +19,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 
 export const TablesManager: React.FC = () => {
-  const { tables, addTable, deleteTable, updateTableStatus, restaurantId, settings } = useRestaurant();
+  const { tables, addTable, deleteTable, updateTableStatus, restaurantId, settings, showToast, askConfirmation } = useRestaurant();
   
   // Dialog States
   const [isOpen, setIsOpen] = useState(false);
@@ -64,13 +64,19 @@ export const TablesManager: React.FC = () => {
     };
 
     await addTable(newTable);
+    showToast(editingTable ? 'Table updated successfully!' : 'Table created successfully!', 'success');
     setIsOpen(false);
   };
 
   const handleDelete = async (tableId: string) => {
-    if (confirm('Are you sure you want to delete this table? The QR code will stop working immediately.')) {
-      await deleteTable(tableId);
-    }
+    askConfirmation(
+      'Delete Table?',
+      'Are you sure you want to delete this table? The QR code will stop working immediately.',
+      async () => {
+        await deleteTable(tableId);
+        showToast('Table deleted successfully.', 'success');
+      }
+    );
   };
 
   const copyUrl = (url: string, tableId: string) => {
