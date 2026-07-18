@@ -80,38 +80,21 @@ export const SuperAdminDashboard: React.FC = () => {
     fetchAllData();
   }, []);
 
-  // Auto-calculate expiry date based on planType in Onboard Restaurant modal
-  useEffect(() => {
-    const calcExpiry = (plan: 'starter' | 'pro_6m' | 'pro_1y') => {
-      const now = new Date();
-      if (plan === 'starter') {
-        now.setDate(now.getDate() + 30);
-      } else if (plan === 'pro_6m') {
-        now.setMonth(now.getMonth() + 6);
-      } else if (plan === 'pro_1y') {
-        now.setFullYear(now.getFullYear() + 1);
-      }
-      return now.toISOString().split('T')[0];
-    };
-    setExpiresAt(calcExpiry(planType));
-  }, [planType]);
-
-  // Auto-calculate expiry date based on editPlan in Edit Restaurant modal
-  useEffect(() => {
-    if (!selectedRest) return;
-    const calcExpiry = (plan: 'starter' | 'pro_6m' | 'pro_1y') => {
-      const now = new Date();
-      if (plan === 'starter') {
-        now.setDate(now.getDate() + 30);
-      } else if (plan === 'pro_6m') {
-        now.setMonth(now.getMonth() + 6);
-      } else if (plan === 'pro_1y') {
-        now.setFullYear(now.getFullYear() + 1);
-      }
-      return now.toISOString().split('T')[0];
-    };
-    setEditExpiresAt(calcExpiry(editPlan));
-  }, [editPlan, selectedRest]);
+  const handleOpenOnboard = () => {
+    setRestId('');
+    setName('');
+    setEmail('');
+    setPhone('');
+    setPlanType('starter');
+    setStatus('trial');
+    
+    // Auto-calculate default initial expiry: +30 Days
+    const defaultExpiry = new Date();
+    defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+    setExpiresAt(defaultExpiry.toISOString().split('T')[0]);
+    
+    setIsModalOpen(true);
+  };
 
   const handleDeleteRestaurant = async (restaurantId: string, restaurantName: string) => {
     askConfirmation(
@@ -306,7 +289,7 @@ export const SuperAdminDashboard: React.FC = () => {
               <RefreshCw className="w-5 h-5" />
             </button>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenOnboard}
               className="flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer flex-[3] sm:flex-none whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
@@ -695,7 +678,19 @@ export const SuperAdminDashboard: React.FC = () => {
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Initial Plan</label>
                   <select
                     value={planType}
-                    onChange={(e) => setPlanType(e.target.value as any)}
+                    onChange={(e) => {
+                      const val = e.target.value as 'starter' | 'pro_6m' | 'pro_1y';
+                      setPlanType(val);
+                      const now = new Date();
+                      if (val === 'starter') {
+                        now.setDate(now.getDate() + 30);
+                      } else if (val === 'pro_6m') {
+                        now.setMonth(now.getMonth() + 6);
+                      } else if (val === 'pro_1y') {
+                        now.setFullYear(now.getFullYear() + 1);
+                      }
+                      setExpiresAt(now.toISOString().split('T')[0]);
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
                   >
                     <option value="starter">Starter Plan</option>
@@ -793,7 +788,19 @@ export const SuperAdminDashboard: React.FC = () => {
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Selected Plan</label>
                   <select
                     value={editPlan}
-                    onChange={(e) => setEditPlan(e.target.value as any)}
+                    onChange={(e) => {
+                      const val = e.target.value as 'starter' | 'pro_6m' | 'pro_1y';
+                      setEditPlan(val);
+                      const now = new Date();
+                      if (val === 'starter') {
+                        now.setDate(now.getDate() + 30);
+                      } else if (val === 'pro_6m') {
+                        now.setMonth(now.getMonth() + 6);
+                      } else if (val === 'pro_1y') {
+                        now.setFullYear(now.getFullYear() + 1);
+                      }
+                      setEditExpiresAt(now.toISOString().split('T')[0]);
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
                   >
                     <option value="starter">Starter Plan</option>
