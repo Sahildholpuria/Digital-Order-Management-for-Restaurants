@@ -759,6 +759,56 @@ export const dbService = {
     }
   },
 
+  async getAllUsers(): Promise<UserProfile[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*');
+      if (error) throw error;
+      return (data || []).map(mapUserToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_users');
+      return data ? JSON.parse(data).map(mapUserToFrontend) : [];
+    }
+  },
+
+  async deleteUserByAdmin(userId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+      if (error) throw error;
+    } else {
+      const dataKey = 'restaurant_users';
+      const existing = localStorage.getItem(dataKey);
+      if (existing) {
+        const list = JSON.parse(existing);
+        const updated = list.filter((u: any) => u.id !== userId);
+        localStorage.setItem(dataKey, JSON.stringify(updated));
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
+  async deleteRestaurant(restaurantId: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('restaurants')
+        .delete()
+        .eq('id', restaurantId);
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('super_admin_restaurants');
+      if (data) {
+        const list = JSON.parse(data);
+        const updated = list.filter((r: any) => r.id !== restaurantId);
+        localStorage.setItem('super_admin_restaurants', JSON.stringify(updated));
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
   // 3. TABLES (Real-time Subscribe & CRUD)
   subscribeTables(restaurantId: string, callback: (tables: RestaurantTable[]) => void) {
     if (isSupabaseConfigured) {

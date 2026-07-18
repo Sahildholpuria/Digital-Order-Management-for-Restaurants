@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../../services/database';
-import { RestaurantSettings } from '../../types';
+import { RestaurantSettings, UserProfile } from '../../types';
 import { 
   Building, 
   Plus, 
@@ -12,11 +12,15 @@ import {
   Award, 
   ShieldCheck, 
   TrendingUp,
-  RefreshCw
+  RefreshCw,
+  Users,
+  Trash2
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'users'>('restaurants');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,21 +48,50 @@ export const SuperAdminDashboard: React.FC = () => {
   const [userRole, setUserRole] = useState<'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter'>('admin');
   const [userRestaurantId, setUserRestaurantId] = useState('');
 
-  const fetchRestaurants = async () => {
+  const fetchAllData = async () => {
     setLoading(true);
     try {
-      const data = await dbService.getAllRestaurants();
-      setRestaurants(data);
+      const restData = await dbService.getAllRestaurants();
+      setRestaurants(restData);
+      
+      const userData = await dbService.getAllUsers();
+      setUsers(userData);
     } catch (err) {
-      console.error('Failed fetching restaurants:', err);
-    } fillly: {
+      console.error('Failed fetching data:', err);
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRestaurants();
+    fetchAllData();
   }, []);
+
+  const handleDeleteRestaurant = async (restaurantId: string, restaurantName: string) => {
+    if (!confirm(`Are you absolutely sure you want to delete "${restaurantName}"? This will permanently delete the restaurant settings, tables, categories, and food items. This action CANNOT be undone.`)) {
+      return;
+    }
+    try {
+      await dbService.deleteRestaurant(restaurantId);
+      alert('Restaurant deleted successfully.');
+      await fetchAllData();
+    } catch (err) {
+      alert('Error deleting restaurant: ' + err);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to delete staff account for "${userName}"?`)) {
+      return;
+    }
+    try {
+      await dbService.deleteUserByAdmin(userId);
+      alert('Staff user deleted successfully.');
+      await fetchAllData();
+    } catch (err) {
+      alert('Error deleting user: ' + err);
+    }
+  };
 
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +119,7 @@ export const SuperAdminDashboard: React.FC = () => {
       setStatus('trial');
       setExpiresAt('');
       
-      await fetchRestaurants();
+      await fetchAllData();
     } catch (err) {
       alert('Error creating restaurant: ' + err);
     }
@@ -118,7 +151,7 @@ export const SuperAdminDashboard: React.FC = () => {
 
       await dbService.updateRestaurantSubscription(selectedRest.id, updates);
       setIsEditModalOpen(false);
-      await fetchRestaurants();
+      await fetchAllData();
     } catch (err) {
       alert('Error updating subscription: ' + err);
     }
@@ -136,17 +169,25 @@ export const SuperAdminDashboard: React.FC = () => {
       setUserFullName('');
       setUserEmail('');
       setUserRole('admin');
+      await fetchAllData();
       alert(`Staff user created successfully! Default login password is "ChangeMe@123".`);
     } catch (err: any) {
       alert('Error creating user: ' + (err.message || err));
     }
   };
 
-  // Filtered list
+  // Filtered lists
   const filtered = restaurants.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.restaurantId && u.restaurantId.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Statistics
@@ -169,7 +210,7 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={fetchRestaurants}
+            onClick={fetchAllData}
             className="bg-white/10 hover:bg-white/20 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center"
             title="Refresh database"
           >
@@ -242,13 +283,48 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Tab Switcher */}
+      <div className="flex gap-3 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <button
+          onClick={() => { setActiveTab('restaurants'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
+            activeTab === 'restaurants'
+              ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Building className="w-4 h-4" />
+          <span>Restaurants Directory ({restaurants.length})</span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('users'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
+            activeTab === 'users'
+              ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Staff Accounts ({users.length})</span>
+        </button>
+      </div>
+
       {/* Table Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-sm overflow-hidden">
         {/* Search Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <h2 className="text-base font-black text-slate-850 dark:text-slate-100 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-brand-500" />
-            <span>Onboarded Restaurants list</span>
+            {activeTab === 'restaurants' ? (
+              <>
+                <Building className="w-5 h-5 text-brand-500" />
+                <span>Onboarded Restaurants list</span>
+              </>
+            ) : (
+              <>
+                <Users className="w-5 h-5 text-indigo-500" />
+                <span>Registered Staff Accounts</span>
+              </>
+            )}
           </h2>
           <div className="relative w-full sm:w-72 shadow-sm rounded-2xl">
             <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -256,7 +332,7 @@ export const SuperAdminDashboard: React.FC = () => {
             </span>
             <input
               type="text"
-              placeholder="Search by restaurant name or slug..."
+              placeholder={activeTab === 'restaurants' ? "Search by restaurant name or slug..." : "Search by staff name, email, or role..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-800 dark:text-slate-100"
@@ -270,82 +346,182 @@ export const SuperAdminDashboard: React.FC = () => {
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3" />
             <p className="text-xs">Loading onboarding directories...</p>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="py-20 text-center">
-            <Building className="w-14 h-14 text-slate-200 dark:text-slate-800 mx-auto mb-4 stroke-[1.2]" />
-            <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">No Restaurants Found</h3>
-            <p className="text-xs text-slate-400 mt-1">Try refining your search terms or onboard a new client.</p>
-          </div>
+        ) : activeTab === 'restaurants' ? (
+          filtered.length === 0 ? (
+            <div className="py-20 text-center">
+              <Building className="w-14 h-14 text-slate-200 dark:text-slate-800 mx-auto mb-4 stroke-[1.2]" />
+              <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">No Restaurants Found</h3>
+              <p className="text-xs text-slate-400 mt-1">Try refining your search terms or onboard a new client.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-6 py-4">Name & Slug</th>
+                    <th className="px-6 py-4">Contact Info</th>
+                    <th className="px-6 py-4">Plan Type</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Expiry Date</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+                  {filtered.map(r => {
+                    const statusColors: Record<string, string> = {
+                      trial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
+                      active: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                      expired: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                      suspended: 'bg-slate-50 text-slate-505 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                    };
+
+                    const planLabels: Record<string, string> = {
+                      starter: 'Starter Plan',
+                      pro_6m: 'Pro 6-Month',
+                      pro_1y: 'Pro 1-Year'
+                    };
+
+                    return (
+                      <tr key={r.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-extrabold text-slate-800 dark:text-slate-200">{r.name}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest">{r.id}</div>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                          <div>{r.email || 'No email registered'}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">{r.phone || 'No phone'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                            <Award className="w-3.5 h-3.5 text-brand-500" />
+                            {planLabels[r.planType || 'starter']}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${statusColors[r.subscriptionStatus || 'trial']}`}>
+                            {r.subscriptionStatus || 'trial'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                          {r.subscriptionExpiresAt ? (
+                            new Date(r.subscriptionExpiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
+                          ) : (
+                            'Lifetime / Lifetime'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEditClick(r)}
+                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer animate-fade-in"
+                            >
+                              Modify Plan
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRestaurant(r.id, r.name)}
+                              className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 p-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center"
+                              title="Delete Restaurant"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-6 py-4">Name & Slug</th>
-                  <th className="px-6 py-4">Contact Info</th>
-                  <th className="px-6 py-4">Plan Type</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Expiry Date</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
-                {filtered.map(r => {
-                  const statusColors: Record<string, string> = {
-                    trial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
-                    active: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
-                    expired: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
-                    suspended: 'bg-slate-50 text-slate-505 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                  };
+          filteredUsers.length === 0 ? (
+            <div className="py-20 text-center">
+              <Users className="w-14 h-14 text-slate-200 dark:text-slate-800 mx-auto mb-4 stroke-[1.2]" />
+              <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">No Staff Found</h3>
+              <p className="text-xs text-slate-400 mt-1">Try refining your search terms or create a new user profile.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-6 py-4">Staff Member</th>
+                    <th className="px-6 py-4">Email</th>
+                    <th className="px-6 py-4">Assigned Restaurant</th>
+                    <th className="px-6 py-4">Role</th>
+                    <th className="px-6 py-4">Joined Date</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+                  {filteredUsers.map(u => {
+                    const roleLabels: Record<string, string> = {
+                      admin: 'Administrator',
+                      manager: 'Store Manager',
+                      cashier: 'Cashier Staff',
+                      kitchen: 'Kitchen Chef',
+                      waiter: 'Waiter Staff'
+                    };
 
-                  const planLabels: Record<string, string> = {
-                    starter: 'Starter Plan',
-                    pro_6m: 'Pro 6-Month',
-                    pro_1y: 'Pro 1-Year'
-                  };
+                    const roleColors: Record<string, string> = {
+                      admin: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                      manager: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/30',
+                      cashier: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                      kitchen: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
+                      waiter: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                    };
 
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-extrabold text-slate-800 dark:text-slate-200">{r.name}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest">{r.id}</div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
-                        <div>{r.email || 'No email registered'}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{r.phone || 'No phone'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
-                          <Award className="w-3.5 h-3.5 text-brand-500" />
-                          {planLabels[r.planType || 'starter']}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${statusColors[r.subscriptionStatus || 'trial']}`}>
-                          {r.subscriptionStatus || 'trial'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
-                        {r.subscriptionExpiresAt ? (
-                          new Date(r.subscriptionExpiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
-                        ) : (
-                          'Lifetime / Lifetime'
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleEditClick(r)}
-                          className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-                        >
-                          Modify Plan
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    const matchedRestaurant = restaurants.find(r => r.id === u.restaurantId);
+
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-extrabold text-slate-800 dark:text-slate-200">{u.name}</div>
+                          {u.isSuperAdmin && (
+                            <span className="inline-flex text-[9px] font-extrabold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-900/30 mt-0.5">SaaS Owner</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                          {u.email}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-700 dark:text-slate-300">
+                            {matchedRestaurant ? matchedRestaurant.name : 'Unknown Restaurant'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest">{u.restaurantId || 'No Tenant'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${roleColors[u.role] || 'bg-slate-100 text-slate-800'}`}>
+                            {roleLabels[u.role] || u.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                          {u.createdAt ? (
+                            new Date(u.createdAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {u.isSuperAdmin ? (
+                            <span className="text-[10px] text-slate-400 italic">Protected</span>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.name)}
+                              className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
 
