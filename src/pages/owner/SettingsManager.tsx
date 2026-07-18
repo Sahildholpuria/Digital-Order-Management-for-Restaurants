@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { 
   Building, 
@@ -38,6 +38,32 @@ export const SettingsManager: React.FC = () => {
   const [enableBillRequest, setEnableBillRequest] = useState(settings?.enableBillRequest ?? true);
   const [enableSoundNotification, setEnableSoundNotification] = useState(settings?.enableSoundNotification ?? true);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  // Sync settings when loaded asynchronously from context
+  useEffect(() => {
+    if (settings) {
+      setName(settings.name || '');
+      setAddress(settings.address || '');
+      setPhone(settings.phone || '');
+      setEmail(settings.email || '');
+      setLogoUrl(settings.logoUrl || '');
+      setGstNumber(settings.gstNumber || '');
+      setTaxPercentage(settings.taxPercentage || 18);
+      setCurrency(settings.currency || '₹');
+      setOpeningHours(settings.openingHours || '09:00');
+      setClosingHours(settings.closingHours || '22:00');
+      setThemeColor(settings.themeColor || '#6366F1');
+      setEnableWaiterCall(settings.enableWaiterCall ?? true);
+      setEnableBillRequest(settings.enableBillRequest ?? true);
+      setEnableSoundNotification(settings.enableSoundNotification ?? true);
+      
+      const savedDate = localStorage.getItem(`settings_updated_at_${settings.id}`);
+      if (savedDate) {
+        setLastUpdated(savedDate);
+      }
+    }
+  }, [settings]);
 
   // Preset theme brand colors
   const themePresets = [
@@ -77,6 +103,17 @@ export const SettingsManager: React.FC = () => {
         enableBillRequest,
         enableSoundNotification,
       });
+      if (settings?.id) {
+        const now = new Date().toLocaleString([], { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        localStorage.setItem(`settings_updated_at_${settings.id}`, now);
+        setLastUpdated(now);
+      }
       alert('Restaurant settings updated successfully!');
     } catch (err) {
       alert('Failed to save settings.');
@@ -97,6 +134,12 @@ export const SettingsManager: React.FC = () => {
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Customize branding, configure invoicing guidelines, and set terminal parameters.
           </p>
+          {lastUpdated && (
+            <p className="text-[10px] text-brand-600 dark:text-brand-400 font-extrabold uppercase tracking-wider mt-1.5 flex items-center gap-1.5 animate-fade-in bg-brand-500/10 px-2.5 py-1 rounded-full w-fit">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+              <span>Last updated: {lastUpdated}</span>
+            </p>
+          )}
         </div>
 
         <button
