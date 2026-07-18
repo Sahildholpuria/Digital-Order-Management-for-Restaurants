@@ -112,6 +112,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-public-api-key
 ```
 4. Restart your dev server (`npm run dev`) to enable the database integration.
 
+
 ---
 
 ## 📦 Vercel Deployment Guide
