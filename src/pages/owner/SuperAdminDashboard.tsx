@@ -80,6 +80,39 @@ export const SuperAdminDashboard: React.FC = () => {
     fetchAllData();
   }, []);
 
+  // Auto-calculate expiry date based on planType in Onboard Restaurant modal
+  useEffect(() => {
+    const calcExpiry = (plan: 'starter' | 'pro_6m' | 'pro_1y') => {
+      const now = new Date();
+      if (plan === 'starter') {
+        now.setDate(now.getDate() + 30);
+      } else if (plan === 'pro_6m') {
+        now.setMonth(now.getMonth() + 6);
+      } else if (plan === 'pro_1y') {
+        now.setFullYear(now.getFullYear() + 1);
+      }
+      return now.toISOString().split('T')[0];
+    };
+    setExpiresAt(calcExpiry(planType));
+  }, [planType]);
+
+  // Auto-calculate expiry date based on editPlan in Edit Restaurant modal
+  useEffect(() => {
+    if (!selectedRest) return;
+    const calcExpiry = (plan: 'starter' | 'pro_6m' | 'pro_1y') => {
+      const now = new Date();
+      if (plan === 'starter') {
+        now.setDate(now.getDate() + 30);
+      } else if (plan === 'pro_6m') {
+        now.setMonth(now.getMonth() + 6);
+      } else if (plan === 'pro_1y') {
+        now.setFullYear(now.getFullYear() + 1);
+      }
+      return now.toISOString().split('T')[0];
+    };
+    setEditExpiresAt(calcExpiry(editPlan));
+  }, [editPlan, selectedRest]);
+
   const handleDeleteRestaurant = async (restaurantId: string, restaurantName: string) => {
     askConfirmation(
       'Delete Restaurant?',
