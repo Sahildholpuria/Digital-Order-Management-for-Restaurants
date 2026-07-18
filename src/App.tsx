@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useRestaurant } from './context/RestaurantContext';
 import { useTheme } from './context/ThemeContext';
 import { CustomerMenu } from './pages/customer/CustomerMenu';
 import { OrderTracker } from './pages/customer/OrderTracker';
-import { Login } from './pages/auth/Login';
-import { AdminDashboard } from './pages/owner/AdminDashboard';
-import { OrdersManager } from './pages/owner/OrdersManager';
-import { TablesManager } from './pages/owner/TablesManager';
-import { MenuManager } from './pages/owner/MenuManager';
-import { BillingManager } from './pages/owner/BillingManager';
-import { ReportsManager } from './pages/owner/ReportsManager';
-import { SettingsManager } from './pages/owner/SettingsManager';
-import { KitchenDisplay } from './pages/kitchen/KitchenDisplay';
-import { WaiterDashboard } from './pages/waiter/WaiterDashboard';
+
+const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const AdminDashboard = lazy(() => import('./pages/owner/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const OrdersManager = lazy(() => import('./pages/owner/OrdersManager').then(m => ({ default: m.OrdersManager })));
+const TablesManager = lazy(() => import('./pages/owner/TablesManager').then(m => ({ default: m.TablesManager })));
+const MenuManager = lazy(() => import('./pages/owner/MenuManager').then(m => ({ default: m.MenuManager })));
+const BillingManager = lazy(() => import('./pages/owner/BillingManager').then(m => ({ default: m.BillingManager })));
+const ReportsManager = lazy(() => import('./pages/owner/ReportsManager').then(m => ({ default: m.ReportsManager })));
+const SettingsManager = lazy(() => import('./pages/owner/SettingsManager').then(m => ({ default: m.SettingsManager })));
+const KitchenDisplay = lazy(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
+const WaiterDashboard = lazy(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
+const SuperAdminDashboard = lazy(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 
 import { 
   TrendingUp, 
@@ -34,8 +36,14 @@ import {
   Globe,
   Shield
 } from 'lucide-react';
-import { SuperAdminDashboard } from './pages/owner/SuperAdminDashboard';
 import { translations, Language } from './translations';
+
+const LazyLoader = () => (
+  <div className="min-h-[50vh] bg-transparent flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+    <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin shadow-md mb-2"></div>
+    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center block">Loading Panel...</span>
+  </div>
+);
 
 export const App: React.FC = () => {
   const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId } = useRestaurant();
@@ -141,11 +149,15 @@ export const App: React.FC = () => {
   // Kitchen direct display access
   if (currentPath === '/kitchen' || currentHash === '#kitchen') {
     if (!currentUser) {
-      return <Login onSuccess={() => navigateTo('/kitchen')} />;
+      return (
+        <Suspense fallback={<LazyLoader />}>
+          <Login onSuccess={() => navigateTo('/kitchen')} />
+        </Suspense>
+      );
     }
     if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'kitchen') {
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800">
             <h2 className="text-2xl font-black text-red-500 mb-2 font-sans tracking-tight">Access Denied</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">You do not have the required permissions to view the Kitchen Display Console.</p>
@@ -164,7 +176,9 @@ export const App: React.FC = () => {
         >
           &larr; Exit KDS
         </button>
-        <KitchenDisplay />
+        <Suspense fallback={<LazyLoader />}>
+          <KitchenDisplay />
+        </Suspense>
       </div>
     );
   }
@@ -172,7 +186,11 @@ export const App: React.FC = () => {
   // Waiter direct display access
   if (currentPath === '/waiter' || currentHash === '#waiter') {
     if (!currentUser) {
-      return <Login onSuccess={() => navigateTo('/waiter')} />;
+      return (
+        <Suspense fallback={<LazyLoader />}>
+          <Login onSuccess={() => navigateTo('/waiter')} />
+        </Suspense>
+      );
     }
     if (currentUser.role !== 'admin' && currentUser.role !== 'manager' && currentUser.role !== 'waiter') {
       return (
@@ -195,7 +213,9 @@ export const App: React.FC = () => {
         >
           &larr; Exit Console
         </button>
-        <WaiterDashboard />
+        <Suspense fallback={<LazyLoader />}>
+          <WaiterDashboard />
+        </Suspense>
       </div>
     );
   }
@@ -205,7 +225,11 @@ export const App: React.FC = () => {
     if (currentUser) {
       navigateTo('/admin');
     } else {
-      return <Login onSuccess={() => navigateTo('/admin')} />;
+      return (
+        <Suspense fallback={<LazyLoader />}>
+          <Login onSuccess={() => navigateTo('/admin')} />
+        </Suspense>
+      );
     }
   }
 
@@ -214,7 +238,11 @@ export const App: React.FC = () => {
   // ==========================================
   if (currentPath === '/admin' || currentPath === '/dashboard') {
     if (!currentUser) {
-      return <Login onSuccess={() => navigateTo('/admin')} />;
+      return (
+        <Suspense fallback={<LazyLoader />}>
+          <Login onSuccess={() => navigateTo('/admin')} />
+        </Suspense>
+      );
     }
 
     // Role-based rendering filters
@@ -458,7 +486,9 @@ export const App: React.FC = () => {
               </button>
             </div>
           )}
-          {renderActiveTabContent()}
+          <Suspense fallback={<LazyLoader />}>
+            {renderActiveTabContent()}
+          </Suspense>
         </main>
 
       </div>
