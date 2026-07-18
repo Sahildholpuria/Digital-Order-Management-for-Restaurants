@@ -310,10 +310,10 @@ export const App: React.FC = () => {
     };
 
     return (
-      <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col lg:flex-row animate-fade-in">
+      <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col xl:flex-row animate-fade-in">
         
-        {/* Mobile Header Bar */}
-        <header className="lg:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+        {/* Mobile/Tablet Header Bar */}
+        <header className="xl:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-brand-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-brand-500/10">
               <ChefHat className="w-4 h-4" />
@@ -331,7 +331,7 @@ export const App: React.FC = () => {
         </header>
 
         {/* Sidebar Frame */}
-        <aside className={`fixed lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 backdrop-blur-xl ${
+        <aside className={`fixed xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 xl:translate-x-0 backdrop-blur-xl ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
           <div className="space-y-8">
@@ -349,7 +349,7 @@ export const App: React.FC = () => {
 
               <button 
                 onClick={() => setMobileSidebarOpen(false)}
-                className="lg:hidden p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400"
+                className="xl:hidden p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400"
               >
                 <X className="w-4 h-4" />
               </button>
