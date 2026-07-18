@@ -141,7 +141,8 @@ Under the **Environment Variables** accordion section of the setup dashboard, ad
 *This ensures pathnames like `/menu/table-3` resolve correctly when scanned by customer phones.*
 
 ## 📖 Interactive Demo & Journey Guide
-A step-by-step walkthrough covering both **The Customer self-ordering journey** and **The Restaurant Owner dashboard/KDS/POS operations** has been created as a dedicated guide. See [DEMO_GUIDE.md](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/DEMO_GUIDE.md) for full details.
+* **User Journeys Guide**: A step-by-step walkthrough covering both **The Customer self-ordering journey** and **The Restaurant Owner dashboard/KDS/POS operations** has been created as a dedicated guide. See [DEMO_GUIDE.md](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/DEMO_GUIDE.md) for full details.
+* **Technical Developer Reference**: A detailed architectural reference covering data models, performance indexes, state subscriptions, portion pricing mechanisms, and secure transitions is located in [ARCHITECTURE.md](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/ARCHITECTURE.md).
 
 ---
 
