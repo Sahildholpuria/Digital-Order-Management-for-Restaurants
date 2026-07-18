@@ -118,10 +118,37 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center animate-fade-in">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto shadow-md"></div>
-          <p className="text-sm font-bold tracking-wide text-slate-500 dark:text-slate-400">Bootstrapping Bistro System...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
+        {/* Glowing background aura */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
+        
+        <div className="space-y-6 max-w-sm w-full z-10">
+          {/* Animated Branded Logo Container */}
+          <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+            {/* Pulsating glowing outline rings */}
+            <div className="absolute inset-0 rounded-3xl border-2 border-brand-500/30 animate-ping duration-1000"></div>
+            <div className="absolute inset-0.5 rounded-3xl border border-brand-500/20 animate-pulse"></div>
+            
+            {/* Core Logo Panel */}
+            <div className="w-16 h-16 bg-brand-600 text-white rounded-3xl flex items-center justify-center shadow-lg shadow-brand-500/30 relative">
+              <ChefHat className="w-8 h-8 animate-bounce duration-2000" />
+            </div>
+          </div>
+
+          {/* Text Title */}
+          <div className="space-y-1">
+            <h2 className="text-xl font-black text-slate-805 dark:text-slate-100 tracking-tight leading-tight uppercase font-sans">
+              RestaurantsOS
+            </h2>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest animate-pulse">
+              Bootstrapping digital ecosystem...
+            </p>
+          </div>
+
+          {/* Premium Progress Bar */}
+          <div className="h-1 w-32 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto overflow-hidden relative shadow-inner">
+            <div className="h-full bg-gradient-to-r from-brand-500 to-pink-500 w-1/2 rounded-full absolute top-0 left-0 animate-loading-bar"></div>
+          </div>
         </div>
       </div>
     );
