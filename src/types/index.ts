@@ -122,3 +122,16 @@ export interface RestaurantNotification {
   isRead: boolean;
   createdAt: any;
 }
+
+export interface ToastConfig {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
+export interface ConfirmModalConfig {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}

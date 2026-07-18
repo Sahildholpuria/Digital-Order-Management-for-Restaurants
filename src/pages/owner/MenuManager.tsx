@@ -26,7 +26,9 @@ export const MenuManager: React.FC = () => {
     deleteCategory, 
     addFoodItem, 
     deleteFoodItem, 
-    settings 
+    settings,
+    showToast,
+    askConfirmation
   } = useRestaurant();
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
@@ -86,6 +88,7 @@ export const MenuManager: React.FC = () => {
     };
 
     await addCategory(newCategory);
+    showToast(editingCategory ? 'Category updated successfully!' : 'Category created successfully!', 'success');
     setIsCatOpen(false);
   };
 
@@ -94,15 +97,20 @@ export const MenuManager: React.FC = () => {
     // Check if food items belong to this category
     const count = foodItems.filter(i => i.categoryId === categoryId).length;
     if (count > 0) {
-      alert(`Cannot delete this category. It contains ${count} food items. Move the items first.`);
+      showToast(`Cannot delete this category. It contains ${count} food items. Move the items first.`, 'error');
       return;
     }
-    if (confirm('Delete this category?')) {
-      await deleteCategory(categoryId);
-      if (activeCategoryId === categoryId) {
-        setActiveCategoryId('all');
+    askConfirmation(
+      'Delete Category?',
+      'Are you sure you want to permanently delete this category? This action cannot be undone.',
+      async () => {
+        await deleteCategory(categoryId);
+        if (activeCategoryId === categoryId) {
+          setActiveCategoryId('all');
+        }
+        showToast('Category deleted successfully.', 'success');
       }
-    }
+    );
   };
 
   const handleMoveCategory = async (cat: MenuCategory, direction: 'up' | 'down') => {
@@ -196,13 +204,19 @@ export const MenuManager: React.FC = () => {
     };
 
     await addFoodItem(newItem);
+    showToast(editingItem ? 'Menu item updated successfully!' : 'Menu item created successfully!', 'success');
     setIsItemOpen(false);
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (confirm('Are you sure you want to delete this menu item?')) {
-      await deleteFoodItem(itemId);
-    }
+    askConfirmation(
+      'Delete Menu Item?',
+      'Are you sure you want to permanently delete this menu item from your restaurant menu?',
+      async () => {
+        await deleteFoodItem(itemId);
+        showToast('Menu item deleted successfully.', 'success');
+      }
+    );
   };
 
   const handleDuplicateItem = async (item: FoodItem) => {

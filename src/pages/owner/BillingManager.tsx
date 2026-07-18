@@ -22,7 +22,8 @@ export const BillingManager: React.FC = () => {
     orders, 
     settings, 
     addPaymentRecord, 
-    updateOrderStatus 
+    updateOrderStatus,
+    showToast
   } = useRestaurant();
 
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
@@ -73,10 +74,10 @@ export const BillingManager: React.FC = () => {
       // Reset POS terminal selection
       setSelectedOrderId('');
       setDiscountPercent(0);
-      alert(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`);
+      showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
     } catch (err) {
       console.error(err);
-      alert('Settlement failed.');
+      showToast('Settlement failed.', 'error');
     } finally {
       setIsProcessing(false);
     }

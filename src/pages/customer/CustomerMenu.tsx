@@ -30,6 +30,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     tables,
     loading,
     tablesLoaded,
+    showToast,
   } = useRestaurant();
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
@@ -165,7 +166,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   const handlePlaceOrder = async () => {
     if (isSubscriptionExpired()) {
-      alert("This restaurant's ordering service is currently inactive. Please contact the staff.");
+      showToast("This restaurant's ordering service is currently inactive. Please contact the staff.", 'error');
       return;
     }
     try {
@@ -180,7 +181,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         origin: { y: 0.6 }
       });
     } catch (err) {
-      alert('Failed to place order. Please try again.');
+      showToast('Failed to place order. Please try again.', 'error');
     }
   };
 

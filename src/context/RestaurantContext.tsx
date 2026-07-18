@@ -14,6 +14,8 @@ import {
   OrderStatus,
   TableStatus,
   UserRole,
+  ToastConfig,
+  ConfirmModalConfig,
 } from '../types';
 
 interface RestaurantContextType {
@@ -65,6 +67,14 @@ interface RestaurantContextType {
   // Auth Helpers
   loginMockUser: (email: string, role: UserRole) => Promise<UserProfile>;
   logoutUser: () => Promise<void>;
+
+  // Toast & Modal Helper State API
+  toasts: ToastConfig[];
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  removeToast: (id: string) => void;
+  confirmModal: ConfirmModalConfig;
+  askConfirmation: (title: string, message: string, onConfirm: () => void) => void;
+  closeConfirmation: () => void;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -116,6 +126,45 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
+
+  // Toast & Modal popup states
+  const [toasts, setToasts] = useState<ToastConfig[]>([]);
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalConfig>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    
+    // Auto-remove toast after 4 seconds
+    setTimeout(() => {
+      removeToast(id);
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const askConfirmation = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        closeConfirmation();
+      },
+    });
+  };
+
+  const closeConfirmation = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
@@ -855,6 +904,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       clearAllNotifications,
       loginMockUser,
       logoutUser,
+      toasts,
+      showToast,
+      removeToast,
+      confirmModal,
+      askConfirmation,
+      closeConfirmation,
     }}>
       {settings?.themeColor && (
         <style dangerouslySetInnerHTML={{ __html: `

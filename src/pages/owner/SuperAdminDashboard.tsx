@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { setRestaurantId } = useRestaurant();
+  const { setRestaurantId, showToast, askConfirmation } = useRestaurant();
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<'restaurants' | 'users'>('restaurants');
@@ -81,29 +81,35 @@ export const SuperAdminDashboard: React.FC = () => {
   }, []);
 
   const handleDeleteRestaurant = async (restaurantId: string, restaurantName: string) => {
-    if (!confirm(`Are you absolutely sure you want to delete "${restaurantName}"? This will permanently delete the restaurant settings, tables, categories, and food items. This action CANNOT be undone.`)) {
-      return;
-    }
-    try {
-      await dbService.deleteRestaurant(restaurantId);
-      alert('Restaurant deleted successfully.');
-      await fetchAllData();
-    } catch (err) {
-      alert('Error deleting restaurant: ' + err);
-    }
+    askConfirmation(
+      'Delete Restaurant?',
+      `Are you absolutely sure you want to delete "${restaurantName}"? This will permanently delete the restaurant settings, tables, categories, and food items. This action CANNOT be undone.`,
+      async () => {
+        try {
+          await dbService.deleteRestaurant(restaurantId);
+          showToast('Restaurant deleted successfully.', 'success');
+          await fetchAllData();
+        } catch (err) {
+          showToast('Error deleting restaurant: ' + err, 'error');
+        }
+      }
+    );
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete staff account for "${userName}"?`)) {
-      return;
-    }
-    try {
-      await dbService.deleteUserByAdmin(userId);
-      alert('Staff user deleted successfully.');
-      await fetchAllData();
-    } catch (err) {
-      alert('Error deleting user: ' + err);
-    }
+    askConfirmation(
+      'Delete Staff Account?',
+      `Are you sure you want to delete staff account for "${userName}"?`,
+      async () => {
+        try {
+          await dbService.deleteUserByAdmin(userId);
+          showToast('Staff user deleted successfully.', 'success');
+          await fetchAllData();
+        } catch (err) {
+          showToast('Error deleting user: ' + err, 'error');
+        }
+      }
+    );
   };
 
   const handleOnboardSubmit = async (e: React.FormEvent) => {
@@ -132,9 +138,10 @@ export const SuperAdminDashboard: React.FC = () => {
       setStatus('trial');
       setExpiresAt('');
       
+      showToast('Restaurant created successfully!', 'success');
       await fetchAllData();
     } catch (err) {
-      alert('Error creating restaurant: ' + err);
+      showToast('Error creating restaurant: ' + err, 'error');
     }
   };
 
@@ -171,9 +178,9 @@ export const SuperAdminDashboard: React.FC = () => {
       await dbService.updateRestaurantSubscription(selectedRest.id, updates);
       setIsEditModalOpen(false);
       await fetchAllData();
-      alert('Restaurant details updated successfully.');
+      showToast('Restaurant details updated successfully.', 'success');
     } catch (err) {
-      alert('Error updating restaurant: ' + err);
+      showToast('Error updating restaurant: ' + err, 'error');
     }
   };
 
@@ -193,9 +200,9 @@ export const SuperAdminDashboard: React.FC = () => {
       await dbService.updateUserByAdmin(selectedUser.id, editUserFullName.trim(), editUserRole, editUserRestaurantId);
       setIsEditUserModalOpen(false);
       await fetchAllData();
-      alert('Staff user profile updated successfully.');
+      showToast('Staff user profile updated successfully.', 'success');
     } catch (err: any) {
-      alert('Error updating user profile: ' + (err.message || err));
+      showToast('Error updating user profile: ' + (err.message || err), 'error');
     }
   };
 
@@ -208,7 +215,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userFullName || !userEmail || !userRestaurantId) {
-      alert('Please fill out all fields.');
+      showToast('Please fill out all fields.', 'error');
       return;
     }
     try {
@@ -218,9 +225,9 @@ export const SuperAdminDashboard: React.FC = () => {
       setUserEmail('');
       setUserRole('admin');
       await fetchAllData();
-      alert(`Staff user created successfully! Default login password is "ChangeMe@123".`);
+      showToast(`Staff user created successfully! Default login password is "ChangeMe@123".`, 'success');
     } catch (err: any) {
-      alert('Error creating user: ' + (err.message || err));
+      showToast('Error creating user: ' + (err.message || err), 'error');
     }
   };
 
@@ -276,7 +283,7 @@ export const SuperAdminDashboard: React.FC = () => {
           <button
             onClick={() => {
               if (restaurants.length === 0) {
-                alert('Please onboard at least one restaurant first!');
+                showToast('Please onboard at least one restaurant first!', 'error');
                 return;
               }
               setUserRestaurantId(restaurants[0].id);

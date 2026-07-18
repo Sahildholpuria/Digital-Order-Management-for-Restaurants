@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
-  const { settings, updateSettings } = useRestaurant();
+  const { settings, updateSettings, showToast } = useRestaurant();
 
   // Settings states
   const [name, setName] = useState(settings?.name || '');
@@ -114,9 +114,9 @@ export const SettingsManager: React.FC = () => {
         localStorage.setItem(`settings_updated_at_${settings.id}`, now);
         setLastUpdated(now);
       }
-      alert('Restaurant settings updated successfully!');
+      showToast('Restaurant settings updated successfully!', 'success');
     } catch (err) {
-      alert('Failed to save settings.');
+      showToast('Failed to save settings.', 'error');
     } finally {
       setIsSaving(false);
     }
