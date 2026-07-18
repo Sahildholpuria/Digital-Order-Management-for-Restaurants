@@ -68,6 +68,16 @@ export const App: React.FC = () => {
     return 'dashboard';
   });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Trigger brief page transition loader on path or tab change
+  useEffect(() => {
+    setIsNavigating(true);
+    const timer = setTimeout(() => {
+      setIsNavigating(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [activeTab, currentPath, currentHash]);
 
   // Sync route on browser navigation (back/forward)
   useEffect(() => {
@@ -116,7 +126,7 @@ export const App: React.FC = () => {
     setCurrentHash(hash);
   };
 
-  if (loading) {
+  if (loading || isNavigating) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
         {/* Glowing background aura */}
