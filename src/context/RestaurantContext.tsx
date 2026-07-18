@@ -674,11 +674,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Customer sessions are anonymous (no auth.uid) so this call is skipped to
     // avoid an RLS violation that would abort the entire order placement.
     try {
-      await dbService.saveTable(restaurantId, {
-        ...currentTable,
-        status: 'occupied',
-        updatedAt: new Date().toISOString()
-      });
+      await dbService.updateTableStatus(restaurantId, currentTable.id, 'occupied');
     } catch (_) {
       // Silently ignore — staff can update table status manually from the dashboard
     }
@@ -747,11 +743,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (activeTableOrders.length === 0) {
         const table = tables.find(t => t.id === order.tableId);
         if (table && table.status === 'occupied') {
-          await dbService.saveTable(restaurantId, {
-            ...table,
-            status: 'available',
-            updatedAt: new Date().toISOString()
-          });
+          await dbService.updateTableStatus(restaurantId, table.id, 'available');
         }
       }
     }
@@ -762,13 +754,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const updateTableStatus = async (tableId: string, status: TableStatus) => {
-    const table = tables.find(t => t.id === tableId);
-    if (!table) return;
-    await dbService.saveTable(restaurantId, {
-      ...table,
-      status,
-      updatedAt: new Date().toISOString()
-    });
+    await dbService.updateTableStatus(restaurantId, tableId, status);
   };
 
   const addTable = async (table: RestaurantTable) => {

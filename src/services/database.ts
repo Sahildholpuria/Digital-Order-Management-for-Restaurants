@@ -971,6 +971,26 @@ export const dbService = {
     }
   },
 
+  async updateTableStatus(restaurantId: string, tableId: string, status: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.rpc('update_table_status', {
+        p_table_id: tableId,
+        p_status: status
+      });
+      if (error) throw error;
+    } else {
+      const data = localStorage.getItem('restaurant_tables');
+      const tables: RestaurantTable[] = data ? JSON.parse(data) : [];
+      const index = tables.findIndex(t => t.id === tableId);
+      if (index > -1) {
+        tables[index].status = status as any;
+        tables[index].updatedAt = new Date().toISOString();
+        localStorage.setItem('restaurant_tables', JSON.stringify(tables));
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
   async deleteTable(restaurantId: string, tableId: string): Promise<void> {
     if (isSupabaseConfigured) {
       const { error } = await supabase
