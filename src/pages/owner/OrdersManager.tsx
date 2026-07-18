@@ -221,7 +221,7 @@ export const OrdersManager: React.FC = () => {
 
       {/* Kanban Board View */}
       {statusFilter === 'active' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {boardColumns.map((col, index) => (
             <div key={index} className={`rounded-3xl border-t-4 p-5 space-y-4 flex flex-col min-h-[500px] border border-slate-200/60 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/10 backdrop-blur-sm ${col.color}`}>
               

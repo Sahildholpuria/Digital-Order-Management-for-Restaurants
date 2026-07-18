@@ -329,7 +329,7 @@ export const SuperAdminDashboard: React.FC = () => {
       </div>
 
       {/* Grid Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
           <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
             <Building className="w-6 h-6" />
