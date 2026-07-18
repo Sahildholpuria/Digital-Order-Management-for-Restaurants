@@ -794,6 +794,52 @@ export const SuperAdminDashboard: React.FC = () => {
                 />
               </div>
 
+              {/* Quick Renewal Actions */}
+              <div className="bg-brand-500/5 border border-brand-500/10 p-4 rounded-2xl space-y-2 mt-4">
+                <span className="text-[10px] font-extrabold text-brand-600 dark:text-brand-400 uppercase tracking-wider block">⚡ Quick Subscription Renewal</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newDate = new Date();
+                      newDate.setDate(newDate.getDate() + 30);
+                      setEditExpiresAt(newDate.toISOString().split('T')[0]);
+                      setEditStatus('active');
+                      showToast('Set to Active and extended +30 Days.', 'info');
+                    }}
+                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-750 dark:text-slate-250 py-2 rounded-xl text-[10px] font-bold transition-all"
+                  >
+                    +30 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newDate = new Date();
+                      newDate.setMonth(newDate.getMonth() + 6);
+                      setEditExpiresAt(newDate.toISOString().split('T')[0]);
+                      setEditStatus('active');
+                      showToast('Set to Active and extended +6 Months.', 'info');
+                    }}
+                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-750 dark:text-slate-250 py-2 rounded-xl text-[10px] font-bold transition-all"
+                  >
+                    +6 Months
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newDate = new Date();
+                      newDate.setFullYear(newDate.getFullYear() + 1);
+                      setEditExpiresAt(newDate.toISOString().split('T')[0]);
+                      setEditStatus('active');
+                      showToast('Set to Active and extended +1 Year.', 'info');
+                    }}
+                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-750 dark:text-slate-250 py-2 rounded-xl text-[10px] font-bold transition-all"
+                  >
+                    +1 Year
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-6 text-xs cursor-pointer"

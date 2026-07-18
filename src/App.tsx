@@ -368,6 +368,73 @@ export const App: React.FC = () => {
         );
       }
 
+      const isSubscriptionExpired = () => {
+        if (currentUser?.isSuperAdmin) return false;
+        if (!settings) return false;
+        const status = settings.subscriptionStatus || 'trial';
+        const expiry = settings.subscriptionExpiresAt;
+        if (status === 'expired' || status === 'suspended') return true;
+        if (expiry && new Date(expiry) < new Date()) return true;
+        return false;
+      };
+
+      if (isSubscriptionExpired()) {
+        const formattedExpiry = settings?.subscriptionExpiresAt 
+          ? new Date(settings.subscriptionExpiresAt).toLocaleDateString([], { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }) 
+          : 'N/A';
+
+        return (
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
+            {/* Glowing red backdrop aura */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
+            
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl p-8 shadow-2xl max-w-md w-full relative z-10 space-y-6">
+              <div className="w-16 h-16 bg-red-500/10 text-red-550 rounded-3xl flex items-center justify-center mx-auto mb-2 animate-bounce duration-3000">
+                <Shield className="w-8 h-8" />
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-slate-850 dark:text-slate-100 tracking-tight font-sans">
+                  Subscription Expired
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                  Your restaurant subscription to <span className="font-extrabold text-brand-655">RestaurantsOS</span> has expired or been suspended on <strong className="text-red-500 font-bold">{formattedExpiry}</strong>. 
+                  Please renew the subscription if you want to continue using the system.
+                </p>
+              </div>
+
+              <div className="bg-slate-50/50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800/50 p-4 rounded-2xl text-[11px] text-slate-400 text-left space-y-1.5 font-sans">
+                <p><strong>Restaurant ID:</strong> <span className="font-mono text-slate-600 dark:text-slate-350 font-bold">{settings?.id}</span></p>
+                <p><strong>Restaurant Name:</strong> <span className="text-slate-600 dark:text-slate-350 font-bold">{settings?.name}</span></p>
+                <p><strong>Billing Status:</strong> <span className="text-red-500 font-bold uppercase">{settings?.subscriptionStatus}</span></p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <a 
+                  href="mailto:billing@restaurantsos.app"
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer block"
+                >
+                  Contact Support for Renewal
+                </a>
+                <button
+                  onClick={async () => {
+                    await logoutUser();
+                    navigateTo('/');
+                  }}
+                  className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-205 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-3.5 px-6 rounded-2xl transition-all text-xs cursor-pointer"
+                >
+                  Sign Out of Portal &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       // Role-based rendering filters (Super Admin has unrestricted bypass)
       const isRole = (roles: string[]) => currentUser?.isSuperAdmin || roles.includes(currentUser.role);
 
@@ -413,39 +480,8 @@ export const App: React.FC = () => {
         { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
       ].filter(item => isRole(item.roles));
 
-      const isSubscriptionExpired = () => {
-        if (currentUser?.isSuperAdmin) return false;
-        if (!settings) return false;
-        const status = settings.subscriptionStatus || 'trial';
-        const expiry = settings.subscriptionExpiresAt;
-        if (status === 'expired' || status === 'suspended') return true;
-        if (expiry && new Date(expiry) < new Date()) return true;
-        return false;
-      };
-
       // Render active tab body
       const renderActiveTabContent = () => {
-        if (isSubscriptionExpired()) {
-          return (
-            <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto h-full">
-              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mb-6">
-                <Shield className="w-8 h-8" />
-              </div>
-              <h2 className="text-xl font-black text-slate-805 dark:text-slate-100">Subscription Inactive</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Your subscription to <span className="font-extrabold text-brand-655">RestaurantsOS</span> has expired, been suspended, or the trial period has ended.
-              </p>
-              <div className="mt-6 bg-slate-50/50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 p-4 rounded-2xl w-full text-[11px] text-slate-400 space-y-1.5 text-left">
-                <p><strong>Restaurant ID:</strong> {settings?.id}</p>
-                <p><strong>Status:</strong> <span className="text-red-500 font-bold uppercase">{settings?.subscriptionStatus}</span></p>
-                <p><strong>Expiry Date:</strong> {settings?.subscriptionExpiresAt ? new Date(settings.subscriptionExpiresAt).toLocaleDateString() : 'N/A'}</p>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-6">
-                Please contact the system administrator at <a href="mailto:hello@restaurantsos.app" className="text-brand-655 font-bold hover:underline">hello@restaurantsos.app</a> to renew your plan.
-              </p>
-            </div>
-          );
-        }
 
         switch (activeTab) {
           case 'superadmin': return <SuperAdminDashboard />;
