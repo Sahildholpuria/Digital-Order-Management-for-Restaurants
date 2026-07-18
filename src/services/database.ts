@@ -481,6 +481,58 @@ export const dbService = {
       return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
+  subscribeSettings(restaurantId: string, callback: (settings: RestaurantSettings) => void) {
+    if (isSupabaseConfigured) {
+      const fetchSettings = async () => {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('id', restaurantId)
+          .maybeSingle();
+        if (!error && data) {
+          callback(mapSettingsToFrontend(data));
+        }
+      };
+
+      fetchSettings();
+
+      const channel = supabase
+        .channel(`public:restaurants:${restaurantId}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'restaurants', 
+          filter: `id=eq.${restaurantId}` 
+        }, () => {
+          fetchSettings();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      const emitData = () => {
+        const data = localStorage.getItem('restaurant_settings');
+        callback(data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS));
+      };
+
+      emitData();
+
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'restaurant_settings') emitData();
+      };
+      const handleCustomChange = () => emitData();
+
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('restaurant-db-update', handleCustomChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('restaurant-db-update', handleCustomChange);
+      };
+    }
+  },
   async getRestaurantIdByTableId(tableId: string): Promise<string | null> {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase

@@ -318,6 +318,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (loading) return;
 
+    let unsubSettings: () => void = () => {};
     let unsubTables: () => void = () => {};
     let unsubCategories: () => void = () => {};
     let unsubFoodItems: () => void = () => {};
@@ -328,25 +329,33 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const loadData = async () => {
       try {
         await dbService.cleanupExpiredOrders(restaurantId);
-        const setts = await dbService.getSettings(restaurantId);
-        setSettings(setts);
 
-        // 1. Fetch tables, categories, and food items ONCE to save connection & DB budget
-        const tablesData = await dbService.getTables(restaurantId);
-        setTables(tablesData);
-        setTablesLoaded(true); // Mark tables as definitively loaded
-        if (currentTable) {
-          const fresh = tablesData.find(t => t.id === currentTable.id);
-          if (fresh) setCurrentTable(fresh);
-        }
+        // 1. Subscribe to settings dynamically
+        unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
+          setSettings(data);
+        });
 
-        const categoriesData = await dbService.getCategories(restaurantId);
-        setCategories(categoriesData);
+        // 2. Subscribe to tables dynamically
+        unsubTables = dbService.subscribeTables(restaurantId, (data) => {
+          setTables(data);
+          setTablesLoaded(true);
+          if (currentTable) {
+            const fresh = data.find(t => t.id === currentTable.id);
+            if (fresh) setCurrentTable(fresh);
+          }
+        });
 
-        const itemsData = await dbService.getFoodItems(restaurantId);
-        setFoodItems(itemsData);
+        // 3. Subscribe to categories dynamically
+        unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
+          setCategories(data);
+        });
 
-        // 2. Optimized Subscriptions - only open WebSocket channels if necessary
+        // 4. Subscribe to food items dynamically
+        unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
+          setFoodItems(data);
+        });
+
+        // 5. Optimized Subscriptions - only open WebSocket channels if necessary
         const isStaffUser = !!currentUser;
 
         if (isStaffUser) {
@@ -390,6 +399,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadData();
 
     return () => {
+      unsubSettings();
       unsubTables();
       unsubCategories();
       unsubFoodItems();
