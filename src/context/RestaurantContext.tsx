@@ -573,16 +573,19 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const clearCart = () => setCart([]);
 
   const getCartSubtotal = () => {
-    return cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const sum = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    return Math.round(sum * 100) / 100;
   };
 
   const getCartTax = () => {
     const taxRate = settings ? settings.taxPercentage : 18;
-    return getCartSubtotal() * (taxRate / 100);
+    const tax = getCartSubtotal() * (taxRate / 100);
+    return Math.round(tax * 100) / 100;
   };
 
   const getCartGrandTotal = () => {
-    return getCartSubtotal() + getCartTax();
+    const total = getCartSubtotal() + getCartTax();
+    return Math.round(total * 100) / 100;
   };
 
   // PLACE ORDER
@@ -592,8 +595,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const taxRate = settings ? settings.taxPercentage : 18;
     const subtotal = getCartSubtotal();
-    const tax = subtotal * (taxRate / 100);
-    const grandTotal = subtotal + tax;
+    const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const grandTotal = Math.round((subtotal + tax) * 100) / 100;
     const orderNum = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newOrder: RestaurantOrder = {

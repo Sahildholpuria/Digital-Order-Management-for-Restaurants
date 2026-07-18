@@ -41,10 +41,10 @@ export const BillingManager: React.FC = () => {
   // Calculations
   const subtotal = selectedOrder ? selectedOrder.subtotal : 0;
   const taxPercentage = settings ? settings.taxPercentage : 18;
-  const discountAmount = subtotal * (discountPercent / 100);
-  const taxableAmount = subtotal - discountAmount;
-  const taxAmount = taxableAmount * (taxPercentage / 100);
-  const grandTotal = taxableAmount + taxAmount;
+  const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100;
+  const taxableAmount = Math.round((subtotal - discountAmount) * 100) / 100;
+  const taxAmount = Math.round(taxableAmount * (taxPercentage / 100) * 100) / 100;
+  const grandTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
 
   const handleMarkPaid = async () => {
     if (!selectedOrder) return;
