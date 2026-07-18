@@ -53,7 +53,7 @@ const ToastContainer: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2.5 max-w-sm w-full pointer-events-none">
+    <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 space-y-2.5 max-w-md sm:max-w-sm w-auto sm:w-full pointer-events-none">
       {toasts.map(toast => {
         const typeStyles = {
           success: 'bg-emerald-500/90 text-white border-emerald-500/20 shadow-emerald-500/10',
@@ -70,15 +70,15 @@ const ToastContainer: React.FC = () => {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border backdrop-blur-md shadow-lg transition-all duration-300 animate-slide-up ${typeStyles[toast.type]}`}
+            className={`pointer-events-auto flex items-start sm:items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border backdrop-blur-md shadow-lg transition-all duration-300 animate-slide-up ${typeStyles[toast.type]}`}
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               {icons[toast.type]}
-              <span className="text-xs font-bold font-sans tracking-wide leading-snug">{toast.message}</span>
+              <span className="text-xs font-bold font-sans tracking-wide leading-snug break-words">{toast.message}</span>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-white/60 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-colors cursor-pointer"
+              className="text-white/60 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-colors cursor-pointer flex-shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -115,7 +115,7 @@ const CustomConfirmModal: React.FC = () => {
           {confirmModal.message}
         </p>
         
-        <div className="flex gap-2.5 mt-6">
+        <div className="flex flex-col-reverse sm:flex-row gap-2.5 mt-6">
           <button
             onClick={closeConfirmation}
             className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-3 px-4 rounded-xl text-xs cursor-pointer transition-colors"
