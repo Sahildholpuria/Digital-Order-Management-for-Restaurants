@@ -60,6 +60,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [userEmail, setUserEmail] = useState('');
   const [userRole, setUserRole] = useState<'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter'>('admin');
   const [userRestaurantId, setUserRestaurantId] = useState('');
+  const [userPassword, setUserPassword] = useState('');
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -237,18 +238,25 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userFullName || !userEmail || !userRestaurantId) {
+    if (!userFullName || !userEmail || !userRestaurantId || !userPassword) {
       showToast('Please fill out all fields.', 'error');
       return;
     }
     try {
-      await dbService.createStaffUser(userEmail.trim(), userFullName.trim(), userRole, userRestaurantId);
+      await dbService.createStaffUser(
+        userEmail.trim(), 
+        userFullName.trim(), 
+        userRole, 
+        userRestaurantId,
+        userPassword.trim()
+      );
       setIsUserModalOpen(false);
       setUserFullName('');
       setUserEmail('');
+      setUserPassword('');
       setUserRole('admin');
       await fetchAllData();
-      showToast(`Staff user created successfully! Default login password is "ChangeMe@123".`, 'success');
+      showToast(`Staff user created successfully!`, 'success');
     } catch (err: any) {
       showToast('Error creating user: ' + (err.message || err), 'error');
     }
@@ -963,11 +971,17 @@ export const SuperAdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-850/50 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-800/80">
-                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">🔒 Security Info</p>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  The user will be created with starting login password: <span className="font-mono font-bold text-brand-600 bg-brand-500/10 px-1.5 py-0.5 rounded">ChangeMe@123</span>. They can change it in settings once logged in.
-                </p>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Account Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="Minimum 6 characters"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100"
+                />
               </div>
 
               <button

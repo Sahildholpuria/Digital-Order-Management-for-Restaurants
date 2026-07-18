@@ -752,7 +752,7 @@ export const dbService = {
     }
   },
 
-  async createStaffUser(email: string, name: string, role: string, restaurantId: string): Promise<void> {
+  async createStaffUser(email: string, name: string, role: string, restaurantId: string, password?: string): Promise<void> {
     if (isSupabaseConfigured) {
       // Use the Edge Function which uses admin.createUser() — no confirmation email sent
       const { data: { session } } = await supabase.auth.getSession();
@@ -771,7 +771,7 @@ export const dbService = {
           name,
           role,
           restaurant_id: restaurantId,
-          password: 'ChangeMe@123'
+          password: password || 'ChangeMe@123'
         })
       });
 
