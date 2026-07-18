@@ -281,3 +281,32 @@ create policy "Allow admin write for profiles" on public.users for all using (
   (public.is_admin(auth.uid()) and restaurant_id = public.get_user_restaurant(auth.uid()))
   or public.is_super_admin(auth.uid())
 );
+
+-- Secure RPC function to update table status (bypassing RLS safely)
+create or replace function public.update_table_status(p_table_id text, p_status text)
+returns void as $$
+begin
+  if p_status not in ('available', 'occupied', 'reserved') then
+    raise exception 'Invalid table status: %', p_status;
+  end if;
+  
+  update public.tables
+  set status = p_status, updated_at = now()
+  where id = p_table_id;
+end;
+$$ language plpgsql security definer;
+
+-- Indexes for performance and scalability (tenant isolation and queries speed)
+create index if not exists idx_users_restaurant_id on public.users(restaurant_id);
+create index if not exists idx_tables_restaurant_id on public.tables(restaurant_id);
+create index if not exists idx_categories_restaurant_id on public.categories(restaurant_id);
+create index if not exists idx_food_items_restaurant_id on public.food_items(restaurant_id);
+create index if not exists idx_food_items_category_id on public.food_items(category_id);
+create index if not exists idx_orders_restaurant_id on public.orders(restaurant_id);
+create index if not exists idx_orders_table_id on public.orders(table_id);
+create index if not exists idx_orders_status on public.orders(status);
+create index if not exists idx_orders_created_at on public.orders(created_at desc);
+create index if not exists idx_payments_restaurant_id on public.payments(restaurant_id);
+create index if not exists idx_payments_created_at on public.payments(created_at desc);
+create index if not exists idx_notifications_restaurant_id on public.notifications(restaurant_id);
+create index if not exists idx_notifications_is_read on public.notifications(is_read);
