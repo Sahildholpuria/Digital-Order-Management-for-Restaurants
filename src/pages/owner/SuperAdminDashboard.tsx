@@ -80,6 +80,13 @@ export const SuperAdminDashboard: React.FC = () => {
     fetchAllData();
   }, []);
 
+  const formatLocalDate = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const handleOpenOnboard = () => {
     setRestId('');
     setName('');
@@ -88,10 +95,10 @@ export const SuperAdminDashboard: React.FC = () => {
     setPlanType('starter');
     setStatus('trial');
     
-    // Auto-calculate default initial expiry: +30 Days
+    // Auto-calculate default initial expiry: +1 Month
     const defaultExpiry = new Date();
-    defaultExpiry.setDate(defaultExpiry.getDate() + 30);
-    setExpiresAt(defaultExpiry.toISOString().split('T')[0]);
+    defaultExpiry.setMonth(defaultExpiry.getMonth() + 1);
+    setExpiresAt(formatLocalDate(defaultExpiry));
     
     setIsModalOpen(true);
   };
@@ -683,13 +690,13 @@ export const SuperAdminDashboard: React.FC = () => {
                       setPlanType(val);
                       const now = new Date();
                       if (val === 'starter') {
-                        now.setDate(now.getDate() + 30);
+                        now.setMonth(now.getMonth() + 1);
                       } else if (val === 'pro_6m') {
                         now.setMonth(now.getMonth() + 6);
                       } else if (val === 'pro_1y') {
                         now.setFullYear(now.getFullYear() + 1);
                       }
-                      setExpiresAt(now.toISOString().split('T')[0]);
+                      setExpiresAt(formatLocalDate(now));
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
                   >
@@ -793,13 +800,13 @@ export const SuperAdminDashboard: React.FC = () => {
                       setEditPlan(val);
                       const now = new Date();
                       if (val === 'starter') {
-                        now.setDate(now.getDate() + 30);
+                        now.setMonth(now.getMonth() + 1);
                       } else if (val === 'pro_6m') {
                         now.setMonth(now.getMonth() + 6);
                       } else if (val === 'pro_1y') {
                         now.setFullYear(now.getFullYear() + 1);
                       }
-                      setEditExpiresAt(now.toISOString().split('T')[0]);
+                      setEditExpiresAt(formatLocalDate(now));
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
                   >
