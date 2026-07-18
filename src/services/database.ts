@@ -1257,22 +1257,43 @@ export const dbService = {
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase
+      // 1. Delete orders older than 30 days
+      const { error: ordersError } = await supabase
         .from('orders')
         .delete()
         .eq('restaurant_id', restaurantId)
         .lt('created_at', thirtyDaysAgoStr);
-      if (error) {
-        console.error('Error cleaning up old orders:', error);
+      if (ordersError) {
+        console.error('Error cleaning up old orders:', ordersError);
+      }
+
+      // 2. Delete payment transactions older than 30 days
+      const { error: paymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('restaurant_id', restaurantId)
+        .lt('created_at', thirtyDaysAgoStr);
+      if (paymentsError) {
+        console.error('Error cleaning up old payments:', paymentsError);
       }
     } else {
+      // LocalStorage orders cleanup
       const data = localStorage.getItem('restaurant_orders');
       if (data) {
         const orders: RestaurantOrder[] = JSON.parse(data);
         const filtered = orders.filter(o => new Date(o.createdAt).getTime() >= thirtyDaysAgo.getTime());
         localStorage.setItem('restaurant_orders', JSON.stringify(filtered));
-        notifyLocalSubscribers();
       }
+
+      // LocalStorage payments cleanup
+      const paymentsData = localStorage.getItem('restaurant_payments');
+      if (paymentsData) {
+        const paymentsList: PaymentRecord[] = JSON.parse(paymentsData);
+        const filtered = paymentsList.filter(p => new Date(p.createdAt).getTime() >= thirtyDaysAgo.getTime());
+        localStorage.setItem('restaurant_payments', JSON.stringify(filtered));
+      }
+      
+      notifyLocalSubscribers();
     }
   },
 
