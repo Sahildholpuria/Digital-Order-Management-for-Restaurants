@@ -204,13 +204,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setCurrentUserState(profile);
       } else {
         // Profile genuinely missing (e.g. legacy account) — only insert then
+        const isSuper = user.email === 'superadmin@restaurant.com' || user.email?.includes('super') || false;
         const profile: UserProfile = {
           id: user.id,
           restaurantId: 'demo-restaurant',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
           email: user.email || '',
           role: 'admin',
-          isSuperAdmin: false,
+          isSuperAdmin: isSuper,
           createdAt: new Date().toISOString(),
         };
         await dbService.addUser('demo-restaurant', profile);

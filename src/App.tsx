@@ -282,8 +282,8 @@ export const App: React.FC = () => {
       );
     }
 
-    // Role-based rendering filters
-    const isRole = (roles: string[]) => roles.includes(currentUser.role);
+    // Role-based rendering filters (Super Admin has unrestricted bypass)
+    const isRole = (roles: string[]) => currentUser?.isSuperAdmin || roles.includes(currentUser.role);
 
     // KDS redirect for kitchen staff
     if (currentUser.role === 'kitchen') {
