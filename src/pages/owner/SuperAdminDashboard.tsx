@@ -256,14 +256,23 @@ export const SuperAdminDashboard: React.FC = () => {
           <h1 className="text-3xl font-black tracking-tight">SaaS Tenant Manager</h1>
           <p className="text-brand-100 text-sm mt-1">Manage restaurant subscription billing lifecycle, plans, and onboard settings.</p>
         </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={fetchAllData}
-            className="bg-white/10 hover:bg-white/20 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center"
-            title="Refresh database"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
+        <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button 
+              onClick={fetchAllData}
+              className="bg-white/10 hover:bg-white/20 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center flex-1 sm:flex-none"
+              title="Refresh database"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer flex-[3] sm:flex-none"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Onboard Restaurant</span>
+            </button>
+          </div>
           <button
             onClick={() => {
               if (restaurants.length === 0) {
@@ -273,17 +282,10 @@ export const SuperAdminDashboard: React.FC = () => {
               setUserRestaurantId(restaurants[0].id);
               setIsUserModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer backdrop-blur-md"
+            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer backdrop-blur-md w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Create Staff User</span>
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Onboard Restaurant</span>
           </button>
         </div>
       </div>
