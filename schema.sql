@@ -150,11 +150,21 @@ on conflict (id) do nothing;
 -- 5. PROFILE SYNC TRIGGER (Creates user profile row automatically on Supabase Auth Sign Up)
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  target_restaurant_id text;
 begin
+  target_restaurant_id := coalesce(new.raw_user_meta_data->>'restaurant_id', 'demo-restaurant');
+  
+  -- Ensure the restaurant exists to satisfy the foreign key constraint
+  insert into public.restaurants (id, name, theme_color)
+  values (target_restaurant_id, 'My Restaurant', '#6366F1')
+  on conflict (id) do nothing;
+
+  -- Now insert the user safely
   insert into public.users (id, restaurant_id, name, email, role)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'restaurant_id', 'demo-restaurant'),
+    target_restaurant_id,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
     coalesce(new.raw_user_meta_data->>'role', 'admin')
