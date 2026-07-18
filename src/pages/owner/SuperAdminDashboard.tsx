@@ -247,16 +247,16 @@ export const SuperAdminDashboard: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-brand-600 to-indigo-600 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/10">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-brand-600 to-indigo-600 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/10">
         <div>
           <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold w-fit mb-2 backdrop-blur-md">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Super Admin Central Control</span>
           </div>
           <h1 className="text-3xl font-black tracking-tight">SaaS Tenant Manager</h1>
-          <p className="text-brand-100 text-sm mt-1">Manage restaurant subscription billing lifecycle, plans, and onboard settings.</p>
+          <p className="text-brand-100 text-sm mt-1 max-w-xl">Manage restaurant subscription billing lifecycle, plans, and onboard settings.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto">
           <div className="flex gap-2 w-full sm:w-auto">
             <button 
               onClick={fetchAllData}
@@ -267,7 +267,7 @@ export const SuperAdminDashboard: React.FC = () => {
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer flex-[3] sm:flex-none"
+              className="flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer flex-[3] sm:flex-none whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span>Onboard Restaurant</span>
@@ -282,7 +282,7 @@ export const SuperAdminDashboard: React.FC = () => {
               setUserRestaurantId(restaurants[0].id);
               setIsUserModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer backdrop-blur-md w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer backdrop-blur-md w-full sm:w-auto whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>Create Staff User</span>
