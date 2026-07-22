@@ -468,6 +468,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Trigger Sound & Speech Synthesis
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
+    // Only play sound and announce speech for new customer orders
+    if (n.type !== 'new_order') return;
+
     try {
       const soundEnabled = settings?.enableSoundNotification ?? true;
       if (!soundEnabled) return;
