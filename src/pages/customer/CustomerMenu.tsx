@@ -9,6 +9,51 @@ interface CustomerMenuProps {
   tableId: string;
 }
 
+interface LazyImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  width?: number;
+}
+
+const LazyImage: React.FC<LazyImageProps> = ({ src, alt, className = '', width = 200 }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  const optimizedSrc = React.useMemo(() => {
+    if (!src) return '';
+    if (src.includes('images.unsplash.com')) {
+      try {
+        const u = new URL(src);
+        u.searchParams.set('w', width.toString());
+        u.searchParams.set('q', '75');
+        u.searchParams.set('auto', 'format');
+        u.searchParams.set('fit', 'crop');
+        return u.toString();
+      } catch (_) {
+        return src;
+      }
+    }
+    return src;
+  }, [src, width]);
+
+  return (
+    <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800">
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center text-slate-350 dark:text-slate-650">
+          <Utensils className="w-5 h-5 stroke-[1.5]" />
+        </div>
+      )}
+      <img
+        src={optimizedSrc}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setIsLoaded(true)}
+        className={`${className} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </div>
+  );
+};
+
 export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const {
     settings,
@@ -698,10 +743,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                         className="bg-white/90 dark:bg-slate-900/65 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-3.5 flex gap-4 cursor-pointer hover:border-brand-500 dark:hover:border-brand-500/50 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 group backdrop-blur-sm"
                       >
                         <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-855 flex-shrink-0">
-                          <img 
+                          <LazyImage 
                             src={item.image} 
                             alt={item.name} 
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            width={160}
                           />
                           
                           {item.discountPercentage > 0 && (
@@ -865,7 +911,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-t-3xl rounded-b-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800/60 animate-scale-in">
             <div className="relative h-56 bg-slate-100">
-              <img src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" />
+              <LazyImage src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" width={480} />
               <button
                 onClick={() => setSelectedItem(null)}
                 className="absolute top-4 right-4 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition-colors shadow-md"
