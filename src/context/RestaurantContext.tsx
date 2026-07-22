@@ -329,6 +329,41 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [currentUser]);
 
+  // Screen Wake Lock API to prevent devices from sleeping/locking during restaurant shifts
+  useEffect(() => {
+    let wakeLock: any = null;
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && currentUser) {
+          wakeLock = await (navigator.wakeLock as any).request('screen');
+        }
+      } catch (err) {
+        console.warn('RestaurantsOS: Failed to acquire screen wake lock:', err);
+      }
+    };
+
+    const handleVisibilityChange = async () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    };
+
+    if (currentUser) {
+      requestWakeLock();
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) {
+        wakeLock.release().then(() => {
+          wakeLock = null;
+        }).catch(() => {});
+      }
+    };
+  }, [currentUser]);
+
   // Resolve restaurantId from URL tableId for guest customers
   useEffect(() => {
     const resolveRestaurantFromUrl = async () => {
