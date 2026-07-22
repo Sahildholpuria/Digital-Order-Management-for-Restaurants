@@ -474,6 +474,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       // Rich 4-note ascending chime with smooth fade-in/out envelopes
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Explicitly resume audio context (fixes browser auto-play policies/suspensions on Windows/Mac)
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
 
       const playNote = (freq: number, startTime: number, duration: number, peakGain: number) => {
         const osc = audioCtx.createOscillator();
@@ -483,11 +488,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, startTime);
         
-        // Smooth fade-in → sustain → fade-out envelope (avoids harsh clicks)
+        // Cross-platform envelope layout: 
+        // 1. Start at silence
+        // 2. Linear ramp to peak (Attack)
+        // 3. Exponential decay to near-silence (Release)
+        // Removes mid-sustain setValueAtTime scheduling, resolving CoreAudio (macOS) vs. WASAPI (Windows) volume curve differences.
         gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.04); // fast attack
-        gain.gain.setValueAtTime(peakGain, startTime + duration * 0.6); // sustain
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration); // smooth decay
+        gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -503,20 +511,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       playNote(783.99, t + 0.44, 0.35, 0.95); // G5
       playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6 - held longer for a satisfying ring
 
-      // Speech Synthesis Voice Announcement
-      if ('speechSynthesis' in window) {
+      // Speech Synthesis Voice Announcement (strictly for new orders)
+      if ('speechSynthesis' in window && n.type === 'new_order') {
         const tableCleanName = n.tableName.replace(/Table\s*/i, '');
-        let speechMessage = '';
-
-        if (n.type === 'new_order') {
-          speechMessage = `New order received from Table ${tableCleanName}.`;
-        } else if (n.type === 'call_waiter') {
-          speechMessage = `Table ${tableCleanName} is requesting a waiter.`;
-        } else if (n.type === 'request_bill') {
-          speechMessage = `Table ${tableCleanName} requested the bill.`;
-        } else {
-          speechMessage = `New message from Table ${tableCleanName}.`;
-        }
+        const speechMessage = `New order received from Table ${tableCleanName}.`;
 
         // Delay speech slightly so chime plays first
         setTimeout(() => {
