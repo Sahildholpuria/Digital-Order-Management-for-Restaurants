@@ -368,6 +368,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (loading) return;
 
+    // Reset loaded states for the new restaurant to avoid displaying stale data/race conditions
+    setTablesLoaded(false);
+    setTables([]);
+    setCategories([]);
+    setFoodItems([]);
+    setSettings(null);
+
     let unsubSettings: () => void = () => {};
     let unsubTables: () => void = () => {};
     let unsubCategories: () => void = () => {};
