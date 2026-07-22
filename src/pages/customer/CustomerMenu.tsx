@@ -231,15 +231,25 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handleCallWaiter = async () => {
-    await callWaiter();
-    setWaiterCalled(true);
-    setTimeout(() => setWaiterCalled(false), 5000);
+    try {
+      await callWaiter();
+      setWaiterCalled(true);
+      showToast('Staff notified. A waiter is on their way to your table!', 'success');
+      setTimeout(() => setWaiterCalled(false), 5000);
+    } catch (_) {
+      showToast('Failed to notify staff. Please try again.', 'error');
+    }
   };
 
   const handleRequestBill = async () => {
-    await requestBill();
-    setBillRequested(true);
-    setTimeout(() => setBillRequested(false), 5000);
+    try {
+      await requestBill();
+      setBillRequested(true);
+      showToast('Bill request sent. A cashier will assist you shortly!', 'success');
+      setTimeout(() => setBillRequested(false), 5000);
+    } catch (_) {
+      showToast('Failed to request bill. Please try again.', 'error');
+    }
   };
 
   // Show loading state while the initial context or tables list hasn't arrived yet.
