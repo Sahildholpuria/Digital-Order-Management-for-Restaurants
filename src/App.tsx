@@ -40,12 +40,10 @@ import {
   Info
 } from 'lucide-react';
 import { translations, Language } from './translations';
+import { PageLoader } from './components/PageLoader';
 
 const LazyLoader = () => (
-  <div className="min-h-[50vh] bg-transparent flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-    <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin shadow-md mb-2"></div>
-    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center block">Loading Panel...</span>
-  </div>
+  <PageLoader message="LOADING DASHBOARD..." subtext="Fetching live restaurant menus and orders" />
 );
 
 const ToastContainer: React.FC = () => {
