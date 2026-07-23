@@ -87,7 +87,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const tableId = menuMatch?.[1] || trackerMatch?.[1];
     
     if (tableId) {
-      const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+      const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
       if (cached) return cached;
     }
     
@@ -110,7 +110,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!isMenuRoute) return false;
     
     const tableId = isMenuRoute[1];
-    const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+    const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
     return !cached;
   });
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
@@ -372,7 +372,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const tableId = menuMatch?.[1] || trackerMatch?.[1];
       
       if (tableId) {
-        const cached = sessionStorage.getItem(`resolved_rest_${tableId}`);
+        const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
         if (cached) {
           setRestaurantId(cached);
           setIsResolvingId(false);
@@ -383,6 +383,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         try {
           const resolvedId = await dbService.getRestaurantIdByTableId(tableId);
           if (resolvedId) {
+            localStorage.setItem(`resolved_rest_${tableId}`, resolvedId);
             sessionStorage.setItem(`resolved_rest_${tableId}`, resolvedId);
             setRestaurantId(resolvedId);
           }
