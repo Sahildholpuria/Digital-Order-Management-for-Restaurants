@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantOrder, OrderStatus } from '../../types';
-import { Clock, CheckSquare, ChefHat, Play } from 'lucide-react';
+import { Clock, CheckSquare, ChefHat, Play, Printer } from 'lucide-react';
+import { printKOTReceipt } from '../../utils/printUtils';
 
 export const KitchenDisplay: React.FC = () => {
   const { orders, updateOrderStatus, settings } = useRestaurant();
   
   // Crossed items track state locally for chef checkboxes
   const [crossedItems, setCrossedItems] = useState<{ [key: string]: boolean }>({});
+  const [autoPrintKOT, setAutoPrintKOT] = useState<boolean>(true);
 
   const currency = settings?.currency || '₹';
 
@@ -69,9 +71,24 @@ export const KitchenDisplay: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-right">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Kitchen Station</p>
-          <p className="text-sm font-bold text-slate-300">{settings?.name || 'Main Kitchen'}</p>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-300 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-xl">
+            <input
+              type="checkbox"
+              checked={autoPrintKOT}
+              onChange={(e) => setAutoPrintKOT(e.target.checked)}
+              className="rounded text-amber-500 focus:ring-amber-500 w-4 h-4 bg-slate-800 border-slate-700"
+            />
+            <span className="flex items-center gap-1.5">
+              <Printer className="w-4 h-4 text-amber-400" />
+              <span>Auto-Print KOT</span>
+            </span>
+          </label>
+
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Kitchen Station</p>
+            <p className="text-sm font-bold text-slate-300">{settings?.name || 'Main Kitchen'}</p>
+          </div>
         </div>
       </div>
 
@@ -156,10 +173,18 @@ export const KitchenDisplay: React.FC = () => {
 
                 {/* Ticket actions */}
                 <div className="p-4 bg-slate-900/80 border-t border-slate-800 flex gap-2">
+                  <button
+                    onClick={() => printKOTReceipt(order, settings?.name || 'Kitchen')}
+                    className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-2xl text-xs flex items-center justify-center transition-colors border border-slate-700"
+                    title="Print Kitchen Order Ticket (KOT)"
+                  >
+                    <Printer className="w-4 h-4" />
+                  </button>
+
                   {order.status === 'accepted' ? (
                     <button
                       onClick={() => handleStartCooking(order.id)}
-                      className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98]"
+                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98]"
                     >
                       <Play className="w-4 h-4 fill-current" />
                       <span>START COOKING</span>
@@ -167,7 +192,7 @@ export const KitchenDisplay: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => handleMarkReady(order)}
-                      className="w-full bg-green-500 hover:bg-green-600 text-slate-950 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98]"
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-slate-950 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98]"
                     >
                       <CheckSquare className="w-4 h-4" />
                       <span>MARK AS READY</span>

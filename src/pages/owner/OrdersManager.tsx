@@ -14,8 +14,10 @@ import {
   Minus,
   Volume2,
   VolumeX,
-  FileText
+  FileText,
+  Printer
 } from 'lucide-react';
+import { printKOTReceipt } from '../../utils/printUtils';
 
 export const OrdersManager: React.FC = () => {
   const { orders, settings, updateOrderStatus, saveOrder } = useRestaurant();
@@ -510,9 +512,16 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </button>
         )}
 
-        {/* Edit & Cancel overrides for active orders */}
+        {/* Print KOT, Edit & Cancel overrides for active orders */}
         {['pending', 'accepted', 'preparing', 'ready', 'served'].includes(order.status) && (
           <>
+            <button
+              onClick={() => printKOTReceipt(order)}
+              className="p-2 border border-slate-205 dark:border-slate-800 text-amber-500 hover:text-amber-600 rounded-xl transition-all"
+              title="Print Kitchen Order Ticket (KOT)"
+            >
+              <Printer className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={() => onOpenEdit(order)}
               className="p-2 border border-slate-205 dark:border-slate-800 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 rounded-xl transition-all"
