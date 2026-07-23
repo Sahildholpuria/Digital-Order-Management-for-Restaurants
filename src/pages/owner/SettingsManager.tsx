@@ -16,7 +16,10 @@ import {
   Bell,
   ToggleLeft,
   ToggleRight,
-  Volume2
+  Volume2,
+  VolumeX,
+  FileText,
+  Printer
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
@@ -37,6 +40,7 @@ export const SettingsManager: React.FC = () => {
   const [enableWaiterCall, setEnableWaiterCall] = useState(settings?.enableWaiterCall ?? true);
   const [enableBillRequest, setEnableBillRequest] = useState(settings?.enableBillRequest ?? true);
   const [enableSoundNotification, setEnableSoundNotification] = useState(settings?.enableSoundNotification ?? true);
+  const [enableBillPrinting, setEnableBillPrinting] = useState(settings?.enableBillPrinting ?? true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
@@ -57,6 +61,7 @@ export const SettingsManager: React.FC = () => {
       setEnableWaiterCall(settings.enableWaiterCall ?? true);
       setEnableBillRequest(settings.enableBillRequest ?? true);
       setEnableSoundNotification(settings.enableSoundNotification ?? true);
+      setEnableBillPrinting(settings.enableBillPrinting ?? true);
       
       const savedDate = localStorage.getItem(`settings_updated_at_${settings.id}`);
       if (savedDate) {
@@ -102,6 +107,7 @@ export const SettingsManager: React.FC = () => {
         enableWaiterCall,
         enableBillRequest,
         enableSoundNotification,
+        enableBillPrinting,
       });
       if (settings?.id) {
         const now = new Date().toLocaleString([], { 
@@ -449,6 +455,32 @@ export const SettingsManager: React.FC = () => {
                   }`}
                 >
                   {enableBillRequest ? (
+                    <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
+                  ) : (
+                    <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
+                  )}
+                </button>
+              </div>
+
+              {/* Thermal Bill Printing Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Printer className="w-4 h-4 text-brand-500" />
+                    <span>POS Thermal Bill Printing</span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Enable receipt printing feature for POS thermal billing machines</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableBillPrinting(v => !v)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    enableBillPrinting
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                  }`}
+                >
+                  {enableBillPrinting ? (
                     <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
                   ) : (
                     <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
