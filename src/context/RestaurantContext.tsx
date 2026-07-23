@@ -392,12 +392,32 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (loading) return;
 
-    // Reset loaded states for the new restaurant to avoid displaying stale data/race conditions
-    setTablesLoaded(false);
-    setTables([]);
-    setCategories([]);
-    setFoodItems([]);
-    setSettings(null);
+    // Hydrate local cache immediately for low-connectivity support (0ms load)
+    try {
+      const cachedTables = localStorage.getItem(`cached_tables_${restaurantId}`);
+      if (cachedTables) {
+        const parsed = JSON.parse(cachedTables);
+        if (parsed && parsed.length > 0) {
+          setTables(parsed);
+          setTablesLoaded(true);
+        }
+      }
+      const cachedCats = localStorage.getItem(`cached_categories_${restaurantId}`);
+      if (cachedCats) {
+        const parsed = JSON.parse(cachedCats);
+        if (parsed && parsed.length > 0) setCategories(parsed);
+      }
+      const cachedFood = localStorage.getItem(`cached_food_${restaurantId}`);
+      if (cachedFood) {
+        const parsed = JSON.parse(cachedFood);
+        if (parsed && parsed.length > 0) setFoodItems(parsed);
+      }
+      const cachedSet = localStorage.getItem(`cached_settings_${restaurantId}`);
+      if (cachedSet) {
+        const parsed = JSON.parse(cachedSet);
+        if (parsed) setSettings(parsed);
+      }
+    } catch (e) {}
 
     let unsubSettings: () => void = () => {};
     let unsubTables: () => void = () => {};
@@ -418,6 +438,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
           setSettings(data);
+          try { localStorage.setItem(`cached_settings_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
         });
       } catch (e) {
         console.error('subscribeSettings error:', e);
@@ -428,6 +449,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         unsubTables = dbService.subscribeTables(restaurantId, (data) => {
           setTables(data);
           setTablesLoaded(true);
+          try { localStorage.setItem(`cached_tables_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
           if (currentTable) {
             const fresh = data.find(t => t.id === currentTable.id);
             if (fresh) setCurrentTable(fresh);
@@ -442,6 +464,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
           setCategories(data);
+          try { localStorage.setItem(`cached_categories_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
         });
       } catch (e) {
         console.error('subscribeCategories error:', e);
@@ -451,6 +474,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
           setFoodItems(data);
+          try { localStorage.setItem(`cached_food_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
         });
       } catch (e) {
         console.error('subscribeFoodItems error:', e);
