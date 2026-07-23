@@ -421,13 +421,21 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const loadData = async () => {
       try {
         await dbService.cleanupExpiredOrders(restaurantId);
+      } catch (e) {
+        console.warn('cleanupExpiredOrders error:', e);
+      }
 
-        // 1. Subscribe to settings dynamically
+      // 1. Subscribe to settings dynamically
+      try {
         unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
           setSettings(data);
         });
+      } catch (e) {
+        console.error('subscribeSettings error:', e);
+      }
 
-        // 2. Subscribe to tables dynamically
+      // 2. Subscribe to tables dynamically
+      try {
         unsubTables = dbService.subscribeTables(restaurantId, (data) => {
           setTables(data);
           setTablesLoaded(true);
@@ -436,18 +444,31 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             if (fresh) setCurrentTable(fresh);
           }
         });
+      } catch (e) {
+        console.error('subscribeTables error:', e);
+        setTablesLoaded(true); // Failsafe to unblock UI
+      }
 
-        // 3. Subscribe to categories dynamically
+      // 3. Subscribe to categories dynamically
+      try {
         unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
           setCategories(data);
         });
+      } catch (e) {
+        console.error('subscribeCategories error:', e);
+      }
 
-        // 4. Subscribe to food items dynamically
+      // 4. Subscribe to food items dynamically
+      try {
         unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
           setFoodItems(data);
         });
+      } catch (e) {
+        console.error('subscribeFoodItems error:', e);
+      }
 
-        // 5. Optimized Subscriptions - only open WebSocket channels if necessary
+      // 5. Optimized Subscriptions - only open WebSocket channels if necessary
+      try {
         const isStaffUser = !!currentUser;
 
         if (isStaffUser) {
@@ -482,9 +503,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             setOrders(data);
           });
         }
-
-      } catch (err) {
-        console.error('Failed loading subscriptions:', err);
+      } catch (e) {
+        console.error('Additional subscriptions error:', e);
       }
     };
 
