@@ -4,6 +4,7 @@ import { FoodItem, MenuCategory } from '../../types';
 import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
+import { PageLoader } from '../../components/PageLoader';
 
 interface CustomerMenuProps {
   tableId: string;
@@ -251,17 +252,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   // Show loading state while the initial context or tables list hasn't arrived yet.
-  // We wait for BOTH loading=false AND tablesLoaded=true before making any
-  // table-existence decision, so we never accidentally block a valid table that
-  // just hasn't loaded from the DB yet.
   if (loading || !tablesLoaded) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center p-6 text-center animate-fade-in">
-        <div className="flex flex-col items-center gap-3.5">
-          <div className="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Synchronizing table details...</p>
-        </div>
-      </div>
+      <PageLoader
+        message="SYNCHRONIZING DIGITAL MENU..."
+        subtext="Please wait a moment while we load live restaurant items & pricing"
+        fullScreen={true}
+      />
     );
   }
 
