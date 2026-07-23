@@ -434,68 +434,57 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         console.warn('cleanupExpiredOrders error:', e);
       }
 
-      // 1. Subscribe to settings dynamically
-      try {
-        unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
-          setSettings(data);
-          try { localStorage.setItem(`cached_settings_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
-        });
-      } catch (e) {
-        console.error('subscribeSettings error:', e);
-      }
+      const isStaffUser = !!currentUser;
 
-      // 2. Subscribe to tables dynamically
-      try {
-        unsubTables = dbService.subscribeTables(restaurantId, (data) => {
-          setTables(data);
+      if (isStaffUser) {
+        // Staff Users (Admin, Manager, Waiter, Kitchen, Cashier) need full Real-time WebSockets
+        try {
+          unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
+            setSettings(data);
+            try { localStorage.setItem(`cached_settings_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+          });
+        } catch (e) { console.error('subscribeSettings error:', e); }
+
+        try {
+          unsubTables = dbService.subscribeTables(restaurantId, (data) => {
+            setTables(data);
+            setTablesLoaded(true);
+            try { localStorage.setItem(`cached_tables_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+            if (currentTable) {
+              const fresh = data.find(t => t.id === currentTable.id);
+              if (fresh) setCurrentTable(fresh);
+            }
+          });
+        } catch (e) {
+          console.error('subscribeTables error:', e);
           setTablesLoaded(true);
-          try { localStorage.setItem(`cached_tables_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
-          if (currentTable) {
-            const fresh = data.find(t => t.id === currentTable.id);
-            if (fresh) setCurrentTable(fresh);
-          }
-        });
-      } catch (e) {
-        console.error('subscribeTables error:', e);
-        setTablesLoaded(true); // Failsafe to unblock UI
-      }
+        }
 
-      // 3. Subscribe to categories dynamically
-      try {
-        unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
-          setCategories(data);
-          try { localStorage.setItem(`cached_categories_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
-        });
-      } catch (e) {
-        console.error('subscribeCategories error:', e);
-      }
+        try {
+          unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
+            setCategories(data);
+            try { localStorage.setItem(`cached_categories_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+          });
+        } catch (e) { console.error('subscribeCategories error:', e); }
 
-      // 4. Subscribe to food items dynamically
-      try {
-        unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
-          setFoodItems(data);
-          try { localStorage.setItem(`cached_food_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
-        });
-      } catch (e) {
-        console.error('subscribeFoodItems error:', e);
-      }
+        try {
+          unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
+            setFoodItems(data);
+            try { localStorage.setItem(`cached_food_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+          });
+        } catch (e) { console.error('subscribeFoodItems error:', e); }
 
-      // 5. Optimized Subscriptions - only open WebSocket channels if necessary
-      try {
-        const isStaffUser = !!currentUser;
-
-        if (isStaffUser) {
-          // Staff needs Live Orders, Notifications
+        try {
           unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
             setOrders(data);
           });
+        } catch (e) { console.error('subscribeOrders error:', e); }
 
+        try {
           unsubNotifications = dbService.subscribeNotifications(restaurantId, (data) => {
             setNotifications(data);
-            
-            // Audio alert / Speech Synthesis on new notification (Order/Request)
             if (!isFirstLoad.current && data.length > prevNotificationsCount.current) {
-              const newNotify = data[0]; // assumes sorted desc
+              const newNotify = data[0];
               if (newNotify && !newNotify.isRead) {
                 triggerNotificationSoundAndSpeech(newNotify);
               }
@@ -503,21 +492,42 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             prevNotificationsCount.current = data.length;
             isFirstLoad.current = false;
           });
+        } catch (e) { console.error('subscribeNotifications error:', e); }
 
-          // Staff Cashier/Admin/Manager needs Payments logs
-          if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier') {
+        if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier') {
+          try {
             unsubPayments = dbService.subscribePayments(restaurantId, (data) => {
               setPayments(data);
             });
+          } catch (e) { console.error('subscribePayments error:', e); }
+        }
+      } else {
+        // Guest Customer Mode: Ultra-efficient REST API one-time fetching to save 90% Supabase Realtime resources & stay FREE
+        try {
+          const [sData, tData, cData, fData] = await Promise.all([
+            dbService.getSettings(restaurantId),
+            dbService.getTables(restaurantId),
+            dbService.getCategories(restaurantId),
+            dbService.getFoodItems(restaurantId)
+          ]);
+          if (sData) setSettings(sData);
+          if (tData) {
+            setTables(tData);
+            setTablesLoaded(true);
           }
-        } else {
-          // Guest Customer - only needs orders subscription (to track status)
+          if (cData) setCategories(cData);
+          if (fData) setFoodItems(fData);
+        } catch (err) {
+          console.error('Guest data fetch error:', err);
+          setTablesLoaded(true);
+        }
+
+        // Guest customer only subscribes to live orders for their table
+        try {
           unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
             setOrders(data);
           });
-        }
-      } catch (e) {
-        console.error('Additional subscriptions error:', e);
+        } catch (e) { console.error('subscribeOrders error:', e); }
       }
     };
 
