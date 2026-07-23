@@ -207,24 +207,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     window.addEventListener('keydown', handleInteraction);
     window.addEventListener('touchstart', handleInteraction);
 
-    // Force complete database re-sync when tab gains focus or visibility
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        setSubscriptionTrigger(t => t + 1);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
-
     return () => {
       if (interval) clearInterval(interval);
       if (audioCtx) audioCtx.close();
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
     };
   }, []);
 
