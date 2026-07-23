@@ -496,8 +496,9 @@ export const dbService = {
 
       fetchSettings();
 
+      const channelId = `pub_settings_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:restaurants:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -910,8 +911,9 @@ export const dbService = {
       fetchTables();
 
       // 2. Realtime listener
+      const channelId = `pub_tables_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:tables:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -1024,8 +1026,9 @@ export const dbService = {
 
       fetchCategories();
 
+      const channelId = `pub_categories_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:categories:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -1117,8 +1120,9 @@ export const dbService = {
 
       fetchFoodItems();
 
+      const channelId = `pub_food_items_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:food_items:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -1210,8 +1214,9 @@ export const dbService = {
 
       fetchOrders();
 
+      const channelId = `pub_orders_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:orders:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -1333,8 +1338,9 @@ export const dbService = {
 
       fetchPayments();
 
+      const channelId = `pub_payments_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:payments:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -1406,8 +1412,9 @@ export const dbService = {
 
       fetchNotifications();
 
+      const channelId = `pub_notifications_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
-        .channel(`public:notifications:${restaurantId}`)
+        .channel(channelId)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 

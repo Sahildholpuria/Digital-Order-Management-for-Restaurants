@@ -97,56 +97,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
 
-  // Load/manage order completion/cancellation timestamps to auto-remove completed/cancelled orders after 2 minutes
-  const [completedTimestamps, setCompletedTimestamps] = useState<Record<string, string>>(() => {
-    try {
-      const saved = localStorage.getItem('completed_orders_timestamps');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  // Track and save completed/cancelled orders' finalized times
-  useEffect(() => {
-    let updated = false;
-    const newTimestamps = { ...completedTimestamps };
-
-    orders.forEach(o => {
-      if ((o.status === 'completed' || o.status === 'cancelled') && !newTimestamps[o.id]) {
-        newTimestamps[o.id] = new Date().toISOString();
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      setCompletedTimestamps(newTimestamps);
-      localStorage.setItem('completed_orders_timestamps', JSON.stringify(newTimestamps));
-    }
-  }, [orders, completedTimestamps]);
-
-  // Periodic tick to trigger recalculation of expired completed/cancelled orders every 10 seconds
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTick(t => t + 1);
-    }, 10000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // All orders placed at this table in this session, filtering out completed/cancelled ones after 2 minutes
+  // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
   const tableOrders = orders
     .filter(o => {
       if (o.tableId !== tableId) return false;
+      // Immediately clear completed/settled and cancelled orders from live order history
       if (o.status === 'completed' || o.status === 'cancelled') {
-        const finalizedAtStr = completedTimestamps[o.id] || o.createdAt;
-        const finalizedAt = new Date(finalizedAtStr).getTime();
-        const now = new Date().getTime();
-        const diffMs = now - finalizedAt;
-        const twoMinutesMs = 2 * 60 * 1000;
-        if (diffMs > twoMinutesMs) {
-          return false;
-        }
+        return false;
       }
       return true;
     })
