@@ -21,6 +21,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
   const enableWaiterCall = themeParts[1] !== 'false';
   const enableBillRequest = themeParts[2] !== 'false';
   const enableSoundNotification = themeParts[3] !== 'false';
+  const enableBillPrinting = themeParts[4] !== 'false';
 
   return {
     id: row.id,
@@ -38,6 +39,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     enableWaiterCall,
     enableBillRequest,
     enableSoundNotification,
+    enableBillPrinting,
     subscriptionStatus: row.subscription_status || 'trial',
     subscriptionExpiresAt: row.subscription_expires_at,
     planType: row.plan_type || 'starter',
@@ -67,7 +69,8 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     const waiter = model.enableWaiterCall ?? true;
     const bill = model.enableBillRequest ?? true;
     const sound = model.enableSoundNotification ?? true;
-    dbRow.theme_color = `${model.themeColor}|${waiter}|${bill}|${sound}|en`;
+    const printBill = model.enableBillPrinting ?? true;
+    dbRow.theme_color = `${model.themeColor}|${waiter}|${bill}|${sound}|${printBill}`;
   }
 
   return dbRow;

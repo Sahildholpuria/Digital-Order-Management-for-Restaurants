@@ -14,6 +14,7 @@ export interface RestaurantSettings {
   enableWaiterCall: boolean;   // show/hide Waiter button on customer menu
   enableBillRequest: boolean;  // show/hide Bill button on customer menu
   enableSoundNotification: boolean; // turn order/request sound chime + voice announcement ON/OFF
+  enableBillPrinting?: boolean; // turn thermal bill printing feature ON/OFF
   subscriptionStatus?: 'trial' | 'active' | 'expired' | 'suspended';
   subscriptionExpiresAt?: any;
   planType?: 'starter' | 'pro_6m' | 'pro_1y';

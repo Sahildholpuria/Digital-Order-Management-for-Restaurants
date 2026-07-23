@@ -72,8 +72,8 @@ export const BillingManager: React.FC = () => {
       
       showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
 
-      // Auto-trigger bill printing on POS thermal billing machine if enabled
-      if (autoPrintOnSettle) {
+      // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
+      if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
         triggerPrint('80mm');
       }
 
@@ -499,36 +499,53 @@ export const BillingManager: React.FC = () => {
 
               <div className="border-t border-slate-100 dark:border-slate-800 pt-5 space-y-4">
                 {/* POS Thermal Printing & Download Commands */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => triggerPrint('80mm')}
-                      className="py-3 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm"
-                    >
-                      <Printer className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                      <span>Print Bill (80mm)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => triggerPrint('58mm')}
-                      className="py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-800"
-                    >
-                      <Printer className="w-4 h-4 text-slate-500" />
-                      <span>Mini Bill (58mm)</span>
-                    </button>
-                  </div>
+                {settings?.enableBillPrinting !== false ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => triggerPrint('80mm')}
+                        className="py-3 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm"
+                      >
+                        <Printer className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                        <span>Print Bill (80mm)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerPrint('58mm')}
+                        className="py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-800"
+                      >
+                        <Printer className="w-4 h-4 text-slate-500" />
+                        <span>Mini Bill (58mm)</span>
+                      </button>
+                    </div>
 
-                  <div className="flex items-center justify-between pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      <input
-                        type="checkbox"
-                        checked={autoPrintOnSettle}
-                        onChange={(e) => setAutoPrintOnSettle(e.target.checked)}
-                        className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
-                      />
-                      <span>Auto-print receipt on settlement</span>
-                    </label>
+                    <div className="flex items-center justify-between pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-400">
+                        <input
+                          type="checkbox"
+                          checked={autoPrintOnSettle}
+                          onChange={(e) => setAutoPrintOnSettle(e.target.checked)}
+                          className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                        />
+                        <span>Auto-print receipt on settlement</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={downloadReceiptPDF}
+                        className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF Invoice</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Printer className="w-4 h-4 text-amber-500" />
+                      <span>Thermal Bill Printing Disabled</span>
+                    </div>
                     <button
                       type="button"
                       onClick={downloadReceiptPDF}
@@ -538,7 +555,7 @@ export const BillingManager: React.FC = () => {
                       <span>PDF Invoice</span>
                     </button>
                   </div>
-                </div>
+                )}
 
                 {/* Final Checkout settled button */}
                 <button
