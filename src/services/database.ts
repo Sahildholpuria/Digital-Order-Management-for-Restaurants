@@ -536,18 +536,36 @@ export const dbService = {
   },
   async getRestaurantIdByTableId(tableId: string): Promise<string | null> {
     if (isSupabaseConfigured) {
+      // 1. Direct match on table ID
       const { data, error } = await supabase
         .from('tables')
         .select('restaurant_id')
         .eq('id', tableId)
         .maybeSingle();
-      if (error) return null;
-      return data?.restaurant_id || null;
+
+      if (!error && data?.restaurant_id) {
+        return data.restaurant_id;
+      }
+
+      // 2. Fallback match on clean table number (e.g. table-1 => 1)
+      const cleanNumber = tableId.replace(/^table-/i, '');
+      const { data: dataNum } = await supabase
+        .from('tables')
+        .select('restaurant_id')
+        .eq('number', cleanNumber)
+        .maybeSingle();
+
+      if (dataNum?.restaurant_id) {
+        return dataNum.restaurant_id;
+      }
+
+      return null;
     } else {
       const data = localStorage.getItem('restaurant_tables');
       if (data) {
         const list = JSON.parse(data);
-        const table = list.find((t: any) => t.id === tableId);
+        const cleanNumber = tableId.replace(/^table-/i, '');
+        const table = list.find((t: any) => t.id === tableId || t.number === cleanNumber || t.number === tableId);
         return table?.restaurant_id || null;
       }
       return null;
