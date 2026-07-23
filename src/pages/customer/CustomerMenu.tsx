@@ -27,62 +27,70 @@ const LazyImage: React.FC<LazyImageProps> = ({
   width = 200,
   priority = false 
 }) => {
-  const optimizedSrc = React.useMemo(() => {
-    if (!src) return '';
+  const getOptimizedUrl = (urlStr: string) => {
+    if (!urlStr) return '';
     try {
-      if (src.includes('images.unsplash.com')) {
-        const u = new URL(src);
+      if (urlStr.includes('images.unsplash.com')) {
+        const u = new URL(urlStr);
         u.searchParams.set('w', width.toString());
-        u.searchParams.set('q', '60');
-        u.searchParams.set('fm', 'webp');
         u.searchParams.set('auto', 'format');
         u.searchParams.set('fit', 'crop');
+        u.searchParams.set('q', '75');
         return u.toString();
-      }
-      if (src.includes('.supabase.co/storage/v1/object/public/')) {
-        const renderUrl = src.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-        const u = new URL(renderUrl);
-        u.searchParams.set('width', width.toString());
-        u.searchParams.set('quality', '60');
-        return u.toString();
-      }
-      if (src.includes('res.cloudinary.com') && src.includes('/upload/')) {
-        return src.replace('/upload/', `/upload/w_${width},q_60,f_auto/`);
       }
     } catch (_) {}
-    return src;
-  }, [src, width]);
+    return urlStr;
+  };
 
-  const [isLoaded, setIsLoaded] = useState(() => globalLoadedImageCache.has(optimizedSrc));
+  const [imgSrc, setImgSrc] = useState(() => getOptimizedUrl(src));
+  const [isLoaded, setIsLoaded] = useState(() => globalLoadedImageCache.has(imgSrc));
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (globalLoadedImageCache.has(optimizedSrc)) {
+    const opt = getOptimizedUrl(src);
+    setImgSrc(opt);
+    setHasError(false);
+    if (globalLoadedImageCache.has(opt) || globalLoadedImageCache.has(src)) {
       setIsLoaded(true);
     }
-  }, [optimizedSrc]);
+  }, [src, width]);
 
   const handleLoad = () => {
-    globalLoadedImageCache.add(optimizedSrc);
+    globalLoadedImageCache.add(imgSrc);
+    globalLoadedImageCache.add(src);
     setIsLoaded(true);
+  };
+
+  const handleError = () => {
+    if (imgSrc !== src) {
+      // Fallback to raw un-transformed src if optimized URL failed
+      setImgSrc(src);
+    } else {
+      setHasError(true);
+      setIsLoaded(true);
+    }
   };
 
   return (
     <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-      {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-200/50 dark:bg-slate-800/50 animate-pulse text-slate-350 dark:text-slate-650">
+      {(!isLoaded || hasError || !src) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-150 dark:bg-slate-800 text-slate-350 dark:text-slate-655">
           <Utensils className="w-5 h-5 stroke-[1.5]" />
         </div>
       )}
-      <img
-        src={optimizedSrc}
-        alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
-        // @ts-ignore
-        fetchpriority={priority ? 'high' : 'low'}
-        decoding="async"
-        onLoad={handleLoad}
-        className={`${className} transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-      />
+      {src && !hasError && (
+        <img
+          src={imgSrc}
+          alt={alt}
+          loading={priority ? 'eager' : 'lazy'}
+          // @ts-ignore
+          fetchpriority={priority ? 'high' : 'low'}
+          decoding="async"
+          onLoad={handleLoad}
+          onError={handleError}
+          className={`${className} transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
     </div>
   );
 };

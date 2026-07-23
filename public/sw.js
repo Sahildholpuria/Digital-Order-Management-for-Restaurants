@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restaurants-os-v2';
+const CACHE_NAME = 'restaurants-os-v3';
 const IMAGE_CACHE_NAME = 'restaurants-os-images-v1';
 
 const ASSETS_TO_CACHE = [
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
       caches.open(IMAGE_CACHE_NAME).then((cache) => {
         return cache.match(event.request).then((cachedResponse) => {
           const fetchPromise = fetch(event.request).then((networkResponse) => {
-            if (networkResponse.status === 200) {
+            if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;
@@ -69,7 +69,7 @@ self.addEventListener('fetch', (event) => {
       caches.open(CACHE_NAME).then((cache) => {
         return cache.match(event.request).then((cachedResponse) => {
           const fetchPromise = fetch(event.request).then((networkResponse) => {
-            if (networkResponse.status === 200) {
+            if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;
