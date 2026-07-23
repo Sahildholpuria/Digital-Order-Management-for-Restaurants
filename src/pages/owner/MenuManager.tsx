@@ -244,9 +244,29 @@ export const MenuManager: React.FC = () => {
     }
   };
 
+  const deleteSupabaseStorageImage = async (imageUrl: string) => {
+    if (!imageUrl || !isSupabaseConfigured) return;
+    try {
+      if (imageUrl.includes('/storage/v1/object/public/food-images/')) {
+        const relativePath = imageUrl.split('/storage/v1/object/public/food-images/')[1];
+        if (relativePath) {
+          const cleanPath = decodeURIComponent(relativePath);
+          await supabase.storage.from('food-images').remove([cleanPath]);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to cleanup old image from Supabase storage:', err);
+    }
+  };
+
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName || !itemCat) return;
+
+    // Automatically delete previous image from Supabase Storage if replaced or removed
+    if (editingItem && editingItem.image && editingItem.image !== itemImage) {
+      deleteSupabaseStorageImage(editingItem.image);
+    }
 
     // Serialize variants to description string
     let finalDesc = itemDesc;
@@ -277,10 +297,14 @@ export const MenuManager: React.FC = () => {
   };
 
   const handleDeleteItem = async (itemId: string) => {
+    const itemToDelete = foodItems.find(i => i.id === itemId);
     askConfirmation(
       'Delete Menu Item?',
       'Are you sure you want to permanently delete this menu item from your restaurant menu?',
       async () => {
+        if (itemToDelete?.image) {
+          deleteSupabaseStorageImage(itemToDelete.image);
+        }
         await deleteFoodItem(itemId);
         showToast('Menu item deleted successfully.', 'success');
       }
