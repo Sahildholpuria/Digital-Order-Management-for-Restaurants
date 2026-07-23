@@ -1,4 +1,6 @@
-const CACHE_NAME = 'restaurants-os-v1';
+const CACHE_NAME = 'restaurants-os-v2';
+const IMAGE_CACHE_NAME = 'restaurants-os-images-v1';
+
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -22,7 +24,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
+          if (cache !== CACHE_NAME && cache !== IMAGE_CACHE_NAME) {
             return caches.delete(cache);
           }
         })
@@ -32,29 +34,50 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event (Stale-While-Revalidate for swift loading)
+// Fetch Event (High-Performance Caching & Low Internet Resilience)
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and local assets
-  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+  if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+
+  // Handle CDN food images (Unsplash, Supabase Storage, Cloudinary)
+  if (
+    url.hostname.includes('unsplash.com') ||
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('cloudinary.com')
+  ) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          const fetchPromise = fetch(event.request).then((networkResponse) => {
+            if (networkResponse.status === 200) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => cachedResponse);
+
+          return cachedResponse || fetchPromise;
+        });
+      })
+    );
     return;
   }
 
-  event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchedResponse = fetch(event.request).then((networkResponse) => {
-          // Cache the fresh resource
-          if (networkResponse.status === 200) {
-            cache.put(event.request, networkResponse.clone());
-          }
-          return networkResponse;
-        }).catch(() => {
-          // Fallback if completely offline
-          return cachedResponse;
-        });
+  // Handle Local Application Assets & Bundles
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          const fetchPromise = fetch(event.request).then((networkResponse) => {
+            if (networkResponse.status === 200) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => cachedResponse);
 
-        return cachedResponse || fetchedResponse;
-      });
-    })
-  );
+          return cachedResponse || fetchPromise;
+        });
+      })
+    );
+  }
 });
