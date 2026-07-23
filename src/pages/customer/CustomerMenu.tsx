@@ -9,46 +9,79 @@ interface CustomerMenuProps {
   tableId: string;
 }
 
+// Global in-memory image cache to render previously loaded images instantly (0ms delay)
+const globalLoadedImageCache = new Set<string>();
+
 interface LazyImageProps {
   src: string;
   alt: string;
   className?: string;
   width?: number;
+  priority?: boolean;
 }
 
-const LazyImage: React.FC<LazyImageProps> = ({ src, alt, className = '', width = 200 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  
+const LazyImage: React.FC<LazyImageProps> = ({ 
+  src, 
+  alt, 
+  className = '', 
+  width = 200,
+  priority = false 
+}) => {
   const optimizedSrc = React.useMemo(() => {
     if (!src) return '';
-    if (src.includes('images.unsplash.com')) {
-      try {
+    try {
+      if (src.includes('images.unsplash.com')) {
         const u = new URL(src);
         u.searchParams.set('w', width.toString());
-        u.searchParams.set('q', '75');
+        u.searchParams.set('q', '60');
+        u.searchParams.set('fm', 'webp');
         u.searchParams.set('auto', 'format');
         u.searchParams.set('fit', 'crop');
         return u.toString();
-      } catch (_) {
-        return src;
       }
-    }
+      if (src.includes('.supabase.co/storage/v1/object/public/')) {
+        const renderUrl = src.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+        const u = new URL(renderUrl);
+        u.searchParams.set('width', width.toString());
+        u.searchParams.set('quality', '60');
+        return u.toString();
+      }
+      if (src.includes('res.cloudinary.com') && src.includes('/upload/')) {
+        return src.replace('/upload/', `/upload/w_${width},q_60,f_auto/`);
+      }
+    } catch (_) {}
     return src;
   }, [src, width]);
 
+  const [isLoaded, setIsLoaded] = useState(() => globalLoadedImageCache.has(optimizedSrc));
+
+  useEffect(() => {
+    if (globalLoadedImageCache.has(optimizedSrc)) {
+      setIsLoaded(true);
+    }
+  }, [optimizedSrc]);
+
+  const handleLoad = () => {
+    globalLoadedImageCache.add(optimizedSrc);
+    setIsLoaded(true);
+  };
+
   return (
-    <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800">
+    <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
       {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center text-slate-350 dark:text-slate-650">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-200/50 dark:bg-slate-800/50 animate-pulse text-slate-350 dark:text-slate-650">
           <Utensils className="w-5 h-5 stroke-[1.5]" />
         </div>
       )}
       <img
         src={optimizedSrc}
         alt={alt}
-        loading="lazy"
-        onLoad={() => setIsLoaded(true)}
-        className={`${className} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        loading={priority ? 'eager' : 'lazy'}
+        // @ts-ignore
+        fetchpriority={priority ? 'high' : 'low'}
+        decoding="async"
+        onLoad={handleLoad}
+        className={`${className} transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
       />
     </div>
   );
@@ -701,7 +734,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredItems.map(item => {
+                  {filteredItems.map((item, index) => {
                     const discountedPrice = item.price * (1 - (item.discountPercentage || 0) / 100);
                     return (
                       <div
@@ -715,6 +748,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                             alt={item.name} 
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             width={160}
+                            priority={index < 6}
                           />
                           
                           {item.discountPercentage > 0 && (
