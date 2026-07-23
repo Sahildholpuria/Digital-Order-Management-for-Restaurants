@@ -40,7 +40,9 @@ export const BillingManager: React.FC = () => {
   const selectedOrder = orders.find(o => o.id === selectedOrderId) || billableOrders[0];
 
   // Calculations
-  const subtotal = selectedOrder ? selectedOrder.subtotal : 0;
+  const subtotal = selectedOrder 
+    ? Math.round(selectedOrder.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 100) / 100 
+    : 0;
   const taxPercentage = settings ? settings.taxPercentage : 18;
   const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100;
   const taxableAmount = Math.round((subtotal - discountAmount) * 100) / 100;

@@ -35,9 +35,9 @@ export const ReportsManager: React.FC = () => {
   // ==========================================
   // METRICS CALCULATIONS
   // ==========================================
-  const totalRevenue = payments.reduce((acc, curr) => acc + curr.grandTotal, 0);
+  const totalRevenue = Math.round(payments.reduce((acc, curr) => acc + curr.grandTotal, 0) * 100) / 100;
   const totalOrders = payments.length;
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const averageOrderValue = totalOrders > 0 ? Math.round((totalRevenue / totalOrders) * 100) / 100 : 0;
 
   // Calculate Top Selling Items
   const getItemStats = () => {
