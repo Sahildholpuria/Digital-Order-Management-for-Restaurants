@@ -77,6 +77,21 @@
     @apply bg-slate-50 text-slate-900 antialiased selection:bg-indigo-100 dark:bg-slate-955 dark:text-slate-100;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+
+  /* Instant 1-Click Touch & Click Responsiveness */
+  button, a, input, select, label {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent inner icons or text spans from swallowing click events */
+  button > svg,
+  button > span,
+  button > div,
+  button > strong,
+  button > p {
+    pointer-events: none;
+  }
 }
 
 /* Custom Scrollbar Styles */
