@@ -687,10 +687,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md text-white mb-2 shadow-inner">
-                <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
-                Live Digital QR Ordering
-              </span>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
                 {settings?.name || 'Gourmet Dining'}
               </h2>
