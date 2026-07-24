@@ -292,9 +292,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     );
   }
 
-  // Once tables have been definitively loaded from the database, if this
-  // tableId is NOT in the list the table has been deleted by the owner.
-  const isTableDeleted = !tables.some(t => t.id === tableId);
+  // Once tables have been definitively loaded from the database for this restaurant, if this
+  // tableId is NOT in the list and tables is loaded, the table has been deactivated/deleted.
+  const isTableDeleted = tablesLoaded && tables.length > 0 && !tables.some(t => 
+    t.id === tableId || 
+    t.number.toLowerCase() === tableId.toLowerCase() ||
+    t.number.replace(/\s+/g, '').toLowerCase() === tableId.replace(/\s+/g, '').toLowerCase()
+  );
   if (isTableDeleted) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
