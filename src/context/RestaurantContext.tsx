@@ -714,7 +714,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const getCartTax = () => {
-    const taxRate = settings ? settings.taxPercentage : 18;
+    const taxRate = settings?.taxPercentage ?? 0;
     const tax = getCartSubtotal() * (taxRate / 100);
     return Math.round(tax * 100) / 100;
   };
@@ -729,7 +729,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (cart.length === 0) throw new Error('Cart is empty');
     if (!currentTable) throw new Error('Table not assigned');
 
-    const taxRate = settings ? settings.taxPercentage : 18;
+    const taxRate = settings?.taxPercentage ?? 0;
     const subtotal = getCartSubtotal();
     const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;

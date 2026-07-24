@@ -411,7 +411,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span>Taxes & GST ({settings?.taxPercentage || 18}%)</span>
+            <span>Taxes & GST ({settings?.taxPercentage ?? 0}%)</span>
             <span className="font-bold text-slate-800 dark:text-slate-205">
               {settings?.currency || '₹'}{getCartTax().toFixed(2)}
             </span>
