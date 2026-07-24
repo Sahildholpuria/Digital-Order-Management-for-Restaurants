@@ -22,6 +22,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
   const enableBillRequest = themeParts[2] !== 'false';
   const enableSoundNotification = themeParts[3] !== 'false';
   const enableBillPrinting = themeParts[4] !== 'false';
+  const websiteUrl = themeParts[5] || row.website_url || row.websiteUrl || '';
 
   return {
     id: row.id,
@@ -31,7 +32,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     email: row.email,
     logoUrl: row.logo_url || row.logoUrl,
     gstNumber: row.gst_number || row.gstNumber || '',
-    websiteUrl: row.website_url || row.websiteUrl || '',
+    websiteUrl,
     taxPercentage: Number(row.tax_percentage ?? row.taxPercentage ?? 0),
     currency: row.currency || '₹',
     openingHours: row.opening_hours || row.openingHours || '09:00',
@@ -57,7 +58,6 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.email !== undefined && { email: model.email }),
     ...(model.logoUrl !== undefined && { logo_url: model.logoUrl }),
     ...(model.gstNumber !== undefined && { gst_number: model.gstNumber }),
-    ...(model.websiteUrl !== undefined && { website_url: model.websiteUrl }),
     ...(model.taxPercentage !== undefined && { tax_percentage: model.taxPercentage }),
     ...(model.currency !== undefined && { currency: model.currency }),
     ...(model.openingHours !== undefined && { opening_hours: model.openingHours }),
@@ -67,12 +67,14 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.planType !== undefined && { plan_type: model.planType }),
   };
 
-  if (model.themeColor !== undefined) {
+  if (model.themeColor !== undefined || model.websiteUrl !== undefined || model.enableWaiterCall !== undefined || model.enableBillPrinting !== undefined) {
+    const color = model.themeColor || '#6366F1';
     const waiter = model.enableWaiterCall ?? true;
     const bill = model.enableBillRequest ?? true;
     const sound = model.enableSoundNotification ?? true;
     const printBill = model.enableBillPrinting ?? true;
-    dbRow.theme_color = `${model.themeColor}|${waiter}|${bill}|${sound}|${printBill}`;
+    const site = model.websiteUrl ?? '';
+    dbRow.theme_color = `${color}|${waiter}|${bill}|${sound}|${printBill}|${site}`;
   }
 
   return dbRow;
