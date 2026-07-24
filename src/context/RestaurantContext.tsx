@@ -68,6 +68,8 @@ interface RestaurantContextType {
   loginMockUser: (email: string, role: UserRole) => Promise<UserProfile>;
   logoutUser: () => Promise<void>;
 
+  refreshData: () => Promise<void>;
+
   // Toast & Modal Helper State API
   toasts: ToastConfig[];
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -956,6 +958,35 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  const refreshData = async () => {
+    try {
+      showToast('Refreshing live restaurant details & orders...', 'info');
+      const [fetchedSettings, fetchedTables, fetchedCats, fetchedFood, fetchedOrders, fetchedPayments, fetchedNotifs] = await Promise.all([
+        dbService.getSettings(restaurantId),
+        dbService.getTables(restaurantId),
+        dbService.getCategories(restaurantId),
+        dbService.getFoodItems(restaurantId),
+        dbService.getOrders(restaurantId),
+        dbService.getPaymentRecords(restaurantId),
+        dbService.getNotifications(restaurantId),
+      ]);
+      if (fetchedSettings) setSettings(fetchedSettings);
+      if (fetchedTables) {
+        setTables(fetchedTables);
+        setTablesLoaded(true);
+      }
+      if (fetchedCats) setCategories(fetchedCats);
+      if (fetchedFood) setFoodItems(fetchedFood);
+      if (fetchedOrders) setOrders(fetchedOrders);
+      if (fetchedPayments) setPayments(fetchedPayments);
+      if (fetchedNotifs) setNotifications(fetchedNotifs);
+      showToast('All details & live orders refreshed!', 'success');
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+      showToast('Failed to refresh details. Please try again.', 'error');
+    }
+  };
+
   return (
     <RestaurantContext.Provider value={{
       settings,
@@ -1000,6 +1031,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       clearAllNotifications,
       loginMockUser,
       logoutUser,
+      refreshData,
       toasts,
       showToast,
       removeToast,

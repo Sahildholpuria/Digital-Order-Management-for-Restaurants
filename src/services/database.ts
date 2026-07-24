@@ -627,6 +627,55 @@ export const dbService = {
     }
   },
 
+  async getOrders(restaurantId: string): Promise<RestaurantOrder[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(mapOrderToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_orders');
+      const parsed: RestaurantOrder[] = data ? JSON.parse(data) : [];
+      parsed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return parsed.map(mapOrderToFrontend);
+    }
+  },
+
+  async getPaymentRecords(restaurantId: string): Promise<PaymentRecord[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(mapPaymentToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_payments');
+      const parsed: PaymentRecord[] = data ? JSON.parse(data) : [];
+      return parsed.map(mapPaymentToFrontend);
+    }
+  },
+
+  async getNotifications(restaurantId: string): Promise<RestaurantNotification[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(mapNotificationToFrontend);
+    } else {
+      const data = localStorage.getItem('restaurant_notifications');
+      const parsed: RestaurantNotification[] = data ? JSON.parse(data) : [];
+      return parsed.map(mapNotificationToFrontend);
+    }
+  },
+
 
   async updateSettings(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
     if (isSupabaseConfigured) {
