@@ -694,6 +694,36 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       )}
       <main className="max-w-md md:max-w-5xl mx-auto px-4 mt-6">
+        {/* Eye-catching Hero Welcome Card */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 text-white p-6 shadow-xl shadow-brand-500/15 mb-6 group transition-all duration-500 hover:shadow-brand-500/25">
+          <div className="absolute -top-12 -right-12 w-44 h-44 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-purple-500/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md text-white mb-2 shadow-inner">
+                <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                Live Digital QR Ordering
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+                {settings?.name || 'The Grand Bistro'}
+              </h2>
+              <p className="text-xs text-white/80 font-medium mt-1">
+                {settings?.address || 'Fresh gourmet dishes crafted & served hot to your table.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+              <div className="bg-white/15 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/20 text-center">
+                <span className="text-[9px] uppercase tracking-widest text-white/70 block font-bold">Table</span>
+                <span className="text-base font-black tracking-wider text-amber-300">
+                  #{currentTable?.number.replace(/table\s*-\s*/gi, '') || tableId.replace('table-', '')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* Left Column: Menu catalogue */}
           <div className="md:col-span-8 space-y-6">
@@ -706,7 +736,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl py-3.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium"
+                className="w-full bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-300 shadow-sm hover:shadow-md font-medium backdrop-blur-md"
               />
             </div>
 
@@ -714,24 +744,24 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             <div className="flex gap-2 mb-6 overflow-x-auto pb-1.5 no-scrollbar">
               <button
                 onClick={() => setVegOnly(!vegOnly)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all duration-200 active:scale-95 whitespace-nowrap ${
                   vegOnly
-                    ? 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400'
-                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                    ? 'bg-green-500/15 border-green-500 text-green-600 dark:text-green-400 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:bg-slate-50'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full bg-green-500 border border-white ${vegOnly ? 'bg-green-500' : ''}`}></span>
+                <span className={`w-2 h-2 rounded-full bg-green-500 border border-white ${vegOnly ? 'bg-green-500 animate-pulse' : ''}`}></span>
                 {t.vegOnly}
               </button>
               <button
                 onClick={() => setPopularOnly(!popularOnly)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all duration-200 active:scale-95 whitespace-nowrap ${
                   popularOnly
-                    ? 'bg-brand-500/10 border-brand-550 text-brand-655 dark:text-brand-400'
-                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                    ? 'bg-brand-500/15 border-brand-550 text-brand-655 dark:text-brand-400 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:bg-slate-50'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
                 {t.popularOnly}
               </button>
             </div>
@@ -742,10 +772,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                  className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
-                      ? 'bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm'
-                      : 'bg-white text-slate-555 border-slate-100 hover:bg-slate-55/50 dark:bg-slate-900 dark:border-slate-805 dark:text-slate-400'
+                      ? 'bg-gradient-to-r from-brand-600 to-indigo-600 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
+                      : 'bg-white text-slate-555 border-slate-200/60 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:scale-105'
                   }`}
                 >
                   {t.allItems}
@@ -754,10 +784,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                    className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
-                        ? 'bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm'
-                        : 'bg-white text-slate-555 border-slate-100 hover:bg-slate-55/50 dark:bg-slate-900 dark:border-slate-805 dark:text-slate-400'
+                        ? 'bg-gradient-to-r from-brand-600 to-indigo-600 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
+                        : 'bg-white text-slate-555 border-slate-200/60 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:scale-105'
                     }`}
                   >
                     {cat.name}
@@ -786,19 +816,22 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                       <div
                         key={item.id}
                         onClick={() => handleOpenItem(item)}
-                        className="bg-white/90 dark:bg-slate-900/65 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-3.5 flex gap-4 cursor-pointer hover:border-brand-500 dark:hover:border-brand-500/50 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 group backdrop-blur-sm"
+                        className="relative bg-white/90 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-4 flex gap-4 cursor-pointer transition-all duration-300 ease-out shadow-sm hover:shadow-xl hover:shadow-brand-500/10 hover:-translate-y-1 hover:border-brand-500/60 dark:hover:border-brand-500/50 group backdrop-blur-md overflow-hidden"
                       >
-                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-855 flex-shrink-0">
+                        {/* Hover Gradient Top Line */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        <div className="relative w-22 h-22 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-855 flex-shrink-0">
                           <LazyImage 
                             src={item.image} 
                             alt={item.name} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                             width={160}
                             priority={index < 6}
                           />
                           
                           {item.discountPercentage > 0 && (
-                            <span className="absolute top-1 left-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-sm">
+                            <span className="absolute top-1 left-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-sm animate-pulse-slow">
                               {item.discountPercentage}% OFF
                             </span>
                           )}
@@ -831,7 +864,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                             </p>
                           </div>
 
-                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/40">
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/40">
                             <div className="flex items-center gap-1.5">
                               {(() => {
                                 if (item.description && item.description.includes('||variants:')) {
@@ -925,28 +958,28 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-150/60 dark:border-slate-800/80 p-4 shadow-glass max-w-md mx-auto rounded-t-3xl animate-slide-up md:hidden">
+        <div className="fixed bottom-4 inset-x-4 z-40 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/20 dark:border-slate-800 text-white p-3.5 pl-4 pr-3 shadow-2xl max-w-md mx-auto rounded-3xl animate-slide-up hover:-translate-y-0.5 transition-all duration-300 md:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative bg-brand-100 dark:bg-brand-950/40 p-3.5 rounded-2xl text-brand-655 dark:text-brand-400">
-                <ShoppingBag className="w-5 h-5" />
-                <span className="absolute -top-1.5 -right-1.5 bg-brand-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+              <div className="relative bg-brand-500/20 p-3 rounded-2xl text-amber-300 border border-brand-500/30">
+                <ShoppingBag className="w-5 h-5 animate-pulse-slow" />
+                <span className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-brand-500 to-indigo-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-white/20">
                   {totalItemsCount}
                 </span>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Subtotal</p>
-                <p className="text-lg font-black text-slate-800 dark:text-slate-100">
-                  {settings?.currency || '₹'}{getCartSubtotal().toFixed(0)}
+                <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Total Basket</p>
+                <p className="text-base font-black tracking-tight text-white">
+                  {settings?.currency || '₹'}{getCartGrandTotal().toFixed(0)}
                 </p>
               </div>
             </div>
             
             <button
               onClick={() => setIsCartOpen(true)}
-              className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-6 py-3.5 rounded-2xl transition-all shadow-lg hover:shadow-brand-500/20 flex items-center gap-1.5 text-sm"
+              className="bg-gradient-to-r from-brand-500 via-indigo-600 to-purple-600 hover:shadow-brand-500/30 text-white font-extrabold px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-105 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg cursor-pointer"
             >
-              <span>Review Basket</span>
+              <span>Review Cart</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
