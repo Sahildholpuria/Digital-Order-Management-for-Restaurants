@@ -138,6 +138,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   // Status states for call staff feedback
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
   const tableOrders = orders
@@ -209,10 +210,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return;
     if (isSubscriptionExpired()) {
       showToast("This restaurant's ordering service is currently inactive. Please contact the staff.", 'error');
       return;
     }
+    setIsPlacingOrder(true);
     try {
       const placed = await placeOrder();
       setOrderSuccess(placed);
@@ -226,6 +229,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       });
     } catch (err) {
       showToast('Failed to place order. Please try again.', 'error');
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -257,6 +262,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       <PageLoader
         message="SYNCHRONIZING DIGITAL MENU..."
         subtext="Please wait a moment while we load live restaurant items & pricing"
+        fullScreen={true}
+      />
+    );
+  }
+
+  if (isPlacingOrder) {
+    return (
+      <PageLoader
+        message="TRANSMITTING YOUR ORDER..."
+        subtext="Sending your dish items directly to the kitchen staff"
         fullScreen={true}
       />
     );
@@ -425,15 +440,25 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
 
         <button
+          type="button"
           onClick={handlePlaceOrder}
-          disabled={isSubscriptionExpired()}
-          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs ${
-            isSubscriptionExpired()
-              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none'
+          disabled={isSubscriptionExpired() || isPlacingOrder}
+          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-xs cursor-pointer ${
+            isSubscriptionExpired() || isPlacingOrder
+              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-80 shadow-none'
               : 'bg-brand-600 hover:bg-brand-700 text-white hover:shadow-brand-500/10'
           }`}
         >
-          {isSubscriptionExpired() ? 'Ordering Service Inactive' : 'Confirm & Place Order'}
+          {isPlacingOrder ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Placing Order...</span>
+            </>
+          ) : isSubscriptionExpired() ? (
+            'Ordering Service Inactive'
+          ) : (
+            'Confirm & Place Order'
+          )}
         </button>
       </div>
     </div>
