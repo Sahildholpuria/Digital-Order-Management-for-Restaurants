@@ -304,10 +304,13 @@ export const SettingsManager: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">GST / Tax Number</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                  <span>GST / Tax Number</span>
+                  <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                </label>
                 <input
                   type="text"
-                  required
+                  placeholder="e.g. 22AAAAA1111A1Z1 (optional)"
                   value={gstNumber}
                   onChange={(e) => setGstNumber(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -316,17 +319,21 @@ export const SettingsManager: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Tax Ratio (%)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                    <span>Tax Ratio (%)</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                  </label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <Percent className="w-4 h-4" />
                     </span>
                     <input
                       type="number"
-                      required
                       min={0}
-                      value={taxPercentage}
-                      onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                      max={100}
+                      placeholder="0"
+                      value={taxPercentage === 0 ? '' : taxPercentage}
+                      onChange={(e) => setTaxPercentage(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
                       className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
