@@ -466,21 +466,43 @@ export const App: React.FC = () => {
         );
       }
 
-      // Sidebar items based on role permissions
-      const sidebarItems = [
-        ...(currentUser?.isSuperAdmin ? [{ id: 'superadmin', label: 'Super Admin', icon: Shield, roles: ['admin'] }] : []),
-        { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager'] },
-        { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
-        { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager'] },
-        { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin', 'manager'] },
-        { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
-        { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
-        { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
-      ].filter(item => isRole(item.roles));
+      // Sidebar items based on role & mode
+      let sidebarItems: Array<{ id: string; label: string; icon: any; roles: string[] }> = [];
+
+      if (currentUser?.isSuperAdmin) {
+        if (activeTab === 'superadmin') {
+          // Pure Super Admin SaaS Mode: show ONLY Super Admin Panel
+          sidebarItems = [
+            { id: 'superadmin', label: 'Super Admin SaaS', icon: Shield, roles: ['admin'] }
+          ];
+        } else {
+          // Tenant Inspection Mode: Super Admin is viewing a restaurant's POS
+          sidebarItems = [
+            { id: 'superadmin', label: '← SaaS Control Center', icon: Shield, roles: ['admin'] },
+            { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin'] },
+            { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin'] },
+            { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin'] },
+            { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin'] },
+            { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin'] },
+            { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
+            { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
+          ];
+        }
+      } else {
+        // Regular restaurant staff account
+        sidebarItems = [
+          { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager'] },
+          { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager'] },
+          { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin', 'manager'] },
+          { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
+          { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
+        ].filter(item => item.roles.includes(currentUser.role));
+      }
 
       // Render active tab body
       const renderActiveTabContent = () => {
-
         switch (activeTab) {
           case 'superadmin': return <SuperAdminDashboard />;
           case 'dashboard': return <AdminDashboard />;
@@ -526,12 +548,33 @@ export const App: React.FC = () => {
                   <ChefHat className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">Restaurant OS</span>
-                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={settings?.name || 'RestaurantsOS'}>
-                    {settings?.name || 'Bistro System'}
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">
+                    {currentUser?.isSuperAdmin && activeTab === 'superadmin' ? 'Super Admin SaaS' : 'Restaurant OS'}
+                  </span>
+                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin && activeTab === 'superadmin' ? 'Tenant Central' : settings?.name}>
+                    {currentUser?.isSuperAdmin && activeTab === 'superadmin' ? 'Tenant Central' : (settings?.name || 'Bistro System')}
                   </span>
                 </div>
               </div>
+
+              {/* Super Admin Tenant Inspection Banner */}
+              {currentUser?.isSuperAdmin && activeTab !== 'superadmin' && (
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-3 space-y-1.5 animate-fade-in">
+                  <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 text-[10px] font-extrabold uppercase tracking-wider">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Tenant POS Inspection</span>
+                  </div>
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-100 truncate" title={settings?.name}>
+                    {settings?.name || 'Restaurant'}
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('superadmin')}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-1.5 px-3 rounded-xl text-[10px] transition-all cursor-pointer shadow-sm mt-1"
+                  >
+                    &larr; Exit to Super Admin
+                  </button>
+                </div>
+              )}
 
               {/* Sidebar Tabs Links */}
               <nav className="space-y-1.5">
