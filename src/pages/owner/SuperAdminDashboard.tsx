@@ -515,9 +515,9 @@ export const SuperAdminDashboard: React.FC = () => {
                     };
 
                     const planLabels: Record<string, string> = {
-                      starter: 'Starter Plan',
-                      pro_6m: 'Pro 6-Month',
-                      pro_1y: 'Pro 1-Year'
+                      starter: '1 Month Plan',
+                      pro_6m: '6 Months Plan',
+                      pro_1y: '12 Months Plan'
                     };
 
                     return (
@@ -767,9 +767,9 @@ export const SuperAdminDashboard: React.FC = () => {
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
                   >
-                    <option value="starter">Starter Plan</option>
-                    <option value="pro_6m">Pro 6-Month</option>
-                    <option value="pro_1y">Pro 1-Year</option>
+                    <option value="starter">1 Month Plan (Starter)</option>
+                    <option value="pro_6m">6 Months Plan (Pro)</option>
+                    <option value="pro_1y">12 Months Plan (Enterprise)</option>
                   </select>
                 </div>
                 <div>
@@ -1103,9 +1103,9 @@ export const SuperAdminDashboard: React.FC = () => {
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
                   >
-                    <option value="starter">Starter Plan</option>
-                    <option value="pro_6m">Pro 6-Month</option>
-                    <option value="pro_1y">Pro 1-Year</option>
+                    <option value="starter">1 Month Plan (Starter)</option>
+                    <option value="pro_6m">6 Months Plan (Pro)</option>
+                    <option value="pro_1y">12 Months Plan (Enterprise)</option>
                   </select>
                 </div>
 
