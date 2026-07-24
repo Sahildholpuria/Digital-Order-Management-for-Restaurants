@@ -89,10 +89,10 @@ export const OrdersManager: React.FC = () => {
   const handleSaveEdit = async () => {
     if (!editingOrder) return;
     
-    const subtotal = editItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+    const subtotal = Math.round(editItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0) * 100) / 100;
     const taxRate = settings?.taxPercentage ?? 0;
-    const tax = subtotal * (taxRate / 100);
-    const grandTotal = subtotal + tax;
+    const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const grandTotal = Math.round((subtotal + tax) * 100) / 100;
 
     const updatedOrder: RestaurantOrder = {
       ...editingOrder,
