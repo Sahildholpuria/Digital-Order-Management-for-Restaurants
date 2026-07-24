@@ -90,8 +90,10 @@ export const SuperAdminDashboard: React.FC = () => {
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
 
-  // Status Filter state
+  // Status Filter & Sorting state
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expired' | 'suspended'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'expiry' | 'date' | 'status'>('name');
+  const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
 
   // Share Credentials Modal
   const [credsModal, setCredsModal] = useState<{ restName: string; email: string; pass: string; role: string; slug: string } | null>(null);
@@ -408,19 +410,35 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  // Filtered lists with Status Pills
-  const filtered = restaurants.filter(r => {
-    const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (!matchesSearch) return false;
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'active') return r.subscriptionStatus === 'active';
-    if (statusFilter === 'trial') return r.subscriptionStatus === 'trial' || !r.subscriptionStatus;
-    if (statusFilter === 'expired') return r.subscriptionStatus === 'expired';
-    if (statusFilter === 'suspended') return r.subscriptionStatus === 'suspended';
-    return true;
-  });
+  // Filtered & sorted lists with Status Pills
+  const filtered = restaurants
+    .filter(r => {
+      const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!matchesSearch) return false;
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'active') return r.subscriptionStatus === 'active';
+      if (statusFilter === 'trial') return r.subscriptionStatus === 'trial' || !r.subscriptionStatus;
+      if (statusFilter === 'expired') return r.subscriptionStatus === 'expired';
+      if (statusFilter === 'suspended') return r.subscriptionStatus === 'suspended';
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'status') return (a.subscriptionStatus || 'trial').localeCompare(b.subscriptionStatus || 'trial');
+      if (sortBy === 'expiry') {
+        const da = a.subscriptionExpiresAt ? new Date(a.subscriptionExpiresAt).getTime() : 0;
+        const db = b.subscriptionExpiresAt ? new Date(b.subscriptionExpiresAt).getTime() : 0;
+        return da - db;
+      }
+      if (sortBy === 'date') {
+        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return db - da;
+      }
+      return 0;
+    });
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -582,31 +600,48 @@ export const SuperAdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Filter Pills for Restaurants Tab */}
+          {/* Quick Filter Pills & Sort Selector */}
           {activeTab === 'restaurants' && (
-            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/50">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1">
-                <Filter className="w-3 h-3" /> Filter:
-              </span>
-              {[
-                { id: 'all', label: `All (${restaurants.length})` },
-                { id: 'active', label: `Active (${activeCount})` },
-                { id: 'trial', label: `Free Trial (${trialCount})` },
-                { id: 'expired', label: `Expired (${restaurants.filter(r => r.subscriptionStatus === 'expired').length})` },
-                { id: 'suspended', label: `Suspended (${restaurants.filter(r => r.subscriptionStatus === 'suspended').length})` },
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setStatusFilter(f.id as any)}
-                  className={`px-3 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    statusFilter === f.id
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-100 dark:border-slate-800/50">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1">
+                  <Filter className="w-3 h-3" /> Status Filter:
+                </span>
+                {[
+                  { id: 'all', label: `All (${restaurants.length})` },
+                  { id: 'active', label: `Active (${activeCount})` },
+                  { id: 'trial', label: `Free Trial (${trialCount})` },
+                  { id: 'expired', label: `Expired (${restaurants.filter(r => r.subscriptionStatus === 'expired').length})` },
+                  { id: 'suspended', label: `Suspended (${restaurants.filter(r => r.subscriptionStatus === 'suspended').length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setStatusFilter(f.id as any)}
+                    className={`px-3 py-1 rounded-xl text-[10px] font-bold transition-all duration-200 cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
+                      statusFilter === f.id
+                        ? 'bg-brand-600 text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sort selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Sort By:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
                 >
-                  {f.label}
-                </button>
-              ))}
+                  <option value="name">Name (A-Z)</option>
+                  <option value="expiry">Expiry Date</option>
+                  <option value="date">Newest Onboarded</option>
+                  <option value="status">Status</option>
+                </select>
+              </div>
             </div>
           )}
         </div>
@@ -614,7 +649,7 @@ export const SuperAdminDashboard: React.FC = () => {
         {/* Table Body */}
         {loading ? (
           <div className="py-20 text-center text-slate-400 dark:text-slate-500 font-bold">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3" />
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-brand-500" />
             <p className="text-xs">Loading onboarding directories...</p>
           </div>
         ) : activeTab === 'restaurants' ? (
@@ -655,7 +690,7 @@ export const SuperAdminDashboard: React.FC = () => {
                     const staffUsersCount = users.filter(u => u.restaurantId === r.id).length;
 
                     return (
-                      <tr key={r.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
+                      <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <span className="font-extrabold text-slate-800 dark:text-slate-200">{r.name}</span>
@@ -664,8 +699,21 @@ export const SuperAdminDashboard: React.FC = () => {
                               {staffUsersCount}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest flex items-center gap-1">
-                            <span>ID: {r.id}</span>
+                          <div className="text-[10px] text-slate-400 mt-1 font-mono flex items-center gap-1.5">
+                            <span className="bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded">ID: {r.id}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(r.id);
+                                setCopiedSlugId(r.id);
+                                showToast(`Tenant ID "${r.id}" copied!`, 'info');
+                                setTimeout(() => setCopiedSlugId(null), 2000);
+                              }}
+                              className="text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                              title="Copy Tenant Slug ID"
+                            >
+                              {copiedSlugId === r.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
@@ -692,32 +740,46 @@ export const SuperAdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={`/menu/${r.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                              title="Preview Live Customer QR Menu"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>QR Menu</span>
+                            </a>
                             <button
+                              type="button"
                               onClick={() => handleOpenSubModal(r)}
-                              className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
                               title="Manage Subscription"
                             >
                               <CreditCard className="w-3 h-3" />
                               <span>Billing</span>
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleOpenAddStaffForRest(r.id)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
                               title="Add Staff User to this Restaurant"
                             >
                               <UserPlus className="w-3 h-3" />
                               <span>+ Staff</span>
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleEditClick(r)}
-                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                               title="Edit Restaurant Info"
                             >
                               Edit
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteRestaurant(r.id, r.name)}
-                              className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 p-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center"
+                              className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 p-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center justify-center"
                               title="Delete Restaurant"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
