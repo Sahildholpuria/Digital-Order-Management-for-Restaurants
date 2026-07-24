@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { useTheme } from '../../context/ThemeContext';
 import { FoodItem, MenuCategory } from '../../types';
 import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe, Sun, Moon } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -121,7 +120,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     showToast,
   } = useRestaurant();
 
-  const { theme, toggleTheme } = useTheme();
+  // Independent customer theme state to decouple Customer Menu theme from POS Admin portal
+  const [customerTheme, setCustomerTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('customer_theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return 'light'; // Default to light mode for customer menu
+  });
+
+  const toggleCustomerTheme = () => {
+    setCustomerTheme(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('customer_theme', next);
+      return next;
+    });
+  };
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
   const t = translations[lang];
@@ -158,11 +170,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   useEffect(() => {
     if (tableId) {
       setCurrentTableById(tableId);
-    }
-    // Ensure customer menu opens in light mode by default unless customer explicitly toggled dark mode
-    const savedTheme = localStorage.getItem('theme');
-    if (!savedTheme && theme === 'dark') {
-      toggleTheme();
     }
   }, [tableId, setCurrentTableById]);
 
@@ -473,7 +480,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
+    <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28 ${customerTheme === 'dark' ? 'dark' : ''}`}>
       {/* Sticky Top Header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-150/60 dark:border-slate-800/80 px-4 py-3 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
@@ -518,11 +525,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
             {/* Dark / Light Mode Toggle */}
             <button
-              onClick={toggleTheme}
+              onClick={toggleCustomerTheme}
               className="flex items-center justify-center p-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer shadow-sm"
-              title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              title={customerTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
-              {theme === 'dark' ? (
+              {customerTheme === 'dark' ? (
                 <Sun className="w-3.5 h-3.5 text-amber-400" />
               ) : (
                 <Moon className="w-3.5 h-3.5 text-slate-700" />
