@@ -820,7 +820,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!order) return;
     
     const updatedOrder = { ...order, status };
-    // If order was served or completed, we might reset table status
+    
+    // Instant Optimistic UI Update
+    setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
+    
+    // Persist to Database
     await dbService.saveOrder(restaurantId, updatedOrder);
 
     // If order completed or cancelled, release the table status if no other active order
@@ -829,6 +833,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (activeTableOrders.length === 0) {
         const table = tables.find(t => t.id === order.tableId);
         if (table && table.status === 'occupied') {
+          setTables(prev => prev.map(t => t.id === table.id ? { ...t, status: 'available' } : t));
           await dbService.updateTableStatus(restaurantId, table.id, 'available');
         }
       }
@@ -836,15 +841,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const saveOrder = async (order: RestaurantOrder) => {
+    // Instant Optimistic UI Update
+    setOrders(prev => {
+      const exists = prev.some(o => o.id === order.id);
+      return exists ? prev.map(o => o.id === order.id ? order : o) : [order, ...prev];
+    });
     await dbService.saveOrder(restaurantId, order);
   };
 
   const updateTableStatus = async (tableId: string, status: TableStatus) => {
+    // Instant Optimistic UI Update
+    setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
     await dbService.updateTableStatus(restaurantId, tableId, status);
   };
 
   const addTable = async (table: RestaurantTable) => {
-    await dbService.saveTable(restaurantId, table);
+    // Instant Optimistic UI Update
     setTables(prev => {
       const exists = prev.some(t => t.id === table.id);
       if (exists) {
@@ -852,56 +864,68 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return [...prev, table].sort((a, b) => a.number.localeCompare(b.number));
     });
+    await dbService.saveTable(restaurantId, table);
   };
 
   const deleteTable = async (tableId: string) => {
-    await dbService.deleteTable(restaurantId, tableId);
+    // Instant Optimistic UI Update
     setTables(prev => prev.filter(t => t.id !== tableId));
+    await dbService.deleteTable(restaurantId, tableId);
   };
 
   const addCategory = async (category: MenuCategory) => {
-    await dbService.saveCategory(restaurantId, category);
+    // Instant Optimistic UI Update
     setCategories(prev => {
       const exists = prev.some(c => c.id === category.id);
       if (exists) return prev.map(c => c.id === category.id ? category : c);
       return [...prev, category].sort((a, b) => a.order - b.order);
     });
+    await dbService.saveCategory(restaurantId, category);
   };
 
   const deleteCategory = async (categoryId: string) => {
-    await dbService.deleteCategory(restaurantId, categoryId);
+    // Instant Optimistic UI Update
     setCategories(prev => prev.filter(c => c.id !== categoryId));
+    await dbService.deleteCategory(restaurantId, categoryId);
   };
 
   const addFoodItem = async (item: FoodItem) => {
-    await dbService.saveFoodItem(restaurantId, item);
+    // Instant Optimistic UI Update
     setFoodItems(prev => {
       const exists = prev.some(f => f.id === item.id);
       if (exists) return prev.map(f => f.id === item.id ? item : f);
       return [...prev, item];
     });
+    await dbService.saveFoodItem(restaurantId, item);
   };
 
   const deleteFoodItem = async (itemId: string) => {
-    await dbService.deleteFoodItem(restaurantId, itemId);
+    // Instant Optimistic UI Update
     setFoodItems(prev => prev.filter(f => f.id !== itemId));
+    await dbService.deleteFoodItem(restaurantId, itemId);
   };
 
   const updateSettings = async (updates: Partial<RestaurantSettings>) => {
+    // Instant Optimistic UI Update
+    setSettings(prev => prev ? { ...prev, ...updates } : null);
     await dbService.updateSettings(restaurantId, updates);
-    const newSettings = await dbService.getSettings(restaurantId);
-    setSettings(newSettings);
   };
 
   const addPaymentRecord = async (payment: PaymentRecord) => {
+    // Instant Optimistic UI Update
+    setPayments(prev => [payment, ...prev]);
     await dbService.addPayment(restaurantId, payment);
   };
 
   const markNotificationRead = async (id: string) => {
+    // Instant Optimistic UI Update
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     await dbService.markNotificationRead(restaurantId, id);
   };
 
   const clearAllNotifications = async () => {
+    // Instant Optimistic UI Update
+    setNotifications([]);
     await dbService.clearAllNotifications(restaurantId);
   };
 
