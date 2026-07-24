@@ -512,8 +512,14 @@ export const dbService = {
           schema: 'public', 
           table: 'restaurants', 
           filter: `id=eq.${restaurantId}` 
-        }, () => {
-          fetchSettings();
+        }, (payload) => {
+          // Instant inline update — no extra round-trip
+          if (payload.eventType === 'DELETE') return; // Restaurant shouldn't be deleted mid-session
+          if (payload.new && Object.keys(payload.new).length > 0) {
+            callback(mapSettingsToFrontend(payload.new));
+          } else {
+            fetchSettings(); // fallback for rare edge cases
+          }
         })
         .subscribe();
 
@@ -971,7 +977,9 @@ export const dbService = {
   // 3. TABLES (Real-time Subscribe & CRUD)
   subscribeTables(restaurantId: string, callback: (tables: RestaurantTable[]) => void) {
     if (isSupabaseConfigured) {
-      // 1. Fetch initial tables
+      // Track current state locally so inline updates can be applied without re-fetching
+      let currentTables: RestaurantTable[] = [];
+
       const fetchTables = async () => {
         const { data, error } = await supabase
           .from('tables')
@@ -979,23 +987,48 @@ export const dbService = {
           .eq('restaurant_id', restaurantId)
           .order('number');
         if (!error && data) {
-          callback(data.map(mapTableToFrontend));
+          currentTables = data.map(mapTableToFrontend);
+          callback(currentTables);
         }
       };
       
       fetchTables();
 
-      // 2. Realtime listener
       const channelId = `pub_tables_${restaurantId}_${Math.random().toString(36).substring(2, 9)}`;
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'tables', 
           filter: `restaurant_id=eq.${restaurantId}` 
-        }, () => {
-          fetchTables();
+        }, (payload) => {
+          if (!payload.new) return;
+          const newTable = mapTableToFrontend(payload.new);
+          currentTables = [...currentTables.filter(t => t.id !== newTable.id), newTable]
+            .sort((a, b) => String(a.number).localeCompare(String(b.number), undefined, { numeric: true }));
+          callback(currentTables);
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'tables', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.new) return;
+          const updated = mapTableToFrontend(payload.new);
+          currentTables = currentTables.map(t => t.id === updated.id ? updated : t);
+          callback(currentTables);
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'tables', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.old?.id) return;
+          currentTables = currentTables.filter(t => t.id !== payload.old.id);
+          callback(currentTables);
         })
         .subscribe();
 
@@ -1088,6 +1121,8 @@ export const dbService = {
   // 4. CATEGORIES (Real-time Subscribe & CRUD)
   subscribeCategories(restaurantId: string, callback: (categories: MenuCategory[]) => void) {
     if (isSupabaseConfigured) {
+      let currentCategories: MenuCategory[] = [];
+
       const fetchCategories = async () => {
         const { data, error } = await supabase
           .from('categories')
@@ -1095,7 +1130,8 @@ export const dbService = {
           .eq('restaurant_id', restaurantId)
           .order('order', { ascending: true });
         if (!error && data) {
-          callback(data.map(mapCategoryToFrontend));
+          currentCategories = data.map(mapCategoryToFrontend);
+          callback(currentCategories);
         }
       };
 
@@ -1105,12 +1141,38 @@ export const dbService = {
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'categories', 
           filter: `restaurant_id=eq.${restaurantId}` 
-        }, () => {
-          fetchCategories();
+        }, (payload) => {
+          if (!payload.new) return;
+          const newCat = mapCategoryToFrontend(payload.new);
+          currentCategories = [...currentCategories.filter(c => c.id !== newCat.id), newCat]
+            .sort((a, b) => a.order - b.order);
+          callback(currentCategories);
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'categories', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.new) return;
+          const updated = mapCategoryToFrontend(payload.new);
+          currentCategories = currentCategories.map(c => c.id === updated.id ? updated : c)
+            .sort((a, b) => a.order - b.order);
+          callback(currentCategories);
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'categories', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.old?.id) return;
+          currentCategories = currentCategories.filter(c => c.id !== payload.old.id);
+          callback(currentCategories);
         })
         .subscribe();
 
@@ -1183,13 +1245,16 @@ export const dbService = {
   // 5. FOOD ITEMS (Real-time Subscribe & CRUD)
   subscribeFoodItems(restaurantId: string, callback: (items: FoodItem[]) => void) {
     if (isSupabaseConfigured) {
+      let currentItems: FoodItem[] = [];
+
       const fetchFoodItems = async () => {
         const { data, error } = await supabase
           .from('food_items')
           .select('*')
           .eq('restaurant_id', restaurantId);
         if (!error && data) {
-          callback(data.map(mapFoodItemToFrontend));
+          currentItems = data.map(mapFoodItemToFrontend);
+          callback(currentItems);
         }
       };
 
@@ -1199,12 +1264,36 @@ export const dbService = {
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'food_items', 
           filter: `restaurant_id=eq.${restaurantId}` 
-        }, () => {
-          fetchFoodItems();
+        }, (payload) => {
+          if (!payload.new) return;
+          const newItem = mapFoodItemToFrontend(payload.new);
+          currentItems = [...currentItems.filter(i => i.id !== newItem.id), newItem];
+          callback(currentItems);
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'food_items', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.new) return;
+          const updated = mapFoodItemToFrontend(payload.new);
+          currentItems = currentItems.map(i => i.id === updated.id ? updated : i);
+          callback(currentItems);
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'food_items', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.old?.id) return;
+          currentItems = currentItems.filter(i => i.id !== payload.old.id);
+          callback(currentItems);
         })
         .subscribe();
 
@@ -1276,6 +1365,8 @@ export const dbService = {
   // 6. ORDERS (Real-time Subscribe & CRUD)
   subscribeOrders(restaurantId: string, callback: (orders: RestaurantOrder[]) => void) {
     if (isSupabaseConfigured) {
+      let currentOrders: RestaurantOrder[] = [];
+
       const fetchOrders = async () => {
         const { data, error } = await supabase
           .from('orders')
@@ -1283,7 +1374,8 @@ export const dbService = {
           .eq('restaurant_id', restaurantId)
           .order('created_at', { ascending: false });
         if (!error && data) {
-          callback(data.map(mapOrderToFrontend));
+          currentOrders = data.map(mapOrderToFrontend);
+          callback(currentOrders);
         }
       };
 
@@ -1293,12 +1385,37 @@ export const dbService = {
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'orders', 
           filter: `restaurant_id=eq.${restaurantId}` 
-        }, () => {
-          fetchOrders();
+        }, (payload) => {
+          if (!payload.new) return;
+          const newOrder = mapOrderToFrontend(payload.new);
+          // Prepend new order so it appears instantly at top of list
+          currentOrders = [newOrder, ...currentOrders.filter(o => o.id !== newOrder.id)];
+          callback(currentOrders);
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'orders', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.new) return;
+          const updated = mapOrderToFrontend(payload.new);
+          currentOrders = currentOrders.map(o => o.id === updated.id ? updated : o);
+          callback(currentOrders);
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'orders', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.old?.id) return;
+          currentOrders = currentOrders.filter(o => o.id !== payload.old.id);
+          callback(currentOrders);
         })
         .subscribe();
 
@@ -1400,6 +1517,8 @@ export const dbService = {
   // 7. PAYMENTS (CRUD & List)
   subscribePayments(restaurantId: string, callback: (payments: PaymentRecord[]) => void) {
     if (isSupabaseConfigured) {
+      let currentPayments: PaymentRecord[] = [];
+
       const fetchPayments = async () => {
         const { data, error } = await supabase
           .from('payments')
@@ -1407,7 +1526,8 @@ export const dbService = {
           .eq('restaurant_id', restaurantId)
           .order('created_at', { ascending: false });
         if (!error && data) {
-          callback(data.map(mapPaymentToFrontend));
+          currentPayments = data.map(mapPaymentToFrontend);
+          callback(currentPayments);
         }
       };
 
@@ -1417,12 +1537,36 @@ export const dbService = {
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'payments', 
           filter: `restaurant_id=eq.${restaurantId}` 
-        }, () => {
-          fetchPayments();
+        }, (payload) => {
+          if (!payload.new) return;
+          const newPay = mapPaymentToFrontend(payload.new);
+          currentPayments = [newPay, ...currentPayments.filter(p => p.id !== newPay.id)];
+          callback(currentPayments);
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'payments', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.new) return;
+          const updated = mapPaymentToFrontend(payload.new);
+          currentPayments = currentPayments.map(p => p.id === updated.id ? updated : p);
+          callback(currentPayments);
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'payments', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.old?.id) return;
+          currentPayments = currentPayments.filter(p => p.id !== payload.old.id);
+          callback(currentPayments);
         })
         .subscribe();
 
@@ -1473,6 +1617,8 @@ export const dbService = {
   // 8. NOTIFICATIONS (Real-time Subscribe & CRUD)
   subscribeNotifications(restaurantId: string, callback: (notifications: RestaurantNotification[]) => void) {
     if (isSupabaseConfigured) {
+      let currentNotifications: RestaurantNotification[] = [];
+
       const fetchNotifications = async () => {
         const { data, error } = await supabase
           .from('notifications')
@@ -1481,7 +1627,8 @@ export const dbService = {
           .order('created_at', { ascending: false })
           .limit(50);
         if (!error && data) {
-          callback(data.map(mapNotificationToFrontend));
+          currentNotifications = data.map(mapNotificationToFrontend);
+          callback(currentNotifications);
         }
       };
 
@@ -1491,12 +1638,38 @@ export const dbService = {
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'notifications', 
           filter: `restaurant_id=eq.${restaurantId}` 
-        }, () => {
-          fetchNotifications();
+        }, (payload) => {
+          if (!payload.new) return;
+          const newNotif = mapNotificationToFrontend(payload.new);
+          // Prepend so newest notifications appear first
+          currentNotifications = [newNotif, ...currentNotifications.filter(n => n.id !== newNotif.id)]
+            .slice(0, 50);
+          callback(currentNotifications);
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.new) return;
+          const updated = mapNotificationToFrontend(payload.new);
+          currentNotifications = currentNotifications.map(n => n.id === updated.id ? updated : n);
+          callback(currentNotifications);
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `restaurant_id=eq.${restaurantId}` 
+        }, (payload) => {
+          if (!payload.old?.id) return;
+          currentNotifications = currentNotifications.filter(n => n.id !== payload.old.id);
+          callback(currentNotifications);
         })
         .subscribe();
 
