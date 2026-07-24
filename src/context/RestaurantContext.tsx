@@ -91,6 +91,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (tableId) {
       const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
       if (cached) return cached;
+      return ''; // On QR menu routes, do NOT load staff/demo restaurant while resolving table URL
     }
     
     const storedStaffRest = localStorage.getItem('last_active_staff_restaurant_id');

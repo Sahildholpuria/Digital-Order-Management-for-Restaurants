@@ -256,8 +256,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   };
 
-  // Show loading state while the initial context or tables list hasn't arrived yet.
-  if (loading || !tablesLoaded) {
+  // Show loading state while the initial context or settings list hasn't arrived yet.
+  if (loading || !tablesLoaded || !settings) {
     return (
       <PageLoader
         message="SYNCHRONIZING DIGITAL MENU..."
@@ -450,7 +450,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             )}
             <div>
               <h1 className="text-base font-extrabold tracking-tight text-slate-805 dark:text-slate-100 font-sans leading-tight">
-                {settings?.name || 'The Grand Bistro'}
+                {settings?.name || 'Restaurant Menu'}
               </h1>
               <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 <span className="inline-block w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
@@ -657,7 +657,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 Live Digital QR Ordering
               </span>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                {settings?.name || 'The Grand Bistro'}
+                {settings?.name || 'Gourmet Dining'}
               </h2>
               <p className="text-xs text-white/80 font-medium mt-1">
                 {settings?.address || 'Fresh gourmet dishes crafted & served hot to your table.'}
