@@ -159,6 +159,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     if (tableId) {
       setCurrentTableById(tableId);
     }
+    // Ensure customer menu opens in light mode by default unless customer explicitly toggled dark mode
+    const savedTheme = localStorage.getItem('theme');
+    if (!savedTheme && theme === 'dark') {
+      toggleTheme();
+    }
   }, [tableId, setCurrentTableById]);
 
   // Filter items
