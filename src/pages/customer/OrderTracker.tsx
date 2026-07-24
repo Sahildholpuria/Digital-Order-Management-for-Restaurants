@@ -3,6 +3,7 @@ import { useRestaurant } from '../../context/RestaurantContext';
 import { Clock, Check, UtensilsCrossed, ChevronLeft, RefreshCw, Flame, CheckCircle } from 'lucide-react';
 import { OrderStatus } from '../../types';
 import { translations, Language } from '../../translations';
+import { PageLoader } from '../../components/PageLoader';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -16,12 +17,12 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
     if (tableId) {
       setCurrentTableById(tableId);
     }
-  }, [tableId, setCurrentTableById]);
+  }, [tableId]);
+
+  const lang: Language = (settings?.themeColor?.split('|')[6] as Language) || 'en';
+  const t = translations[lang] || translations.en;
 
   const order = orders.find(o => o.id === orderId);
-
-  const lang = (localStorage.getItem('customer_lang') as Language) || 'en';
-  const t = translations[lang];
 
   // Status timeline nodes
   const statuses: { label: string; value: OrderStatus; desc: string }[] = [
@@ -44,12 +45,15 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-glass border border-slate-100 dark:border-slate-800">
-          <RefreshCw className="w-10 h-10 text-brand-500 animate-spin mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-205">{t.findingOrder}</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">{t.checkingKitchen}</p>
+          <PageLoader 
+            compact={true} 
+            size="md"
+            message={t.findingOrder || "LOCATING YOUR ORDER..."} 
+            subtext={t.checkingKitchen || "Checking kitchen display system"} 
+          />
           <button 
             onClick={() => window.location.pathname = `/menu/${tableId}`}
-            className="mt-6 text-sm font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-1 mx-auto"
+            className="mt-4 text-sm font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-1 mx-auto"
           >
             <ChevronLeft className="w-4 h-4" /> {t.backToMenu}
           </button>

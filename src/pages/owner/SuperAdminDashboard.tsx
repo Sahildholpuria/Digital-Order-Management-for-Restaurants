@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../../services/database';
 import { RestaurantSettings, UserProfile } from '../../types';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { PageLoader } from '../../components/PageLoader';
 import { 
   Building, 
   Plus, 
@@ -648,10 +649,12 @@ export const SuperAdminDashboard: React.FC = () => {
 
         {/* Table Body */}
         {loading ? (
-          <div className="py-20 text-center text-slate-400 dark:text-slate-500 font-bold">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-brand-500" />
-            <p className="text-xs">Loading onboarding directories...</p>
-          </div>
+          <PageLoader 
+            compact={true} 
+            size="md"
+            message="LOADING TENANT DIRECTORIES..." 
+            subtext="Syncing restaurant tenants and staff accounts" 
+          />
         ) : activeTab === 'restaurants' ? (
           filtered.length === 0 ? (
             <div className="py-20 text-center">
