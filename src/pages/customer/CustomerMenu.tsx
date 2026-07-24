@@ -120,6 +120,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     showToast,
   } = useRestaurant();
 
+  // Returns a clean, short display number from the actual table record.
+  // Always use currentTable.number from DB; never fall back to raw timestamp tableId.
+  const getTableDisplayNumber = () => {
+    if (currentTable?.number) {
+      // Strip any "table-" prefix the number field might have, return clean label
+      return currentTable.number.replace(/^table[\s\-_]*/i, '');
+    }
+    return '—';
+  };
+
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
   const t = translations[lang];
 
@@ -297,7 +307,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 font-semibold uppercase tracking-wider">Table Assigned</span>
-              <span className="font-extrabold text-slate-800 dark:text-slate-200">{currentTable?.number || tableId.replace('table-', '')}</span>
+              <span className="font-extrabold text-slate-800 dark:text-slate-200">{getTableDisplayNumber()}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 font-semibold uppercase tracking-wider">Est. Preparation</span>
@@ -454,7 +464,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </h1>
               <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 <span className="inline-block w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
-                <span>Table {currentTable?.number.replace(/table\s*-\s*/gi, '') || tableId.replace('table-', '')}</span>
+                <span>Table {getTableDisplayNumber()}</span>
               </div>
             </div>
           </div>
@@ -549,7 +559,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <div>
                 <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-base">My Orders</h2>
                 <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                  Table {currentTable?.number || tableId.replace('table-', '')} · {tableOrders.length} order{tableOrders.length !== 1 ? 's' : ''}
+                  Table {getTableDisplayNumber()} · {tableOrders.length} order{tableOrders.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
@@ -668,7 +678,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <div className="bg-white/15 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/20 text-center">
                 <span className="text-[9px] uppercase tracking-widest text-white/70 block font-bold">Table</span>
                 <span className="text-base font-black tracking-wider text-amber-300">
-                  #{currentTable?.number.replace(/table\s*-\s*/gi, '') || tableId.replace('table-', '')}
+                  #{getTableDisplayNumber()}
                 </span>
               </div>
             </div>
