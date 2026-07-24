@@ -19,7 +19,8 @@ import {
   Volume2,
   VolumeX,
   FileText,
-  Printer
+  Printer,
+  Globe
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
@@ -32,6 +33,7 @@ export const SettingsManager: React.FC = () => {
   const [email, setEmail] = useState(settings?.email || '');
   const [logoUrl, setLogoUrl] = useState(settings?.logoUrl || '');
   const [gstNumber, setGstNumber] = useState(settings?.gstNumber || '');
+  const [websiteUrl, setWebsiteUrl] = useState(settings?.websiteUrl || '');
   const [taxPercentage, setTaxPercentage] = useState(settings?.taxPercentage ?? 0);
   const [currency, setCurrency] = useState(settings?.currency || '₹');
   const [openingHours, setOpeningHours] = useState(settings?.openingHours || '09:00');
@@ -53,6 +55,7 @@ export const SettingsManager: React.FC = () => {
       setEmail(settings.email || '');
       setLogoUrl(settings.logoUrl || '');
       setGstNumber(settings.gstNumber || '');
+      setWebsiteUrl(settings.websiteUrl || '');
       setTaxPercentage(settings.taxPercentage ?? 0);
       setCurrency(settings.currency || '₹');
       setOpeningHours(settings.openingHours || '09:00');
@@ -99,6 +102,7 @@ export const SettingsManager: React.FC = () => {
         email,
         logoUrl,
         gstNumber,
+        websiteUrl,
         taxPercentage: Number(taxPercentage),
         currency,
         openingHours,
@@ -315,6 +319,25 @@ export const SettingsManager: React.FC = () => {
                   onChange={(e) => setGstNumber(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                  <span>Website URL</span>
+                  <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Globe className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="e.g. www.yourrestaurant.com"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

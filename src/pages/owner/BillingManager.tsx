@@ -141,6 +141,7 @@ export const BillingManager: React.FC = () => {
     const restAddress = settings?.address || '';
     const restPhone = settings?.phone ? `Tel: ${settings.phone}` : '';
     const gstNo = settings?.gstNumber ? `GSTIN: ${settings.gstNumber}` : '';
+    const websiteStr = settings?.websiteUrl || '';
     const bodyWidth = paperWidth === '58mm' ? '58mm' : '80mm';
 
     printWindow.document.write(`
@@ -270,7 +271,7 @@ export const BillingManager: React.FC = () => {
           <div class="text-center" style="font-size: 10px; margin-top: 4px;">
             <div>Payment: <strong>${paymentMethod.toUpperCase()}</strong></div>
             <div style="margin-top: 6px;" class="font-bold">Thank you for dining with us!</div>
-            <div style="font-size: 9px; color: #555; margin-top: 2px;">Please visit again</div>
+            ${websiteStr ? `<div style="font-size: 9px; color: #555; margin-top: 2px;">${websiteStr}</div>` : '<div style="font-size: 9px; color: #555; margin-top: 2px;">Please visit again</div>'}
           </div>
 
           <div style="height: 35px;"></div>
@@ -374,7 +375,9 @@ export const BillingManager: React.FC = () => {
                   <p className="text-[10px] text-slate-500 leading-tight">
                     {settings?.address || '102 Gourmet Blvd, Culinary District'}
                   </p>
-                  <p className="text-[10px] text-slate-500">GSTIN: {settings?.gstNumber || '22AAAAA1111A1Z1'}</p>
+                  {settings?.gstNumber && (
+                    <p className="text-[10px] text-slate-500 font-bold">GSTIN: {settings.gstNumber}</p>
+                  )}
                 </div>
 
                 <div className="border-t border-dashed border-slate-300 my-2"></div>
@@ -444,7 +447,11 @@ export const BillingManager: React.FC = () => {
                 <div className="text-center text-[9px] text-slate-550 space-y-0.5">
                   <p>Settled via {paymentMethod.toUpperCase()}</p>
                   <p>Thank you for dining with us!</p>
-                  <p>www.{settings?.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bistro'}.com</p>
+                  {settings?.websiteUrl ? (
+                    <p className="font-mono text-[9px] text-slate-600 font-semibold">{settings.websiteUrl}</p>
+                  ) : (
+                    <p className="text-[9px] text-slate-400">Please visit again</p>
+                  )}
                 </div>
               </div>
             </div>

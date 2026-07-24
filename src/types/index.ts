@@ -6,6 +6,7 @@ export interface RestaurantSettings {
   email: string;
   logoUrl: string;
   gstNumber: string;
+  websiteUrl?: string;
   taxPercentage: number;
   currency: string;
   openingHours: string;
