@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { useTheme } from '../../context/ThemeContext';
 import { FoodItem, MenuCategory } from '../../types';
 import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe, Sun, Moon } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -120,20 +121,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     showToast,
   } = useRestaurant();
 
-  // Independent customer theme state to decouple Customer Menu theme from POS Admin portal
-  const [customerTheme, setCustomerTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('customer_theme');
-    if (saved === 'light' || saved === 'dark') return saved;
-    return 'light'; // Default to light mode for customer menu
-  });
-
-  const toggleCustomerTheme = () => {
-    setCustomerTheme(prev => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      localStorage.setItem('customer_theme', next);
-      return next;
-    });
-  };
+  const { theme, toggleTheme } = useTheme();
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
   const t = translations[lang];
@@ -292,44 +280,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     );
   }
 
-  // Once tables have been definitively loaded from the database for this restaurant, if this
-  // tableId is NOT in the list and tables is loaded, the table has been deactivated/deleted.
-  const isTableDeleted = tablesLoaded && tables.length > 0 && !tables.some(t => 
-    t.id === tableId || 
-    t.number.toLowerCase() === tableId.toLowerCase() ||
-    t.number.replace(/\s+/g, '').toLowerCase() === tableId.replace(/\s+/g, '').toLowerCase()
-  );
-  if (isTableDeleted) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-150/60 dark:border-slate-800/80 animate-scale-in">
-          <div className="w-20 h-20 bg-rose-500/10 dark:bg-rose-950/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/20">
-            <X className="w-10 h-10 text-rose-600 dark:text-rose-400" />
-          </div>
-          
-          <h2 className="text-2xl font-black mb-2 text-slate-800 dark:text-slate-100 font-sans tracking-tight">Table Inactive</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-6 text-xs font-semibold leading-relaxed">
-            This table QR code has been deactivated or deleted by the restaurant management. Please contact our staff or scan a valid table QR code to proceed.
-          </p>
 
-          <div className="bg-slate-50 dark:bg-slate-800/20 rounded-2xl p-4.5 mb-6 text-left border border-slate-100 dark:border-slate-800/40 text-xs">
-            <div className="flex justify-between items-center text-slate-500 dark:text-slate-455">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Reference ID</span>
-              <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{tableId}</span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => window.location.href = '/'}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs cursor-pointer"
-          >
-            <span>Return to Homepage</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (orderSuccess) {
     return (
@@ -484,7 +435,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   );
 
   return (
-    <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28 ${customerTheme === 'dark' ? 'dark' : ''}`}>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
       {/* Sticky Top Header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-150/60 dark:border-slate-800/80 px-4 py-3 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
@@ -529,11 +480,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
             {/* Dark / Light Mode Toggle */}
             <button
-              onClick={toggleCustomerTheme}
+              onClick={toggleTheme}
               className="flex items-center justify-center p-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer shadow-sm"
-              title={customerTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
-              {customerTheme === 'dark' ? (
+              {theme === 'dark' ? (
                 <Sun className="w-3.5 h-3.5 text-amber-400" />
               ) : (
                 <Moon className="w-3.5 h-3.5 text-slate-700" />
