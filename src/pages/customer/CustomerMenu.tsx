@@ -4,6 +4,7 @@ import { FoodItem, MenuCategory } from '../../types';
 import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
+import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
 import { PageLoader } from '../../components/PageLoader';
 
 interface CustomerMenuProps {
@@ -268,13 +269,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   // Show loading state while the initial context or settings list hasn't arrived yet.
   if (loading || !tablesLoaded || !settings) {
-    return (
-      <PageLoader
-        message="SYNCHRONIZING DIGITAL MENU..."
-        subtext="Please wait a moment while we load live restaurant items & pricing"
-        fullScreen={true}
-      />
-    );
+    return <CustomerMenuLoader restaurantName={settings?.name} />;
   }
 
   if (isPlacingOrder) {
