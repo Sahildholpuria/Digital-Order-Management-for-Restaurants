@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { useTheme } from '../../context/ThemeContext';
 import { FoodItem, MenuCategory } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe, Sun, Moon } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
 import { PageLoader } from '../../components/PageLoader';
@@ -119,6 +120,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     tablesLoaded,
     showToast,
   } = useRestaurant();
+
+  const { theme, toggleTheme } = useTheme();
 
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
   const t = translations[lang];
@@ -506,6 +509,19 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             >
               <Globe className="w-3.5 h-3.5" />
               <span>{lang === 'en' ? 'हिन्दी' : 'EN'}</span>
+            </button>
+
+            {/* Dark / Light Mode Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center p-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer shadow-sm"
+              title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-slate-700" />
+              )}
             </button>
 
             {(settings?.enableWaiterCall ?? true) && (
