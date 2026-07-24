@@ -22,8 +22,28 @@ export const KitchenDisplay: React.FC = () => {
 
   // Filter for active kitchen tickets
   const kitchenOrders = orders
-    .filter(o => ['accepted', 'preparing'].includes(o.status))
+    .filter(o => ['pending', 'accepted', 'preparing'].includes(o.status))
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); // oldest first
+
+  // Auto-print KOT when new orders arrive in kitchen queue
+  const prevOrdersCountRef = React.useRef(kitchenOrders.length);
+  const isFirstRender = React.useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevOrdersCountRef.current = kitchenOrders.length;
+      return;
+    }
+
+    if (autoPrintKOT && kitchenOrders.length > prevOrdersCountRef.current) {
+      const latestNewOrder = kitchenOrders[kitchenOrders.length - 1];
+      if (latestNewOrder) {
+        printKOTReceipt(latestNewOrder, settings?.name || 'Kitchen');
+      }
+    }
+    prevOrdersCountRef.current = kitchenOrders.length;
+  }, [kitchenOrders.length, autoPrintKOT, settings?.name]);
 
   const toggleItemCross = (orderId: string, itemIdx: number) => {
     const key = `${orderId}-${itemIdx}`;
