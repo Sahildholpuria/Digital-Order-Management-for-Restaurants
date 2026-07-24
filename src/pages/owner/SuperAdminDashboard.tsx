@@ -693,14 +693,6 @@ export const SuperAdminDashboard: React.FC = () => {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => handleAccessPortal(r.id)}
-                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
-                              title="Access POS Portal"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              <span>Portal</span>
-                            </button>
-                            <button
                               onClick={() => handleOpenSubModal(r)}
                               className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
                               title="Manage Subscription"
