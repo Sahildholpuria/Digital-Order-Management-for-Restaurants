@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantOrder, PaymentRecord } from '../../types';
+import { printHTMLContent } from '../../utils/printUtils';
 import { 
   FileText, 
   Printer, 
@@ -119,12 +120,6 @@ export const BillingManager: React.FC = () => {
   const triggerPrint = (paperWidth: '80mm' | '58mm' = '80mm') => {
     if (!selectedOrder) return;
 
-    const printWindow = window.open('', '_blank', 'width=450,height=700');
-    if (!printWindow) {
-      showToast('Please allow popup windows to print billing receipts.', 'error');
-      return;
-    }
-
     const itemsHtml = selectedOrder.items.map(item => `
       <tr>
         <td style="padding: 3px 0; vertical-align: top;">
@@ -144,7 +139,7 @@ export const BillingManager: React.FC = () => {
     const websiteStr = settings?.websiteUrl || '';
     const bodyWidth = paperWidth === '58mm' ? '58mm' : '80mm';
 
-    printWindow.document.write(`
+    const receiptHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -275,17 +270,11 @@ export const BillingManager: React.FC = () => {
           </div>
 
           <div style="height: 35px;"></div>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 400);
-            };
-          </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    printHTMLContent(receiptHtml, 'pos-receipt-print-frame');
   };
 
   return (
