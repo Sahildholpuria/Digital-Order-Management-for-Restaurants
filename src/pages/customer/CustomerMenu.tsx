@@ -197,10 +197,24 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     setSelectedVariantName(defaultVariant);
   };
 
+  // Anti-spam cooldown timestamps
+  const [lastWaiterCallTime, setLastWaiterCallTime] = useState<number>(0);
+  const [lastBillRequestTime, setLastBillRequestTime] = useState<number>(0);
+
+  const sanitizeInput = (str: string, maxLen = 250): string => {
+    if (!str) return '';
+    return str
+      .replace(/<[^>]*>?/gm, '') // Strip HTML tags
+      .trim()
+      .slice(0, maxLen);
+  };
+
   const handleAddToCart = () => {
     if (selectedItem) {
-      addToCart(selectedItem, quantity, specialInstructions, selectedVariantName || undefined);
+      const cleanInstructions = sanitizeInput(specialInstructions, 200);
+      addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined);
       setSelectedItem(null);
+      setSpecialInstructions('');
       
       // Mini pop confetti on button click
       confetti({
@@ -246,8 +260,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handleCallWaiter = async () => {
+    const now = Date.now();
+    if (now - lastWaiterCallTime < 15000) {
+      const remainingSecs = Math.ceil((15000 - (now - lastWaiterCallTime)) / 1000);
+      showToast(`Please wait ${remainingSecs}s before calling waiter again.`, 'info');
+      return;
+    }
+
     try {
       await callWaiter();
+      setLastWaiterCallTime(now);
       setWaiterCalled(true);
       showToast('Staff notified. A waiter is on their way to your table!', 'success');
       setTimeout(() => setWaiterCalled(false), 5000);
@@ -257,8 +279,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handleRequestBill = async () => {
+    const now = Date.now();
+    if (now - lastBillRequestTime < 15000) {
+      const remainingSecs = Math.ceil((15000 - (now - lastBillRequestTime)) / 1000);
+      showToast(`Please wait ${remainingSecs}s before requesting bill again.`, 'info');
+      return;
+    }
+
     try {
       await requestBill();
+      setLastBillRequestTime(now);
       setBillRequested(true);
       showToast('Bill request sent. A cashier will assist you shortly!', 'success');
       setTimeout(() => setBillRequested(false), 5000);
