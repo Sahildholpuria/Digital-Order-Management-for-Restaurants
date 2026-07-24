@@ -20,7 +20,15 @@ import {
   CreditCard,
   Clock,
   Zap,
-  Ban
+  Ban,
+  UserPlus,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Filter,
+  Key
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
@@ -73,6 +81,21 @@ export const SuperAdminDashboard: React.FC = () => {
   const [userRole, setUserRole] = useState<'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter'>('admin');
   const [userRestaurantId, setUserRestaurantId] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // 2-in-1 Onboarding: Option to create Admin Staff at same time
+  const [createAdminAccount, setCreateAdminAccount] = useState(true);
+  const [adminFullName, setAdminFullName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+
+  // Status Filter state
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expired' | 'suspended'>('all');
+
+  // Share Credentials Modal
+  const [credsModal, setCredsModal] = useState<{ restName: string; email: string; pass: string; role: string; slug: string } | null>(null);
+  const [copiedText, setCopiedText] = useState(false);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -100,6 +123,15 @@ export const SuperAdminDashboard: React.FC = () => {
     return `${y}-${m}-${d}`;
   };
 
+  const generateRandomPassword = (): string => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let pass = 'Pass#';
+    for (let i = 0; i < 4; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pass;
+  };
+
   const handleOpenOnboard = () => {
     setRestId('');
     setName('');
@@ -107,6 +139,10 @@ export const SuperAdminDashboard: React.FC = () => {
     setPhone('');
     setPlanType('starter');
     setStatus('trial');
+    setCreateAdminAccount(true);
+    setAdminFullName('');
+    setAdminEmail('');
+    setAdminPassword(generateRandomPassword());
     
     // Auto-calculate default initial expiry: +1 Month
     const defaultExpiry = new Date();
@@ -114,6 +150,15 @@ export const SuperAdminDashboard: React.FC = () => {
     setExpiresAt(formatLocalDate(defaultExpiry));
     
     setIsModalOpen(true);
+  };
+
+  const handleOpenAddStaffForRest = (targetRestId: string) => {
+    setUserRestaurantId(targetRestId);
+    setUserFullName('');
+    setUserEmail('');
+    setUserRole('admin');
+    setUserPassword(generateRandomPassword());
+    setIsUserModalOpen(true);
   };
 
   const handleDeleteRestaurant = async (restaurantId: string, restaurantName: string) => {
@@ -152,9 +197,11 @@ export const SuperAdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!restId || !name) return;
 
+    const cleanSlug = restId.trim().toLowerCase().replace(/\s+/g, '-');
+
     try {
       const newRest: Partial<RestaurantSettings> = {
-        id: restId.trim().toLowerCase().replace(/\s+/g, '-'),
+        id: cleanSlug,
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
@@ -164,7 +211,42 @@ export const SuperAdminDashboard: React.FC = () => {
       };
 
       await dbService.createRestaurant(newRest);
+
+      // If 2-in-1 onboarding is enabled, create Admin Staff user immediately
+      let createdUser = false;
+      const targetAdminEmail = adminEmail.trim() || email.trim();
+      const targetAdminName  = adminFullName.trim() || `${name.trim()} Owner`;
+
+      if (createAdminAccount && targetAdminEmail && adminPassword) {
+        try {
+          await dbService.createStaffUser(
+            targetAdminEmail,
+            targetAdminName,
+            'admin',
+            cleanSlug,
+            adminPassword.trim()
+          );
+          createdUser = true;
+        } catch (uErr: any) {
+          showToast('Restaurant created, but staff account failed: ' + (uErr.message || uErr), 'error');
+        }
+      }
+
       setIsModalOpen(false);
+
+      // If staff user was created, show credentials summary pop-up
+      if (createdUser && targetAdminEmail) {
+        setCredsModal({
+          restName: name.trim(),
+          email: targetAdminEmail,
+          pass: adminPassword.trim(),
+          role: 'Administrator',
+          slug: cleanSlug,
+        });
+      } else {
+        showToast('Restaurant created successfully!', 'success');
+      }
+
       // Reset form
       setRestId('');
       setName('');
@@ -173,8 +255,10 @@ export const SuperAdminDashboard: React.FC = () => {
       setPlanType('starter');
       setStatus('trial');
       setExpiresAt('');
-      
-      showToast('Restaurant created successfully!', 'success');
+      setAdminFullName('');
+      setAdminEmail('');
+      setAdminPassword('');
+
       await fetchAllData();
     } catch (err) {
       showToast('Error creating restaurant: ' + err, 'error');
@@ -301,24 +385,42 @@ export const SuperAdminDashboard: React.FC = () => {
         userRestaurantId,
         userPassword.trim()
       );
+
+      const targetRest = restaurants.find(r => r.id === userRestaurantId);
+
       setIsUserModalOpen(false);
+
+      setCredsModal({
+        restName: targetRest?.name || userRestaurantId,
+        email: userEmail.trim(),
+        pass: userPassword.trim(),
+        role: userRole.toUpperCase(),
+        slug: userRestaurantId,
+      });
+
       setUserFullName('');
       setUserEmail('');
       setUserPassword('');
       setUserRole('admin');
       await fetchAllData();
-      showToast(`Staff user created successfully!`, 'success');
     } catch (err: any) {
       showToast('Error creating user: ' + (err.message || err), 'error');
     }
   };
 
-  // Filtered lists
-  const filtered = restaurants.filter(r => 
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filtered lists with Status Pills
+  const filtered = restaurants.filter(r => {
+    const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (!matchesSearch) return false;
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'active') return r.subscriptionStatus === 'active';
+    if (statusFilter === 'trial') return r.subscriptionStatus === 'trial' || !r.subscriptionStatus;
+    if (statusFilter === 'expired') return r.subscriptionStatus === 'expired';
+    if (statusFilter === 'suspended') return r.subscriptionStatus === 'suspended';
+    return true;
+  });
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -450,33 +552,63 @@ export const SuperAdminDashboard: React.FC = () => {
 
       {/* Table Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-sm overflow-hidden">
-        {/* Search Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h2 className="text-base font-black text-slate-850 dark:text-slate-100 flex items-center gap-2">
-            {activeTab === 'restaurants' ? (
-              <>
-                <Building className="w-5 h-5 text-brand-500" />
-                <span>Onboarded Restaurants list</span>
-              </>
-            ) : (
-              <>
-                <Users className="w-5 h-5 text-indigo-500" />
-                <span>Registered Staff Accounts</span>
-              </>
-            )}
-          </h2>
-          <div className="relative w-full sm:w-72 shadow-sm rounded-2xl">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-              <Search className="w-4 h-4 text-slate-400" />
-            </span>
-            <input
-              type="text"
-              placeholder={activeTab === 'restaurants' ? "Search by restaurant name or slug..." : "Search by staff name, email, or role..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-800 dark:text-slate-100"
-            />
+        {/* Search & Filter Header */}
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <h2 className="text-base font-black text-slate-850 dark:text-slate-100 flex items-center gap-2">
+              {activeTab === 'restaurants' ? (
+                <>
+                  <Building className="w-5 h-5 text-brand-500" />
+                  <span>Onboarded Restaurants directory</span>
+                </>
+              ) : (
+                <>
+                  <Users className="w-5 h-5 text-indigo-500" />
+                  <span>Registered Staff Accounts</span>
+                </>
+              )}
+            </h2>
+            <div className="relative w-full sm:w-72 shadow-sm rounded-2xl">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <Search className="w-4 h-4 text-slate-400" />
+              </span>
+              <input
+                type="text"
+                placeholder={activeTab === 'restaurants' ? "Search by restaurant name or slug..." : "Search by staff name, email, or role..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-800 dark:text-slate-100"
+              />
+            </div>
           </div>
+
+          {/* Quick Filter Pills for Restaurants Tab */}
+          {activeTab === 'restaurants' && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/50">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1">
+                <Filter className="w-3 h-3" /> Filter:
+              </span>
+              {[
+                { id: 'all', label: `All (${restaurants.length})` },
+                { id: 'active', label: `Active (${activeCount})` },
+                { id: 'trial', label: `Free Trial (${trialCount})` },
+                { id: 'expired', label: `Expired (${restaurants.filter(r => r.subscriptionStatus === 'expired').length})` },
+                { id: 'suspended', label: `Suspended (${restaurants.filter(r => r.subscriptionStatus === 'suspended').length})` },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setStatusFilter(f.id as any)}
+                  className={`px-3 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                    statusFilter === f.id
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Table Body */}
@@ -520,11 +652,21 @@ export const SuperAdminDashboard: React.FC = () => {
                       pro_1y: '12 Months Plan'
                     };
 
+                    const staffUsersCount = users.filter(u => u.restaurantId === r.id).length;
+
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-extrabold text-slate-800 dark:text-slate-200">{r.name}</div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest">{r.id}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-slate-800 dark:text-slate-200">{r.name}</span>
+                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                              <Users className="w-2.5 h-2.5" />
+                              {staffUsersCount}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5 uppercase font-bold tracking-widest flex items-center gap-1">
+                            <span>ID: {r.id}</span>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
                           <div>{r.email || 'No email registered'}</div>
@@ -549,10 +691,10 @@ export const SuperAdminDashboard: React.FC = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleAccessPortal(r.id)}
-                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
                               title="Access POS Portal"
                             >
                               <ExternalLink className="w-3 h-3" />
@@ -560,15 +702,24 @@ export const SuperAdminDashboard: React.FC = () => {
                             </button>
                             <button
                               onClick={() => handleOpenSubModal(r)}
-                              className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
                               title="Manage Subscription"
                             >
                               <CreditCard className="w-3 h-3" />
                               <span>Billing</span>
                             </button>
                             <button
+                              onClick={() => handleOpenAddStaffForRest(r.id)}
+                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              title="Add Staff User to this Restaurant"
+                            >
+                              <UserPlus className="w-3 h-3" />
+                              <span>+ Staff</span>
+                            </button>
+                            <button
                               onClick={() => handleEditClick(r)}
-                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                              title="Edit Restaurant Info"
                             >
                               Edit
                             </button>
@@ -691,116 +842,196 @@ export const SuperAdminDashboard: React.FC = () => {
       {/* Onboard Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Onboard New Restaurant</h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-lg p-6 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-5">
+              <div>
+                <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Onboard New Restaurant</h3>
+                <p className="text-[10px] text-slate-400 font-semibold">Set up tenant details & optional admin staff account</p>
+              </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleOnboardSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Unique Slug (ID)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. bistro-delhi"
-                  value={restId}
-                  onChange={(e) => setRestId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
-                />
-              </div>
+              {/* Step 1: Restaurant Info */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1">
+                  <Building className="w-3.5 h-3.5" /> Step 1: Restaurant Details
+                </p>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Restaurant Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. The Grand Bistro"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Email</label>
-                  <input
-                    type="email"
-                    placeholder="name@restaurant.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Phone</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Restaurant Name</label>
                   <input
                     type="text"
-                    placeholder="+91 XXXXX XXXXX"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
+                    required
+                    placeholder="e.g. The Grand Bistro"
+                    value={name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setName(val);
+                      if (!restId) {
+                        setRestId(val.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'));
+                      }
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Unique Slug / Tenant ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. bistro-delhi"
+                    value={restId}
+                    onChange={(e) => setRestId(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-850 dark:text-slate-100 font-mono"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Owner Email</label>
+                    <input
+                      type="email"
+                      placeholder="owner@bistro.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (!adminEmail) setAdminEmail(e.target.value);
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Owner Phone</label>
+                    <input
+                      type="text"
+                      placeholder="+91 XXXXX XXXXX"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Subscription Plan</label>
+                    <select
+                      value={planType}
+                      onChange={(e) => {
+                        const val = e.target.value as 'starter' | 'pro_6m' | 'pro_1y';
+                        setPlanType(val);
+                        const now = new Date();
+                        if (val === 'starter') now.setMonth(now.getMonth() + 1);
+                        else if (val === 'pro_6m') now.setMonth(now.getMonth() + 6);
+                        else if (val === 'pro_1y') now.setFullYear(now.getFullYear() + 1);
+                        setExpiresAt(formatLocalDate(now));
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
+                    >
+                      <option value="starter">1 Month Plan (Starter)</option>
+                      <option value="pro_6m">6 Months Plan (Pro)</option>
+                      <option value="pro_1y">12 Months Plan (Enterprise)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Initial Status</label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as any)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                    >
+                      <option value="trial">Free Trial</option>
+                      <option value="active">Active Plan</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Initial Plan</label>
-                  <select
-                    value={planType}
-                    onChange={(e) => {
-                      const val = e.target.value as 'starter' | 'pro_6m' | 'pro_1y';
-                      setPlanType(val);
-                      const now = new Date();
-                      if (val === 'starter') {
-                        now.setMonth(now.getMonth() + 1);
-                      } else if (val === 'pro_6m') {
-                        now.setMonth(now.getMonth() + 6);
-                      } else if (val === 'pro_1y') {
-                        now.setFullYear(now.getFullYear() + 1);
-                      }
-                      setExpiresAt(formatLocalDate(now));
-                    }}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
-                  >
-                    <option value="starter">1 Month Plan (Starter)</option>
-                    <option value="pro_6m">6 Months Plan (Pro)</option>
-                    <option value="pro_1y">12 Months Plan (Enterprise)</option>
-                  </select>
+              {/* Step 2: 2-in-1 Admin Staff Account Setup */}
+              <div className="pt-3 border-t border-slate-150 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                    <UserPlus className="w-3.5 h-3.5" /> Step 2: Create Admin User Account
+                  </span>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createAdminAccount}
+                      onChange={e => setCreateAdminAccount(e.target.checked)}
+                      className="w-3.5 h-3.5 accent-brand-600 rounded cursor-pointer"
+                    />
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Enable</span>
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Subscription Status</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
-                  >
-                    <option value="trial">Free Trial</option>
-                    <option value="active">Active Plan</option>
-                    <option value="expired">Expired</option>
-                  </select>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Plan Expiry Date</label>
-                <input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
-                />
+                {createAdminAccount && (
+                  <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl p-3.5 space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Admin Full Name</label>
+                      <input
+                        type="text"
+                        placeholder={name ? `${name} Admin` : "e.g. Rahul Sharma"}
+                        value={adminFullName}
+                        onChange={(e) => setAdminFullName(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-850 dark:text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Admin Login Email</label>
+                      <input
+                        type="email"
+                        placeholder={email || "admin@restaurant.com"}
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-850 dark:text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
+                        <button
+                          type="button"
+                          onClick={() => setAdminPassword(generateRandomPassword())}
+                          className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
+                        >
+                          <Zap className="w-3 h-3" /> Auto-Generate
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type={showAdminPassword ? 'text' : 'password'}
+                          required={createAdminAccount}
+                          minLength={6}
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-3 pr-9 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-850 dark:text-slate-100 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          {showAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-6 text-xs cursor-pointer"
+                className="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-2 mt-4"
               >
-                Onboard Tenant
+                <Sparkles className="w-4 h-4" />
+                <span>Onboard Tenant & Create Accounts</span>
               </button>
             </form>
           </div>
@@ -1257,25 +1488,106 @@ export const SuperAdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Account Password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="Minimum 6 characters"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100"
-                />
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Password</label>
+                  <button
+                    type="button"
+                    onClick={() => setUserPassword(generateRandomPassword())}
+                    className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
+                  >
+                    <Zap className="w-3 h-3" /> Auto-Generate
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Minimum 6 characters"
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-4 pr-10 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-850 text-slate-855 dark:text-slate-100 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer flex items-center justify-center gap-2"
               >
-                Create Staff Account
+                <UserPlus className="w-4 h-4" />
+                <span>Create Staff Account</span>
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== CREATED CREDENTIALS SUMMARY MODAL ===== */}
+      {credsModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center">
+            <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+              <CheckCircle className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-xl font-black text-slate-850 dark:text-slate-100">Account Ready!</h3>
+            <p className="text-xs text-slate-400 font-medium mt-1">
+              Account created for <strong className="text-slate-700 dark:text-slate-200">{credsModal.restName}</strong>
+            </p>
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 my-5 text-left space-y-2.5 font-mono text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Restaurant Slug</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.slug}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Role</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">{credsModal.role}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/50 pt-2">
+                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Email</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.email}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Password</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100 bg-amber-400/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">
+                  {credsModal.pass}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `Restaurant: ${credsModal.restName}\nTenant Slug: ${credsModal.slug}\nRole: ${credsModal.role}\nEmail: ${credsModal.email}\nPassword: ${credsModal.pass}`;
+                  navigator.clipboard.writeText(text);
+                  setCopiedText(true);
+                  showToast('Login credentials copied to clipboard!', 'success');
+                  setTimeout(() => setCopiedText(false), 3000);
+                }}
+                className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-4 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {copiedText ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedText ? 'Copied!' : 'Copy Credentials'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCredsModal(null)}
+                className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-5 rounded-2xl text-xs transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
