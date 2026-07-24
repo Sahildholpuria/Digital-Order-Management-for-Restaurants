@@ -171,8 +171,28 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
+  const sessionStartTime = useRef<number>(Date.now());
+  const originalDocTitle = useRef<string>(document.title);
 
-  // Silent audio loop to keep browser tab active in background, and visibility listener to re-sync
+  // Update session start time whenever user logs in or switches
+  useEffect(() => {
+    sessionStartTime.current = Date.now();
+    isFirstLoad.current = true;
+    prevNotificationsCount.current = 0;
+  }, [currentUser?.id, restaurantId]);
+
+  // Handle Tab Focus to clear flashing title
+  useEffect(() => {
+    const handleFocus = () => {
+      if (originalDocTitle.current) {
+        document.title = originalDocTitle.current;
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Silent audio loop & User Interaction Audio Unlocker for Mac, Windows, and Android
   useEffect(() => {
     let interval: any;
     let audioCtx: AudioContext | null = null;
@@ -182,9 +202,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         
-        // Play tiny silent sound every 10 seconds to keep the process running in the background
+        // Play tiny silent sound every 10 seconds to keep Web Audio process active in background
         interval = setInterval(() => {
           if (!audioCtx) return;
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+          }
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.connect(gain);
@@ -198,9 +221,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     };
 
-    // Trigger on first user interaction to bypass browser autoplay policies
+    // Trigger on first user interaction to unlock audio & request native web notifications
     const handleInteraction = () => {
       startKeepAlive();
+      if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
@@ -501,7 +530,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             setNotifications(data);
             if (!isFirstLoad.current && data.length > prevNotificationsCount.current) {
               const newNotify = data[0];
-              if (newNotify && !newNotify.isRead) {
+              const notifyTime = newNotify?.createdAt ? new Date(newNotify.createdAt).getTime() : 0;
+              // STRICT GUARD: Sound ONLY plays for fresh live customer orders created AFTER current session started
+              const isLiveCreatedDuringSession = notifyTime >= (sessionStartTime.current - 2000);
+
+              if (newNotify && !newNotify.isRead && newNotify.type === 'new_order' && isLiveCreatedDuringSession) {
                 triggerNotificationSoundAndSpeech(newNotify);
               }
             }
@@ -560,7 +593,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id, loading]);
 
-  // Trigger Sound & Speech Synthesis
+  // Trigger Sound, Speech Synthesis & Background Notifications
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
     // Only play sound and announce speech for new customer orders
     if (n.type !== 'new_order') return;
@@ -569,27 +602,41 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const soundEnabled = settings?.enableSoundNotification ?? true;
       if (!soundEnabled) return;
 
-      // Rich 4-note ascending chime with smooth fade-in/out envelopes
+      const tableCleanName = n.tableName.replace(/Table\s*/i, '');
+
+      // 1. Native Desktop / Mobile Background Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(`🔔 NEW ORDER - Table ${tableCleanName}`, {
+            body: `Order received from Table ${tableCleanName}. Tap to view.`,
+            icon: '/favicon.ico',
+            tag: n.id,
+          });
+        } catch (e) {
+          console.warn('Native notification error:', e);
+        }
+      }
+
+      // 2. Background Tab Title Flashing
+      if (document.hidden) {
+        document.title = `🔔 (1) NEW ORDER - Table ${tableCleanName}!`;
+      }
+
+      // 3. Rich 4-note ascending chime with smooth fade-in/out envelopes
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Explicitly resume audio context (fixes browser auto-play policies/suspensions on Windows/Mac)
+      // Explicitly resume audio context (fixes browser auto-play policies/suspensions on macOS, Windows, Android)
       if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().catch(() => {});
       }
 
       const playNote = (freq: number, startTime: number, duration: number, peakGain: number) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         
-        // Smoother waveform for a bell-like tone
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, startTime);
         
-        // Cross-platform envelope layout: 
-        // 1. Start at silence
-        // 2. Linear ramp to peak (Attack)
-        // 3. Exponential decay to near-silence (Release)
-        // Removes mid-sustain setValueAtTime scheduling, resolving CoreAudio (macOS) vs. WASAPI (Windows) volume curve differences.
         gain.gain.setValueAtTime(0, startTime);
         gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
@@ -602,39 +649,39 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       const t = audioCtx.currentTime;
 
-      // 4-note ascending bell sequence: C5 → E5 → G5 → C6 (Louder version)
+      // 4-note ascending bell sequence: C5 → E5 → G5 → C6
       playNote(523.25, t + 0.0,  0.35, 0.95); // C5
       playNote(659.25, t + 0.22, 0.35, 0.95); // E5
       playNote(783.99, t + 0.44, 0.35, 0.95); // G5
-      playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6 - held longer for a satisfying ring
+      playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6
 
-      // Speech Synthesis Voice Announcement (strictly for new orders)
-      if ('speechSynthesis' in window && n.type === 'new_order') {
-        const tableCleanName = n.tableName.replace(/Table\s*/i, '');
+      // 4. Speech Synthesis Voice Announcement (strictly for new customer orders)
+      if ('speechSynthesis' in window) {
         const speechMessage = `New order received from Table ${tableCleanName}.`;
 
-        // Delay speech slightly so chime plays first
         setTimeout(() => {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
           const speech = new SpeechSynthesisUtterance(speechMessage);
           speech.rate = 0.78;   // Slower for clarity
-          speech.pitch = 1.05;  // Slightly higher for a warm restaurant tone
-          speech.volume = 1.0;  // Max volume
+          speech.pitch = 1.05;  // Warm tone
+          speech.volume = 1.0;
           speech.lang = 'en-US';
 
-          // Prefer a high-quality natural voice
           const voices = window.speechSynthesis.getVoices();
           const preferredVoice =
             voices.find(v => v.name.includes('Samantha')) ||     // macOS premium
-            voices.find(v => v.name.includes('Google US English')) || // Chrome
-            voices.find(v => v.name.includes('Microsoft Aria')) ||    // Edge
-            voices.find(v => v.lang === 'en-US' && v.localService) || // any local en-US
-            voices.find(v => v.lang.startsWith('en'));                 // any English
+            voices.find(v => v.name.includes('Google US English')) || // Chrome / Android
+            voices.find(v => v.name.includes('Microsoft Aria')) ||    // Edge / Windows
+            voices.find(v => v.lang === 'en-US' && v.localService) ||
+            voices.find(v => v.lang.startsWith('en'));
 
           if (preferredVoice) speech.voice = preferredVoice;
 
-          window.speechSynthesis.cancel(); // clear any queued speech
+          window.speechSynthesis.cancel();
           window.speechSynthesis.speak(speech);
-        }, 900); // let the chime finish before speaking
+        }, 900);
       }
     } catch (e) {
       console.warn('Notification audio/speech synthesis blocked by browser:', e);
