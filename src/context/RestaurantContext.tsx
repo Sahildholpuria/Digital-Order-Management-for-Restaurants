@@ -394,6 +394,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (loading) return;
 
+    // Reset tablesLoaded for new restaurantId to prevent flash of wrong table cache
+    setTablesLoaded(false);
+
     // Hydrate local cache immediately for low-connectivity support (0ms load)
     try {
       const cachedTables = localStorage.getItem(`cached_tables_${restaurantId}`);
@@ -402,17 +405,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (parsed && parsed.length > 0) {
           setTables(parsed);
           setTablesLoaded(true);
+        } else {
+          setTables([]);
         }
+      } else {
+        setTables([]);
       }
       const cachedCats = localStorage.getItem(`cached_categories_${restaurantId}`);
       if (cachedCats) {
         const parsed = JSON.parse(cachedCats);
         if (parsed && parsed.length > 0) setCategories(parsed);
+        else setCategories([]);
+      } else {
+        setCategories([]);
       }
       const cachedFood = localStorage.getItem(`cached_food_${restaurantId}`);
       if (cachedFood) {
         const parsed = JSON.parse(cachedFood);
         if (parsed && parsed.length > 0) setFoodItems(parsed);
+        else setFoodItems([]);
+      } else {
+        setFoodItems([]);
       }
       const cachedSet = localStorage.getItem(`cached_settings_${restaurantId}`);
       if (cachedSet) {
