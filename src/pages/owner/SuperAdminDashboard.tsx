@@ -16,7 +16,11 @@ import {
   RefreshCw,
   Users,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  CreditCard,
+  Clock,
+  Zap,
+  Ban
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
@@ -46,6 +50,14 @@ export const SuperAdminDashboard: React.FC = () => {
   const [editPlan, setEditPlan] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
   const [editStatus, setEditStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
   const [editExpiresAt, setEditExpiresAt] = useState('');
+
+  // Dedicated subscription management modal
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [subRest, setSubRest] = useState<RestaurantSettings | null>(null);
+  const [subPlan, setSubPlan] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
+  const [subStatus, setSubStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
+  const [subExpiresAt, setSubExpiresAt] = useState('');
+  const [subSaving, setSubSaving] = useState(false);
 
   // Edit staff user states
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
@@ -228,6 +240,45 @@ export const SuperAdminDashboard: React.FC = () => {
     } catch (err: any) {
       showToast('Error updating user profile: ' + (err.message || err), 'error');
     }
+  };
+
+  const handleOpenSubModal = (rest: RestaurantSettings) => {
+    setSubRest(rest);
+    setSubPlan(rest.planType || 'starter');
+    setSubStatus(rest.subscriptionStatus || 'trial');
+    if (rest.subscriptionExpiresAt) {
+      const d = new Date(rest.subscriptionExpiresAt);
+      setSubExpiresAt(d.toISOString().split('T')[0]);
+    } else {
+      setSubExpiresAt('');
+    }
+    setIsSubModalOpen(true);
+  };
+
+  const handleSubSave = async () => {
+    if (!subRest) return;
+    setSubSaving(true);
+    try {
+      await dbService.updateRestaurantSubscription(subRest.id, {
+        planType: subPlan,
+        subscriptionStatus: subStatus,
+        subscriptionExpiresAt: subExpiresAt ? new Date(subExpiresAt).toISOString() : undefined,
+      });
+      setIsSubModalOpen(false);
+      await fetchAllData();
+      showToast(`Subscription updated for ${subRest.name}.`, 'success');
+    } catch (err) {
+      showToast('Failed to update subscription: ' + err, 'error');
+    } finally {
+      setSubSaving(false);
+    }
+  };
+
+  // Derives days left (positive = future, negative = overdue)
+  const getDaysLeft = (expiresAt: any): number | null => {
+    if (!expiresAt) return null;
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
   const handleAccessPortal = (restaurantId: string) => {
@@ -508,6 +559,14 @@ export const SuperAdminDashboard: React.FC = () => {
                               <span>Portal</span>
                             </button>
                             <button
+                              onClick={() => handleOpenSubModal(r)}
+                              className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                              title="Manage Subscription"
+                            >
+                              <CreditCard className="w-3 h-3" />
+                              <span>Billing</span>
+                            </button>
+                            <button
                               onClick={() => handleEditClick(r)}
                               className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
                             >
@@ -747,6 +806,232 @@ export const SuperAdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ===== SUBSCRIPTION MANAGEMENT MODAL ===== */}
+      {isSubModalOpen && subRest && (() => {
+        const daysLeft = getDaysLeft(subExpiresAt);
+        const isExpired = daysLeft !== null && daysLeft <= 0;
+        const isWarning = daysLeft !== null && daysLeft > 0 && daysLeft <= 14;
+
+        const plans = [
+          {
+            id: 'starter' as const,
+            label: '1 Month',
+            duration: '30 days',
+            months: 1,
+            icon: '🗓️',
+            color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400',
+            ring: 'ring-amber-400',
+            badge: 'Starter Plan',
+          },
+          {
+            id: 'pro_6m' as const,
+            label: '6 Months',
+            duration: '180 days',
+            months: 6,
+            icon: '⚡',
+            color: 'border-brand-500 bg-brand-50 dark:bg-brand-950/20 text-brand-700 dark:text-brand-400',
+            ring: 'ring-brand-500',
+            badge: 'Pro Plan',
+          },
+          {
+            id: 'pro_1y' as const,
+            label: '12 Months',
+            duration: '365 days',
+            months: 12,
+            icon: '🏆',
+            color: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400',
+            ring: 'ring-emerald-500',
+            badge: 'Enterprise Plan',
+          },
+        ];
+
+        const applyPlan = (plan: typeof plans[0]) => {
+          setSubPlan(plan.id);
+          const newDate = new Date();
+          newDate.setMonth(newDate.getMonth() + plan.months);
+          setSubExpiresAt(newDate.toISOString().split('T')[0]);
+          setSubStatus('active');
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-scale-in overflow-hidden">
+
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-purple-200 text-[10px] font-bold uppercase tracking-widest mb-1">
+                      <CreditCard className="w-3 h-3" />
+                      <span>Subscription Management</span>
+                    </div>
+                    <h3 className="text-lg font-black tracking-tight">{subRest.name}</h3>
+                    <p className="text-purple-200 text-[10px] font-mono uppercase tracking-widest mt-0.5">{subRest.id}</p>
+                  </div>
+                  <button onClick={() => setIsSubModalOpen(false)} className="text-purple-200 hover:text-white mt-1">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Current status banner */}
+                <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-2xl p-3 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-purple-200">Current Status</p>
+                    <p className="font-black text-sm capitalize mt-0.5">
+                      {subStatus === 'active' ? '✅ Active' :
+                       subStatus === 'trial' ? '🟡 Free Trial' :
+                       subStatus === 'suspended' ? '🚫 Suspended' : '❌ Expired'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-purple-200">Expires</p>
+                    <p className="font-black text-sm mt-0.5">
+                      {subExpiresAt
+                        ? new Date(subExpiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : '—'}
+                    </p>
+                  </div>
+                  {daysLeft !== null && (
+                    <div className={`text-right px-3 py-1.5 rounded-xl text-center font-black text-sm min-w-[70px] ${
+                      isExpired ? 'bg-red-500/30 text-red-200' :
+                      isWarning ? 'bg-amber-400/30 text-amber-200' :
+                      'bg-emerald-400/30 text-emerald-200'
+                    }`}>
+                      <p className="text-[9px] font-bold uppercase tracking-wider opacity-80">Days Left</p>
+                      <p className="text-lg font-black leading-none mt-0.5">
+                        {isExpired ? `+${Math.abs(daysLeft)}` : daysLeft}
+                      </p>
+                      {isExpired && <p className="text-[8px] opacity-70">overdue</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto">
+
+                {/* Plan Cards */}
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-3">Select Subscription Plan</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {plans.map(plan => (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => applyPlan(plan)}
+                        className={`relative border-2 rounded-2xl p-3.5 text-center transition-all cursor-pointer ${
+                          subPlan === plan.id
+                            ? `${plan.color} ${plan.ring} ring-2 scale-[1.03] shadow-md`
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
+                        }`}
+                      >
+                        {subPlan === plan.id && (
+                          <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-current text-white text-[8px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: plan.id === 'starter' ? '#f59e0b' : plan.id === 'pro_6m' ? '#6366f1' : '#10b981', color: '#fff' }}>
+                            Selected
+                          </span>
+                        )}
+                        <div className="text-2xl mb-1">{plan.icon}</div>
+                        <p className="font-black text-sm text-slate-800 dark:text-slate-100">{plan.label}</p>
+                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">{plan.duration}</p>
+                        <p className="text-[9px] font-bold mt-1.5 uppercase tracking-wide" style={{ color: plan.id === 'starter' ? '#d97706' : plan.id === 'pro_6m' ? '#6366f1' : '#10b981' }}>
+                          {plan.badge}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Controls */}
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-3">Subscription Status</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { val: 'active', label: 'Activate', icon: <CheckCircle className="w-3.5 h-3.5" />, cls: 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800/50' },
+                      { val: 'trial', label: 'Trial', icon: <Clock className="w-3.5 h-3.5" />, cls: 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800/50' },
+                      { val: 'expired', label: 'Expired', icon: <AlertCircle className="w-3.5 h-3.5" />, cls: 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-300 dark:border-red-800/50' },
+                      { val: 'suspended', label: 'Suspend', icon: <Ban className="w-3.5 h-3.5" />, cls: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700' },
+                    ].map(s => (
+                      <button
+                        key={s.val}
+                        type="button"
+                        onClick={() => setSubStatus(s.val as any)}
+                        className={`flex flex-col items-center gap-1 border-2 rounded-xl py-2.5 px-1 text-[9px] font-extrabold uppercase tracking-wide transition-all cursor-pointer ${
+                          subStatus === s.val
+                            ? `${s.cls} ring-2 ring-current scale-[1.04]`
+                            : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 bg-white dark:bg-slate-800'
+                        }`}
+                      >
+                        {s.icon}
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Expiry Override */}
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">Custom Expiry Date Override</p>
+                  <input
+                    type="date"
+                    value={subExpiresAt}
+                    onChange={e => setSubExpiresAt(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-slate-100 cursor-pointer"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1.5">Overrides auto-calculated date from plan selection above.</p>
+                </div>
+
+                {/* Days Progress Bar */}
+                {subExpiresAt && (() => {
+                  const totalDays = subPlan === 'starter' ? 30 : subPlan === 'pro_6m' ? 180 : 365;
+                  const dl = getDaysLeft(subExpiresAt);
+                  const pct = dl !== null ? Math.max(0, Math.min(100, (dl / totalDays) * 100)) : 0;
+                  return (
+                    <div>
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400 mb-1.5">
+                        <span>Subscription Timeline</span>
+                        <span>{dl !== null ? (dl > 0 ? `${dl} days remaining` : `${Math.abs(dl)} days overdue`) : ''}</span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            pct > 50 ? 'bg-emerald-500' : pct > 20 ? 'bg-amber-400' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800 mt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSubModalOpen(false)}
+                  className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-2xl text-xs transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubSave}
+                  disabled={subSaving}
+                  className="flex-[2] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-60 text-white font-bold py-3 rounded-2xl text-xs transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2"
+                >
+                  {subSaving ? (
+                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+                  ) : (
+                    <><Zap className="w-3.5 h-3.5" /> Apply Subscription Changes</>
+                  )}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Edit Modal */}
       {isEditModalOpen && selectedRest && (
