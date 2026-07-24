@@ -32,7 +32,7 @@ export const SettingsManager: React.FC = () => {
   const [email, setEmail] = useState(settings?.email || '');
   const [logoUrl, setLogoUrl] = useState(settings?.logoUrl || '');
   const [gstNumber, setGstNumber] = useState(settings?.gstNumber || '');
-  const [taxPercentage, setTaxPercentage] = useState(settings?.taxPercentage || 18);
+  const [taxPercentage, setTaxPercentage] = useState(settings?.taxPercentage ?? 0);
   const [currency, setCurrency] = useState(settings?.currency || '₹');
   const [openingHours, setOpeningHours] = useState(settings?.openingHours || '09:00');
   const [closingHours, setClosingHours] = useState(settings?.closingHours || '22:00');
@@ -53,7 +53,7 @@ export const SettingsManager: React.FC = () => {
       setEmail(settings.email || '');
       setLogoUrl(settings.logoUrl || '');
       setGstNumber(settings.gstNumber || '');
-      setTaxPercentage(settings.taxPercentage || 18);
+      setTaxPercentage(settings.taxPercentage ?? 0);
       setCurrency(settings.currency || '₹');
       setOpeningHours(settings.openingHours || '09:00');
       setClosingHours(settings.closingHours || '22:00');
@@ -332,7 +332,7 @@ export const SettingsManager: React.FC = () => {
                       min={0}
                       max={100}
                       placeholder="0"
-                      value={taxPercentage === 0 ? '' : taxPercentage}
+                      value={taxPercentage}
                       onChange={(e) => setTaxPercentage(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
                       className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />

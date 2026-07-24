@@ -90,7 +90,7 @@ export const OrdersManager: React.FC = () => {
     if (!editingOrder) return;
     
     const subtotal = editItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-    const taxRate = settings ? settings.taxPercentage : 18;
+    const taxRate = settings?.taxPercentage ?? 0;
     const tax = subtotal * (taxRate / 100);
     const grandTotal = subtotal + tax;
 
