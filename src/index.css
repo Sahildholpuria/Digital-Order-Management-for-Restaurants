@@ -4,16 +4,34 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --brand-50: #fafafa;
+  --brand-100: #f4f4f5;
+  --brand-400: #71717a;
+  --brand-500: #18181b;
+  --brand-600: #09090b;
+  --brand-700: #000000;
+}
+
+.dark {
+  --brand-50: #18181b;
+  --brand-100: #27272a;
+  --brand-400: #a1a1aa;
+  --brand-500: #ffffff;
+  --brand-600: #f4f4f5;
+  --brand-700: #e4e4e7;
+}
+
 @theme {
-  --color-brand-50: var(--brand-50, #ecfdf5);
-  --color-brand-100: var(--brand-100, #d1fae5);
-  --color-brand-405: #34d399;
-  --color-brand-500: var(--brand-500, #10b981);
-  --color-brand-550: #10b981;
-  --color-brand-600: var(--brand-600, #059669);
-  --color-brand-650: #059669;
-  --color-brand-655: #059669;
-  --color-brand-700: var(--brand-700, #047857);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-405: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-550: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-650: var(--brand-600);
+  --color-brand-655: var(--brand-600);
+  --color-brand-700: var(--brand-700);
   
   /* Custom/Legacy Theme Color Mapping Extensions */
   --color-slate-105: #f1f5f9;
