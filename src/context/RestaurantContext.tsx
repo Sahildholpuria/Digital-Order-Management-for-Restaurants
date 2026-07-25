@@ -18,7 +18,12 @@ import {
   ConfirmModalConfig,
 } from '../types';
 
+import { translations, Language } from '../translations';
+
 interface RestaurantContextType {
+  lang: Language;
+  setLang: (lang: Language) => void;
+  t: typeof translations.en;
   settings: RestaurantSettings | null;
   categories: MenuCategory[];
   foodItems: FoodItem[];
@@ -129,6 +134,23 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
+
+  // Global Language & Translation state
+  const [lang, setLangState] = useState<Language>(() => {
+    return (localStorage.getItem('app_language') as Language) || 
+           (localStorage.getItem('customer_lang') as Language) || 
+           (localStorage.getItem('admin_lang') as Language) || 
+           'en';
+  });
+
+  const setLang = (newLang: Language) => {
+    setLangState(newLang);
+    localStorage.setItem('app_language', newLang);
+    localStorage.setItem('customer_lang', newLang);
+    localStorage.setItem('admin_lang', newLang);
+  };
+
+  const t = translations[lang] || translations.en;
 
   // Toast & Modal popup states
   const [toasts, setToasts] = useState<ToastConfig[]>([]);
@@ -1050,6 +1072,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   return (
     <RestaurantContext.Provider value={{
+      lang,
+      setLang,
+      t,
       settings,
       categories,
       foodItems,

@@ -119,6 +119,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     loading,
     tablesLoaded,
     showToast,
+    lang,
+    setLang,
+    t,
   } = useRestaurant();
 
   // Returns a clean, short display number from the actual table record.
@@ -130,9 +133,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
     return '—';
   };
-
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
-  const t = translations[lang];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
