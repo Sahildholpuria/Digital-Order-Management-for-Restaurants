@@ -214,41 +214,8 @@ export const SuperAdminDashboard: React.FC = () => {
       };
 
       await dbService.createRestaurant(newRest);
-
-      // If 2-in-1 onboarding is enabled, create Admin Staff user immediately
-      let createdUser = false;
-      const targetAdminEmail = adminEmail.trim() || email.trim();
-      const targetAdminName  = adminFullName.trim() || `${name.trim()} Owner`;
-
-      if (createAdminAccount && targetAdminEmail && adminPassword) {
-        try {
-          await dbService.createStaffUser(
-            targetAdminEmail,
-            targetAdminName,
-            'admin',
-            cleanSlug,
-            adminPassword.trim()
-          );
-          createdUser = true;
-        } catch (uErr: any) {
-          showToast('Restaurant created, but staff account failed: ' + (uErr.message || uErr), 'error');
-        }
-      }
-
       setIsModalOpen(false);
-
-      // If staff user was created, show credentials summary pop-up
-      if (createdUser && targetAdminEmail) {
-        setCredsModal({
-          restName: name.trim(),
-          email: targetAdminEmail,
-          pass: adminPassword.trim(),
-          role: 'Administrator',
-          slug: cleanSlug,
-        });
-      } else {
-        showToast('Restaurant created successfully!', 'success');
-      }
+      showToast('Restaurant onboarded successfully!', 'success');
 
       // Reset form
       setRestId('');
@@ -258,9 +225,6 @@ export const SuperAdminDashboard: React.FC = () => {
       setPlanType('starter');
       setStatus('trial');
       setExpiresAt('');
-      setAdminFullName('');
-      setAdminEmail('');
-      setAdminPassword('');
 
       await fetchAllData();
     } catch (err) {
@@ -1007,80 +971,6 @@ export const SuperAdminDashboard: React.FC = () => {
                     </select>
                   </div>
                 </div>
-              </div>
-
-              {/* Step 2: 2-in-1 Admin Staff Account Setup */}
-              <div className="pt-3 border-t border-slate-150 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                    <UserPlus className="w-3.5 h-3.5" /> Step 2: Create Admin User Account
-                  </span>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={createAdminAccount}
-                      onChange={e => setCreateAdminAccount(e.target.checked)}
-                      className="w-3.5 h-3.5 accent-brand-600 rounded cursor-pointer"
-                    />
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Enable</span>
-                  </label>
-                </div>
-
-                {createAdminAccount && (
-                  <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl p-3.5 space-y-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Admin Full Name</label>
-                      <input
-                        type="text"
-                        placeholder={name ? `${name} Admin` : "e.g. Rahul Sharma"}
-                        value={adminFullName}
-                        onChange={(e) => setAdminFullName(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-850 dark:text-slate-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Admin Login Email</label>
-                      <input
-                        type="email"
-                        placeholder={email || "admin@restaurant.com"}
-                        value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-850 dark:text-slate-100"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
-                        <button
-                          type="button"
-                          onClick={() => setAdminPassword(generateRandomPassword())}
-                          className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
-                        >
-                          <Zap className="w-3 h-3" /> Auto-Generate
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type={showAdminPassword ? 'text' : 'password'}
-                          required={createAdminAccount}
-                          minLength={6}
-                          value={adminPassword}
-                          onChange={(e) => setAdminPassword(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-3 pr-9 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-850 dark:text-slate-100 font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          {showAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <button
