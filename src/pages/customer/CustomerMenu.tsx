@@ -556,6 +556,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 </span>
               )}
             </button>
+
+            {/* Language Selector Button */}
+            <button
+              onClick={() => {
+                const next = lang === 'en' ? 'hi' : 'en';
+                setLang(next);
+                localStorage.setItem('customer_lang', next);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+              title="Switch Language / भाषा बदलें"
+            >
+              <Globe className="w-3.5 h-3.5 text-brand-500" />
+              <span>{lang === 'en' ? 'हिन्दी' : 'English'}</span>
+            </button>
           </div>
         </div>
       </header>
