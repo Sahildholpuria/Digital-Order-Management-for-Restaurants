@@ -378,61 +378,7 @@ export const SettingsManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Theme custom presets */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
-              <Palette className="w-5 h-5 text-brand-500" />
-              <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Brand Personalization</h3>
-            </div>
 
-            <div className="space-y-4">
-              <p className="text-[11px] text-slate-400 leading-normal">
-                Select a primary color. This changes both the <strong>Dashboard UI</strong> and <strong>Customer QR Menus</strong> to match your brand style.
-              </p>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {themePresets.map(preset => {
-                  const isActive = themeColor.toLowerCase() === preset.hex.toLowerCase();
-                  return (
-                    <button
-                      key={preset.hex}
-                      type="button"
-                      onClick={() => setThemeColor(preset.hex)}
-                      className={`p-3 rounded-2xl text-left border text-xs font-bold flex items-center gap-2.5 transition-all ${
-                        isActive
-                          ? 'border-brand-500 bg-brand-50/20 text-brand-650 dark:text-brand-400'
-                          : 'bg-white border-slate-200 text-slate-505 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className={`w-3.5 h-3.5 rounded-full ${preset.color}`} />
-                      <span>{preset.label.split(' ')[0]}</span>
-                      {isActive && <Check className="w-3.5 h-3.5 ml-auto text-brand-500" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Custom hex selector */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Custom Brand Hex</label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
-                    className="w-10 h-10 border-0 rounded-xl bg-transparent cursor-pointer flex-shrink-0"
-                  />
-                  <input
-                    type="text"
-                    value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
-                    placeholder="#FFFFFF"
-                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-xl px-4 text-xs font-mono focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Customer Menu Feature Toggles */}
           <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
