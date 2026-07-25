@@ -15,9 +15,9 @@ import {
 // ==========================================
 
 const mapSettingsToFrontend = (row: any): RestaurantSettings => {
-  const rawTheme = row.theme_color || row.themeColor || '#6366F1';
+  const rawTheme = row.theme_color || row.themeColor || '#10B981';
   const themeParts = rawTheme.split('|');
-  const themeColor = themeParts[0] || '#6366F1';
+  const themeColor = themeParts[0] || '#10B981';
   const enableWaiterCall = themeParts[1] !== 'false';
   const enableBillRequest = themeParts[2] !== 'false';
   const enableSoundNotification = themeParts[3] !== 'false';
