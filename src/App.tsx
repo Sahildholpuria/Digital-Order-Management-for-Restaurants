@@ -133,11 +133,8 @@ const CustomConfirmModal: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId } = useRestaurant();
+  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t } = useRestaurant();
   const { theme, toggleTheme } = useTheme();
-
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('admin_lang') as Language) || 'en');
-  const t = translations[lang];
 
   // Navigation Routing States
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -472,18 +469,18 @@ export const App: React.FC = () => {
       if (currentUser?.isSuperAdmin) {
         // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
         sidebarItems = [
-          { id: 'superadmin', label: 'Super Admin Panel', icon: Shield, roles: ['admin'] }
+          { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
         ];
       } else {
         // Regular restaurant staff account
         sidebarItems = [
-          { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager'] },
-          { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
-          { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager'] },
-          { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin', 'manager'] },
-          { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
-          { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
-          { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
+          { id: 'dashboard', label: t.dashboard, icon: TrendingUp, roles: ['admin', 'manager'] },
+          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['admin', 'manager'] },
+          { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin', 'manager'] },
+          { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
+          { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
         ].filter(item => item.roles.includes(currentUser.role));
       }
 

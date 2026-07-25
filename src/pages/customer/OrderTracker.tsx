@@ -11,16 +11,13 @@ interface OrderTrackerProps {
 }
 
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) => {
-  const { orders, settings, setCurrentTableById, currentTable } = useRestaurant();
+  const { orders, settings, setCurrentTableById, currentTable, t, lang } = useRestaurant();
 
   useEffect(() => {
     if (tableId) {
       setCurrentTableById(tableId);
     }
   }, [tableId]);
-
-  const lang: Language = (settings?.themeColor?.split('|')[6] as Language) || 'en';
-  const t = translations[lang] || translations.en;
 
   const order = orders.find(o => o.id === orderId);
 
