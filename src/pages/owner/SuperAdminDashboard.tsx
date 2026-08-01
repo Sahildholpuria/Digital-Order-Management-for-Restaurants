@@ -726,17 +726,17 @@ export const SuperAdminDashboard: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleAccessPortal(r.id)}
-                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/20 dark:hover:bg-blue-950/30 dark:text-blue-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
                               title="Switch to this Restaurant's POS Dashboard"
                             >
-                              <Zap className="w-3 h-3 text-blue-500" />
+                              <Zap className="w-3 h-3" />
                               <span>POS Portal</span>
                             </button>
                             <a
                               href={`/menu/${r.id}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
                               title="Preview Live Customer QR Menu"
                             >
                               <ExternalLink className="w-3 h-3" />
@@ -745,7 +745,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenSubModal(r)}
-                              className="bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:hover:bg-purple-950/30 dark:text-purple-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
                               title="Manage Subscription"
                             >
                               <CreditCard className="w-3 h-3" />
@@ -754,7 +754,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenAddStaffForRest(r.id)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/30 dark:text-indigo-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
                               title="Add Staff User to this Restaurant"
                             >
                               <UserPlus className="w-3 h-3" />
@@ -763,7 +763,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleEditClick(r)}
-                              className="bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                               title="Edit Restaurant Info"
                             >
                               Edit
