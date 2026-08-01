@@ -496,9 +496,29 @@ export const MenuManager: React.FC = () => {
                             {item.name}
                           </h3>
                         </div>
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
-                          {item.description}
-                        </p>
+                        {(() => {
+                          const rawDesc = item.description || '';
+                          const hasVariants = rawDesc.includes('||variants:');
+                          const [cleanText, variantsStr] = hasVariants ? rawDesc.split('||variants:') : [rawDesc, ''];
+                          const variantNames = variantsStr
+                            ? variantsStr.split(';').map(v => v.split('=')[0]).filter(Boolean).join(', ')
+                            : '';
+
+                          return (
+                            <div className="space-y-1">
+                              {cleanText.trim() ? (
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
+                                  {cleanText.trim()}
+                                </p>
+                              ) : null}
+                              {variantNames ? (
+                                <span className="inline-block bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                  Variants: {variantNames}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Tags & Badges */}
