@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restaurants-os-v3';
+const CACHE_NAME = 'restaurants-os-v4';
 const IMAGE_CACHE_NAME = 'restaurants-os-images-v1';
 
 const ASSETS_TO_CACHE = [
@@ -47,17 +47,18 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('cloudinary.com')
   ) {
     event.respondWith(
-      caches.open(IMAGE_CACHE_NAME).then((cache) => {
-        return cache.match(event.request).then((cachedResponse) => {
-          const fetchPromise = fetch(event.request).then((networkResponse) => {
-            if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
-              cache.put(event.request, networkResponse.clone());
-            }
-            return networkResponse;
-          }).catch(() => cachedResponse);
-
-          return cachedResponse || fetchPromise;
-        });
+      caches.open(IMAGE_CACHE_NAME).then(async (cache) => {
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) return cachedResponse;
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        } catch (e) {
+          return new Response('', { status: 408, statusText: 'Image Request Failed' });
+        }
       })
     );
     return;
@@ -66,18 +67,34 @@ self.addEventListener('fetch', (event) => {
   // Handle Local Application Assets & Bundles
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.open(CACHE_NAME).then((cache) => {
-        return cache.match(event.request).then((cachedResponse) => {
-          const fetchPromise = fetch(event.request).then((networkResponse) => {
-            if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
-              cache.put(event.request, networkResponse.clone());
-            }
-            return networkResponse;
-          }).catch(() => cachedResponse);
+      (async () => {
+        const isAsset = url.pathname.startsWith('/assets/');
+        
+        try {
+          if (isAsset) {
+            const cachedAsset = await caches.match(event.request);
+            if (cachedAsset) return cachedAsset;
+          }
 
-          return cachedResponse || fetchPromise;
-        });
-      })
+          const networkResponse = await fetch(event.request);
+          // Only cache successful 200 OK responses (don't cache 404 HTML fallback responses!)
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        } catch (err) {
+          const cachedFallback = await caches.match(event.request);
+          if (cachedFallback) return cachedFallback;
+
+          if (event.request.mode === 'navigate') {
+            const indexCache = await caches.match('/index.html');
+            if (indexCache) return indexCache;
+          }
+
+          return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
+        }
+      })()
     );
   }
 });

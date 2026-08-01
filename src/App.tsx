@@ -4,17 +4,35 @@ import { useTheme } from './context/ThemeContext';
 import { CustomerMenu } from './pages/customer/CustomerMenu';
 import { OrderTracker } from './pages/customer/OrderTracker';
 
-const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
-const AdminDashboard = lazy(() => import('./pages/owner/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const OrdersManager = lazy(() => import('./pages/owner/OrdersManager').then(m => ({ default: m.OrdersManager })));
-const TablesManager = lazy(() => import('./pages/owner/TablesManager').then(m => ({ default: m.TablesManager })));
-const MenuManager = lazy(() => import('./pages/owner/MenuManager').then(m => ({ default: m.MenuManager })));
-const BillingManager = lazy(() => import('./pages/owner/BillingManager').then(m => ({ default: m.BillingManager })));
-const ReportsManager = lazy(() => import('./pages/owner/ReportsManager').then(m => ({ default: m.ReportsManager })));
-const SettingsManager = lazy(() => import('./pages/owner/SettingsManager').then(m => ({ default: m.SettingsManager })));
-const KitchenDisplay = lazy(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
-const WaiterDashboard = lazy(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
-const SuperAdminDashboard = lazy(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  lazy(async () => {
+    const pageHasBeenRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page_has_been_refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page_has_been_refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenRefreshed) {
+        window.sessionStorage.setItem('page_has_been_refreshed', 'true');
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+
+const Login = lazyWithRetry(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const AdminDashboard = lazyWithRetry(() => import('./pages/owner/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const OrdersManager = lazyWithRetry(() => import('./pages/owner/OrdersManager').then(m => ({ default: m.OrdersManager })));
+const TablesManager = lazyWithRetry(() => import('./pages/owner/TablesManager').then(m => ({ default: m.TablesManager })));
+const MenuManager = lazyWithRetry(() => import('./pages/owner/MenuManager').then(m => ({ default: m.MenuManager })));
+const BillingManager = lazyWithRetry(() => import('./pages/owner/BillingManager').then(m => ({ default: m.BillingManager })));
+const ReportsManager = lazyWithRetry(() => import('./pages/owner/ReportsManager').then(m => ({ default: m.ReportsManager })));
+const SettingsManager = lazyWithRetry(() => import('./pages/owner/SettingsManager').then(m => ({ default: m.SettingsManager })));
+const KitchenDisplay = lazyWithRetry(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
+const WaiterDashboard = lazyWithRetry(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
+const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 
 import { 
   TrendingUp, 
