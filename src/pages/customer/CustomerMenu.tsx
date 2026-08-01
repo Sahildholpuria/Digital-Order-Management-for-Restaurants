@@ -710,7 +710,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-10 text-[16px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 shadow-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                style={{ fontSize: '16px' }}
+                className="w-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-10 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400"
               />
               {searchQuery && (
                 <button
