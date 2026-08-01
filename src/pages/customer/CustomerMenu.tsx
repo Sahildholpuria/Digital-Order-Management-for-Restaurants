@@ -168,6 +168,38 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [billRequested, setBillRequested] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
+  // Splash Screen state for QR scan greeting
+  const [showSplash, setShowSplash] = useState(() => {
+    const key = `splash_seen_${tableId}`;
+    return !sessionStorage.getItem(key);
+  });
+  const [splashProgress, setSplashProgress] = useState(0);
+
+  useEffect(() => {
+    if (!showSplash) return;
+
+    const interval = setInterval(() => {
+      setSplashProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setShowSplash(false);
+            sessionStorage.setItem(`splash_seen_${tableId}`, 'true');
+          }, 250);
+          return 100;
+        }
+        return prev + 4;
+      });
+    }, 90);
+
+    return () => clearInterval(interval);
+  }, [showSplash, tableId]);
+
+  const handleDismissSplash = () => {
+    setShowSplash(false);
+    sessionStorage.setItem(`splash_seen_${tableId}`, 'true');
+  };
+
   // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
   const tableOrders = useMemo(() => {
     return orders
@@ -496,6 +528,89 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
+      {/* Welcome Splash Screen Overlay */}
+      {showSplash && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 text-white animate-fade-in overflow-hidden">
+          {/* Background Glow Orbs */}
+          <div className="absolute top-1/4 -left-20 w-72 h-72 bg-emerald-500/20 rounded-full blur-3xl animate-pulse pointer-events-none" />
+          <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-teal-500/20 rounded-full blur-3xl animate-pulse pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Top Brand Badge */}
+          <div className="relative z-10 pt-4 sm:pt-6 text-center">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[10px] font-black uppercase tracking-widest text-emerald-300 shadow-lg">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span>Digital Order & Dining</span>
+            </div>
+          </div>
+
+          {/* Center Welcome Card */}
+          <div className="relative z-10 max-w-sm w-full text-center space-y-5 sm:space-y-6 my-auto px-2">
+            {/* Logo / Avatar with animated glowing rings */}
+            <div className="relative mx-auto w-24 h-24 sm:w-28 sm:h-28">
+              <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 opacity-75 blur-md animate-pulse" />
+              <div className="relative w-full h-full rounded-full bg-slate-900 p-1 border-2 border-white/30 overflow-hidden shadow-2xl flex items-center justify-center">
+                {settings?.logoUrl ? (
+                  <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-800 rounded-full flex items-center justify-center">
+                    <Utensils className="w-12 h-12 text-white" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Restaurant Name & Address */}
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans drop-shadow-md leading-snug">
+                {settings?.name || 'Gourmet Restaurant'}
+              </h1>
+              <p className="text-xs text-emerald-200/90 font-medium mt-1 max-w-xs mx-auto line-clamp-2">
+                {settings?.address || 'Fresh gourmet dishes crafted with passion & served hot to your table.'}
+              </p>
+            </div>
+
+            {/* Table Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-200">
+                Seated at Table <span className="text-amber-300 font-extrabold text-sm font-mono">#{getTableDisplayNumber()}</span>
+              </span>
+            </div>
+
+            {/* Warm Greeting Card */}
+            <div className="p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-slate-200 text-xs sm:text-sm font-medium leading-relaxed shadow-lg">
+              <p className="flex items-center justify-center gap-1.5 font-black text-amber-300 mb-1 text-xs uppercase tracking-wider">
+                <span>✨ Welcome & Bon Appétit ✨</span>
+              </p>
+              <span>
+                We are delighted to serve you today! Browse our freshly prepared delicacies, customize your dishes, and place your order directly from your table.
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Controls & Progress */}
+          <div className="relative z-10 w-full max-w-sm pb-4 sm:pb-6 space-y-4 text-center">
+            {/* Animated Loader Bar */}
+            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden backdrop-blur-sm border border-white/10">
+              <div 
+                className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 h-full transition-all duration-100 ease-out"
+                style={{ width: `${splashProgress}%` }}
+              />
+            </div>
+
+            {/* Manual Dismiss Button */}
+            <button
+              onClick={handleDismissSplash}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-900/40 border border-emerald-400/30 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+            >
+              <span>Explore Menu</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Top Header */}
       <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-3 sm:px-4 py-2.5 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
