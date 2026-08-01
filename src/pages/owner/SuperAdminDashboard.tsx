@@ -29,11 +29,27 @@ import {
   EyeOff,
   Sparkles,
   Filter,
-  Key
+  Key,
+  ShieldAlert
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { setRestaurantId, showToast, askConfirmation } = useRestaurant();
+  const { currentUser, setRestaurantId, showToast, askConfirmation } = useRestaurant();
+
+  // Strict Super Admin Access Guard
+  if (!currentUser || !currentUser.isSuperAdmin) {
+    return (
+      <div className="py-24 text-center space-y-4 max-w-md mx-auto animate-fade-in">
+        <div className="w-16 h-16 bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto shadow-sm">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-black text-slate-850 dark:text-slate-100">Super Admin Access Required</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          You do not have administrative authorization to view SaaS tenant controls. Only verified SaaS Super Administrators can access this portal.
+        </p>
+      </div>
+    );
+  }
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<'restaurants' | 'users'>('restaurants');
