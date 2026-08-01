@@ -16,7 +16,11 @@ import {
   Bell,
   ToggleLeft,
   ToggleRight,
-  Volume2
+  Volume2,
+  VolumeX,
+  FileText,
+  Printer,
+  Globe
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
@@ -29,7 +33,8 @@ export const SettingsManager: React.FC = () => {
   const [email, setEmail] = useState(settings?.email || '');
   const [logoUrl, setLogoUrl] = useState(settings?.logoUrl || '');
   const [gstNumber, setGstNumber] = useState(settings?.gstNumber || '');
-  const [taxPercentage, setTaxPercentage] = useState(settings?.taxPercentage || 18);
+  const [websiteUrl, setWebsiteUrl] = useState(settings?.websiteUrl || '');
+  const [taxPercentage, setTaxPercentage] = useState(settings?.taxPercentage ?? 0);
   const [currency, setCurrency] = useState(settings?.currency || '₹');
   const [openingHours, setOpeningHours] = useState(settings?.openingHours || '09:00');
   const [closingHours, setClosingHours] = useState(settings?.closingHours || '22:00');
@@ -37,6 +42,7 @@ export const SettingsManager: React.FC = () => {
   const [enableWaiterCall, setEnableWaiterCall] = useState(settings?.enableWaiterCall ?? true);
   const [enableBillRequest, setEnableBillRequest] = useState(settings?.enableBillRequest ?? true);
   const [enableSoundNotification, setEnableSoundNotification] = useState(settings?.enableSoundNotification ?? true);
+  const [enableBillPrinting, setEnableBillPrinting] = useState(settings?.enableBillPrinting ?? true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
@@ -49,7 +55,8 @@ export const SettingsManager: React.FC = () => {
       setEmail(settings.email || '');
       setLogoUrl(settings.logoUrl || '');
       setGstNumber(settings.gstNumber || '');
-      setTaxPercentage(settings.taxPercentage || 18);
+      setWebsiteUrl(settings.websiteUrl || '');
+      setTaxPercentage(settings.taxPercentage ?? 0);
       setCurrency(settings.currency || '₹');
       setOpeningHours(settings.openingHours || '09:00');
       setClosingHours(settings.closingHours || '22:00');
@@ -57,6 +64,7 @@ export const SettingsManager: React.FC = () => {
       setEnableWaiterCall(settings.enableWaiterCall ?? true);
       setEnableBillRequest(settings.enableBillRequest ?? true);
       setEnableSoundNotification(settings.enableSoundNotification ?? true);
+      setEnableBillPrinting(settings.enableBillPrinting ?? true);
       
       const savedDate = localStorage.getItem(`settings_updated_at_${settings.id}`);
       if (savedDate) {
@@ -94,6 +102,7 @@ export const SettingsManager: React.FC = () => {
         email,
         logoUrl,
         gstNumber,
+        websiteUrl,
         taxPercentage: Number(taxPercentage),
         currency,
         openingHours,
@@ -102,6 +111,7 @@ export const SettingsManager: React.FC = () => {
         enableWaiterCall,
         enableBillRequest,
         enableSoundNotification,
+        enableBillPrinting,
       });
       if (settings?.id) {
         const now = new Date().toLocaleString([], { 
@@ -298,29 +308,55 @@ export const SettingsManager: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">GST / Tax Number</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                  <span>GST / Tax Number</span>
+                  <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                </label>
                 <input
                   type="text"
-                  required
+                  placeholder="e.g. 22AAAAA1111A1Z1 (optional)"
                   value={gstNumber}
                   onChange={(e) => setGstNumber(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                  <span>Website URL</span>
+                  <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Globe className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="e.g. www.yourrestaurant.com"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Tax Ratio (%)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                    <span>Tax Ratio (%)</span>
+                    <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                  </label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <Percent className="w-4 h-4" />
                     </span>
                     <input
                       type="number"
-                      required
                       min={0}
+                      max={100}
+                      placeholder="0"
                       value={taxPercentage}
-                      onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                      onChange={(e) => setTaxPercentage(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
                       className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
@@ -342,61 +378,7 @@ export const SettingsManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Theme custom presets */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
-              <Palette className="w-5 h-5 text-brand-500" />
-              <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Brand Personalization</h3>
-            </div>
 
-            <div className="space-y-4">
-              <p className="text-[11px] text-slate-400 leading-normal">
-                Select a primary color. This changes both the <strong>Dashboard UI</strong> and <strong>Customer QR Menus</strong> to match your brand style.
-              </p>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {themePresets.map(preset => {
-                  const isActive = themeColor.toLowerCase() === preset.hex.toLowerCase();
-                  return (
-                    <button
-                      key={preset.hex}
-                      type="button"
-                      onClick={() => setThemeColor(preset.hex)}
-                      className={`p-3 rounded-2xl text-left border text-xs font-bold flex items-center gap-2.5 transition-all ${
-                        isActive
-                          ? 'border-brand-500 bg-brand-50/20 text-brand-650 dark:text-brand-400'
-                          : 'bg-white border-slate-200 text-slate-505 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className={`w-3.5 h-3.5 rounded-full ${preset.color}`} />
-                      <span>{preset.label.split(' ')[0]}</span>
-                      {isActive && <Check className="w-3.5 h-3.5 ml-auto text-brand-500" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Custom hex selector */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Custom Brand Hex</label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
-                    className="w-10 h-10 border-0 rounded-xl bg-transparent cursor-pointer flex-shrink-0"
-                  />
-                  <input
-                    type="text"
-                    value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
-                    placeholder="#FFFFFF"
-                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-xl px-4 text-xs font-mono focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Customer Menu Feature Toggles */}
           <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
@@ -449,6 +431,32 @@ export const SettingsManager: React.FC = () => {
                   }`}
                 >
                   {enableBillRequest ? (
+                    <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
+                  ) : (
+                    <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
+                  )}
+                </button>
+              </div>
+
+              {/* Thermal Bill Printing Toggle */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Printer className="w-4 h-4 text-brand-500" />
+                    <span>POS Thermal Bill Printing</span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Enable receipt printing feature for POS thermal billing machines</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableBillPrinting(v => !v)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    enableBillPrinting
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                  }`}
+                >
+                  {enableBillPrinting ? (
                     <><ToggleRight className="w-4 h-4" /><span>Enabled</span></>
                   ) : (
                     <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>

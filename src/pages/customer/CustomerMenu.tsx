@@ -1,55 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
+import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
+import { PageLoader } from '../../components/PageLoader';
 
 interface CustomerMenuProps {
   tableId: string;
 }
+
+// Global in-memory image cache to render previously loaded images instantly (0ms delay)
+const globalLoadedImageCache = new Set<string>();
 
 interface LazyImageProps {
   src: string;
   alt: string;
   className?: string;
   width?: number;
+  priority?: boolean;
 }
 
-const LazyImage: React.FC<LazyImageProps> = ({ src, alt, className = '', width = 200 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  
-  const optimizedSrc = React.useMemo(() => {
-    if (!src) return '';
-    if (src.includes('images.unsplash.com')) {
-      try {
-        const u = new URL(src);
+const LazyImage: React.FC<LazyImageProps> = ({ 
+  src, 
+  alt, 
+  className = '', 
+  width = 200,
+  priority = false 
+}) => {
+  const getOptimizedUrl = (urlStr: string) => {
+    if (!urlStr) return '';
+    try {
+      if (urlStr.includes('images.unsplash.com')) {
+        const u = new URL(urlStr);
         u.searchParams.set('w', width.toString());
-        u.searchParams.set('q', '75');
         u.searchParams.set('auto', 'format');
         u.searchParams.set('fit', 'crop');
+        u.searchParams.set('q', '75');
         return u.toString();
-      } catch (_) {
-        return src;
       }
+    } catch (_) {}
+    return urlStr;
+  };
+
+  const [imgSrc, setImgSrc] = useState(() => getOptimizedUrl(src));
+  const [isLoaded, setIsLoaded] = useState(() => globalLoadedImageCache.has(imgSrc));
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const opt = getOptimizedUrl(src);
+    setImgSrc(opt);
+    setHasError(false);
+    if (globalLoadedImageCache.has(opt) || globalLoadedImageCache.has(src)) {
+      setIsLoaded(true);
     }
-    return src;
   }, [src, width]);
 
+  const handleLoad = () => {
+    globalLoadedImageCache.add(imgSrc);
+    globalLoadedImageCache.add(src);
+    setIsLoaded(true);
+  };
+
+  const handleError = () => {
+    if (imgSrc !== src) {
+      // Fallback to raw un-transformed src if optimized URL failed
+      setImgSrc(src);
+    } else {
+      setHasError(true);
+      setIsLoaded(true);
+    }
+  };
+
   return (
-    <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800">
-      {!isLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center text-slate-350 dark:text-slate-650">
+    <div className="relative w-full h-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+      {(!isLoaded || hasError || !src) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-150 dark:bg-slate-800 text-slate-350 dark:text-slate-655">
           <Utensils className="w-5 h-5 stroke-[1.5]" />
         </div>
       )}
-      <img
-        src={optimizedSrc}
-        alt={alt}
-        loading="lazy"
-        onLoad={() => setIsLoaded(true)}
-        className={`${className} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-      />
+      {src && !hasError && (
+        <img
+          src={imgSrc}
+          alt={alt}
+          loading={priority ? 'eager' : 'lazy'}
+          // @ts-ignore
+          fetchpriority={priority ? 'high' : 'low'}
+          decoding="async"
+          onLoad={handleLoad}
+          onError={handleError}
+          className={`${className} transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
     </div>
   );
 };
@@ -76,10 +119,37 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     loading,
     tablesLoaded,
     showToast,
+    lang,
+    setLang,
+    t,
   } = useRestaurant();
 
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('customer_lang') as Language) || 'en');
-  const t = translations[lang];
+  // Returns a clean, short display number from the actual table record.
+  // Never displays raw 13-digit timestamp IDs (e.g. 1785560211444).
+  const getTableDisplayNumber = () => {
+    const target = currentTable || tables.find(t => t.id === tableId || t.number === tableId);
+    
+    if (target?.number) {
+      const clean = target.number.replace(/^table[\s\-_]*/i, '').trim();
+      if (clean && !/^\d{7,}$/.test(clean)) {
+        return clean;
+      }
+    }
+
+    if (tables && tables.length > 0) {
+      const idx = tables.findIndex(t => t.id === tableId || t.id === currentTable?.id || t.number === tableId);
+      if (idx !== -1) {
+        return `${idx + 1}`;
+      }
+    }
+
+    const cleanId = tableId ? tableId.replace(/^table[\s\-_]*/i, '').trim() : '';
+    if (cleanId && !/^\d{7,}$/.test(cleanId)) {
+      return cleanId;
+    }
+
+    return '1';
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -96,18 +166,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   // Status states for call staff feedback
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
-  const tableOrders = orders
-    .filter(o => {
-      if (o.tableId !== tableId) return false;
-      // Immediately clear completed/settled and cancelled orders from live order history
-      if (o.status === 'completed' || o.status === 'cancelled') {
-        return false;
-      }
-      return true;
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const tableOrders = useMemo(() => {
+    return orders
+      .filter(o => {
+        if (o.tableId !== tableId) return false;
+        if (o.status === 'completed' || o.status === 'cancelled') {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [orders, tableId]);
 
   useEffect(() => {
     if (tableId) {
@@ -115,16 +187,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   }, [tableId, setCurrentTableById]);
 
-  // Filter items
-  const filteredItems = foodItems.filter(item => {
-    if (!item.isAvailable) return false;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
-    const matchesVeg = !vegOnly || item.isVeg;
-    const matchesPopular = !popularOnly || item.isPopular || item.isRecommended;
-    return matchesSearch && matchesCategory && matchesVeg && matchesPopular;
-  });
+  // Filter items memoized for zero-lag UI response
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return foodItems.filter(item => {
+      if (!item.isAvailable) return false;
+      const matchesSearch = !query || 
+                            item.name.toLowerCase().includes(query) || 
+                            item.description.toLowerCase().includes(query);
+      const matchesCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
+      const matchesVeg = !vegOnly || item.isVeg;
+      const matchesPopular = !popularOnly || item.isPopular || item.isRecommended;
+      return matchesSearch && matchesCategory && matchesVeg && matchesPopular;
+    });
+  }, [foodItems, searchQuery, selectedCategory, vegOnly, popularOnly]);
 
   const handleOpenItem = (item: FoodItem) => {
     setSelectedItem(item);
@@ -143,10 +219,24 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     setSelectedVariantName(defaultVariant);
   };
 
+  // Anti-spam cooldown timestamps
+  const [lastWaiterCallTime, setLastWaiterCallTime] = useState<number>(0);
+  const [lastBillRequestTime, setLastBillRequestTime] = useState<number>(0);
+
+  const sanitizeInput = (str: string, maxLen = 250): string => {
+    if (!str) return '';
+    return str
+      .replace(/<[^>]*>?/gm, '') // Strip HTML tags
+      .trim()
+      .slice(0, maxLen);
+  };
+
   const handleAddToCart = () => {
     if (selectedItem) {
-      addToCart(selectedItem, quantity, specialInstructions, selectedVariantName || undefined);
+      const cleanInstructions = sanitizeInput(specialInstructions, 200);
+      addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined);
       setSelectedItem(null);
+      setSpecialInstructions('');
       
       // Mini pop confetti on button click
       confetti({
@@ -167,10 +257,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return;
     if (isSubscriptionExpired()) {
       showToast("This restaurant's ordering service is currently inactive. Please contact the staff.", 'error');
       return;
     }
+    setIsPlacingOrder(true);
     try {
       const placed = await placeOrder();
       setOrderSuccess(placed);
@@ -184,12 +276,22 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       });
     } catch (err) {
       showToast('Failed to place order. Please try again.', 'error');
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
   const handleCallWaiter = async () => {
+    const now = Date.now();
+    if (now - lastWaiterCallTime < 15000) {
+      const remainingSecs = Math.ceil((15000 - (now - lastWaiterCallTime)) / 1000);
+      showToast(`Please wait ${remainingSecs}s before calling waiter again.`, 'info');
+      return;
+    }
+
     try {
       await callWaiter();
+      setLastWaiterCallTime(now);
       setWaiterCalled(true);
       showToast('Staff notified. A waiter is on their way to your table!', 'success');
       setTimeout(() => setWaiterCalled(false), 5000);
@@ -199,8 +301,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handleRequestBill = async () => {
+    const now = Date.now();
+    if (now - lastBillRequestTime < 15000) {
+      const remainingSecs = Math.ceil((15000 - (now - lastBillRequestTime)) / 1000);
+      showToast(`Please wait ${remainingSecs}s before requesting bill again.`, 'info');
+      return;
+    }
+
     try {
       await requestBill();
+      setLastBillRequestTime(now);
       setBillRequested(true);
       showToast('Bill request sent. A cashier will assist you shortly!', 'success');
       setTimeout(() => setBillRequested(false), 5000);
@@ -209,55 +319,28 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   };
 
-  // Show loading state while the initial context or tables list hasn't arrived yet.
-  // We wait for BOTH loading=false AND tablesLoaded=true before making any
-  // table-existence decision, so we never accidentally block a valid table that
-  // just hasn't loaded from the DB yet.
-  if (loading || !tablesLoaded) {
+  // Show loading state while the initial context or settings list hasn't arrived yet.
+  if (loading || !tablesLoaded || !settings) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center p-6 text-center animate-fade-in">
-        <div className="flex flex-col items-center gap-3.5">
-          <div className="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Synchronizing table details...</p>
-        </div>
-      </div>
+      <PageLoader
+        message="LOADING GOURMET MENU..."
+        subtext="Syncing live restaurant items & kitchen status"
+        fullScreen={true}
+      />
     );
   }
 
-  // Once tables have been definitively loaded from the database, if this
-  // tableId is NOT in the list the table has been deleted by the owner.
-  const isTableDeleted = !tables.some(t => t.id === tableId);
-  if (isTableDeleted) {
+  if (isPlacingOrder) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-150/60 dark:border-slate-800/80 animate-scale-in">
-          <div className="w-20 h-20 bg-rose-500/10 dark:bg-rose-950/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/20">
-            <X className="w-10 h-10 text-rose-600 dark:text-rose-400" />
-          </div>
-          
-          <h2 className="text-2xl font-black mb-2 text-slate-800 dark:text-slate-100 font-sans tracking-tight">Table Inactive</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-6 text-xs font-semibold leading-relaxed">
-            This table QR code has been deactivated or deleted by the restaurant management. Please contact our staff or scan a valid table QR code to proceed.
-          </p>
-
-          <div className="bg-slate-50 dark:bg-slate-800/20 rounded-2xl p-4.5 mb-6 text-left border border-slate-100 dark:border-slate-800/40 text-xs">
-            <div className="flex justify-between items-center text-slate-500 dark:text-slate-455">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Reference ID</span>
-              <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{tableId}</span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => window.location.href = '/'}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs cursor-pointer"
-          >
-            <span>Return to Homepage</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      <PageLoader
+        message="TRANSMITTING YOUR ORDER..."
+        subtext="Sending your dish items directly to the kitchen staff"
+        fullScreen={true}
+      />
     );
   }
+
+
 
   if (orderSuccess) {
     return (
@@ -277,7 +360,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 font-semibold uppercase tracking-wider">Table Assigned</span>
-              <span className="font-extrabold text-slate-800 dark:text-slate-200">{currentTable?.number || tableId.replace('table-', '')}</span>
+              <span className="font-extrabold text-slate-800 dark:text-slate-200">{getTableDisplayNumber()}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 font-semibold uppercase tracking-wider">Est. Preparation</span>
@@ -373,7 +456,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span>Taxes & GST ({settings?.taxPercentage || 18}%)</span>
+            <span>Taxes & GST ({settings?.taxPercentage ?? 0}%)</span>
             <span className="font-bold text-slate-800 dark:text-slate-205">
               {settings?.currency || '₹'}{getCartTax().toFixed(2)}
             </span>
@@ -387,15 +470,25 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
 
         <button
+          type="button"
           onClick={handlePlaceOrder}
-          disabled={isSubscriptionExpired()}
-          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs ${
-            isSubscriptionExpired()
-              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none'
+          disabled={isSubscriptionExpired() || isPlacingOrder}
+          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-xs cursor-pointer ${
+            isSubscriptionExpired() || isPlacingOrder
+              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-80 shadow-none'
               : 'bg-brand-600 hover:bg-brand-700 text-white hover:shadow-brand-500/10'
           }`}
         >
-          {isSubscriptionExpired() ? 'Ordering Service Inactive' : 'Confirm & Place Order'}
+          {isPlacingOrder ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Placing Order...</span>
+            </>
+          ) : isSubscriptionExpired() ? (
+            'Ordering Service Inactive'
+          ) : (
+            'Confirm & Place Order'
+          )}
         </button>
       </div>
     </div>
@@ -404,59 +497,46 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
       {/* Sticky Top Header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-150/60 dark:border-slate-800/80 px-4 py-3 shadow-sm">
-        <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
+        <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {settings?.logoUrl ? (
               <img 
                 src={settings.logoUrl} 
                 alt={settings.name} 
-                className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-800"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl object-cover border border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 bg-brand-500/10 text-brand-600 rounded-full flex items-center justify-center border border-brand-500/20">
-                <Utensils className="w-5 h-5" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-sm flex-shrink-0">
+                <Utensils className="w-4 h-4" />
               </div>
             )}
-            <div>
-              <h1 className="text-base font-extrabold tracking-tight text-slate-805 dark:text-slate-100 font-sans leading-tight">
-                {settings?.name || 'The Grand Bistro'}
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-base font-black tracking-tight text-slate-900 dark:text-slate-100 font-sans leading-tight truncate max-w-[120px] xs:max-w-[170px] sm:max-w-none">
+                {settings?.name || 'Gourmet Restaurant'}
               </h1>
-              <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                <span className="inline-block w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
-                <span>Table {currentTable?.number.replace(/table\s*-\s*/gi, '') || tableId.replace('table-', '')}</span>
+              <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-mono">Table #{getTableDisplayNumber()}</span>
               </div>
             </div>
           </div>
 
           {/* Quick Staff Interactions */}
-          <div className="flex gap-1.5 sm:gap-2">
-            {/* Language Switcher */}
-            <button
-              onClick={() => {
-                const nextLang = lang === 'en' ? 'hi' : 'en';
-                setLang(nextLang);
-                localStorage.setItem('customer_lang', nextLang);
-              }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-              title="Change Language"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>{lang === 'en' ? 'हिन्दी' : 'EN'}</span>
-            </button>
+          <div className="flex gap-1.5 sm:gap-2 items-center">
 
             {(settings?.enableWaiterCall ?? true) && (
               <button
                 onClick={handleCallWaiter}
                 disabled={waiterCalled}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer active:scale-95 shadow-sm ${
                   waiterCalled 
-                    ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
+                    ? 'bg-amber-500 border-amber-500 text-white shadow-md'
                     : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
                 }`}
                 title={waiterCalled ? "Waiter Called" : "Call Waiter"}
               >
-                <Bell className="w-3.5 h-3.5" />
+                <Bell className={`w-3.5 h-3.5 ${waiterCalled ? 'animate-bounce' : 'text-amber-500'}`} />
                 <span className="hidden sm:inline">{waiterCalled ? t.waiterCalled : t.callWaiter}</span>
               </button>
             )}
@@ -465,14 +545,14 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <button
                 onClick={handleRequestBill}
                 disabled={billRequested}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer active:scale-95 shadow-sm ${
                   billRequested 
-                    ? 'bg-green-600 border-green-600 text-white shadow-sm'
+                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
                     : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50'
                 }`}
                 title={billRequested ? "Bill Requested" : "Request Bill"}
               >
-                <Receipt className="w-3.5 h-3.5" />
+                <Receipt className={`w-3.5 h-3.5 ${billRequested ? '' : 'text-emerald-500'}`} />
                 <span className="hidden sm:inline">{billRequested ? t.billRequested : t.requestBill}</span>
               </button>
             )}
@@ -480,17 +560,18 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             {/* My Orders button with badge */}
             <button
               onClick={() => setIsOrdersOpen(true)}
-              className="relative flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
+              className="relative flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border bg-slate-900 border-slate-800 text-white hover:bg-slate-800 cursor-pointer active:scale-95 shadow-sm"
               title="Live Orders"
             >
-              <ClipboardList className="w-3.5 h-3.5" />
+              <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
               <span className="hidden sm:inline">{t.liveOrders}</span>
               {tableOrders.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-brand-600 text-white text-[8px] font-black rounded-full flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 text-slate-950 text-[9px] font-black rounded-full flex items-center justify-center shadow-md border border-white">
                   {tableOrders.length}
                 </span>
               )}
             </button>
+
           </div>
         </div>
       </header>
@@ -502,29 +583,29 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           onClick={() => setIsOrdersOpen(false)}
         >
           {/* Scrim */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
           {/* Panel */}
           <div
-            className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl border-t border-slate-100 dark:border-slate-800 animate-slide-up"
+            className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl border-t border-slate-200 dark:border-slate-800 animate-slide-up"
             onClick={e => e.stopPropagation()}
           >
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-base">My Orders</h2>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                  Table {currentTable?.number || tableId.replace('table-', '')} · {tableOrders.length} order{tableOrders.length !== 1 ? 's' : ''}
+                <h2 className="font-black text-slate-900 dark:text-slate-100 text-base">My Live Orders</h2>
+                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
+                  Table #{getTableDisplayNumber()} &bull; {tableOrders.length} order{tableOrders.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
                 onClick={() => setIsOrdersOpen(false)}
-                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -534,42 +615,42 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             <div className="overflow-y-auto flex-1 px-4 py-4 space-y-3">
               {tableOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <ClipboardList className="w-12 h-12 text-slate-200 dark:text-slate-700 mb-3" />
-                  <p className="text-sm font-bold text-slate-400">No orders placed yet</p>
-                  <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Add items to your basket and place an order!</p>
+                  <ClipboardList className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+                  <p className="text-sm font-black text-slate-400">No orders placed yet</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Select delicious dishes and place your order!</p>
                 </div>
               ) : (
                 tableOrders.map(order => {
                   const statusColors: Record<string, string> = {
-                    pending:   'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30',
-                    accepted:  'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30',
-                    preparing: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30',
-                    ready:     'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/20 dark:text-brand-400 dark:border-brand-900/30',
-                    served:    'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30',
+                    pending:   'bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:border-yellow-900/40',
+                    accepted:  'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900/40',
+                    preparing: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900/40',
+                    ready:     'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/40',
+                    served:    'bg-green-50 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-900/40',
                     completed: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
-                    cancelled: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                    cancelled: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-900/40',
                   };
                   const statusDot: Record<string, string> = {
                     pending: 'bg-yellow-400 animate-pulse', accepted: 'bg-blue-500 animate-pulse',
-                    preparing: 'bg-orange-500 animate-pulse', ready: 'bg-brand-500 animate-pulse',
+                    preparing: 'bg-orange-500 animate-pulse', ready: 'bg-emerald-500 animate-pulse',
                     served: 'bg-green-500', completed: 'bg-slate-400', cancelled: 'bg-red-500',
                   };
 
                   return (
                     <div
                       key={order.id}
-                      className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800"
+                      className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200/70 dark:border-slate-800 shadow-sm"
                     >
                       {/* Order header row */}
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="font-extrabold text-slate-800 dark:text-slate-100 text-sm">{order.orderNumber}</p>
-                          <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3 h-3" />
+                          <p className="font-black text-slate-900 dark:text-slate-100 text-sm font-mono">{order.orderNumber}</p>
+                          <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-emerald-500" />
                             {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusColors[order.status] || statusColors.pending}`}>
+                        <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusColors[order.status] || statusColors.pending}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${statusDot[order.status] || 'bg-yellow-400'}`} />
                           {order.status}
                         </span>
@@ -578,20 +659,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                       {/* Items list */}
                       <div className="space-y-1 mb-3">
                         {order.items.slice(0, 3).map(item => (
-                          <div key={item.itemId} className="flex justify-between text-xs">
-                            <span className="text-slate-600 dark:text-slate-400 font-medium">{item.name} × {item.quantity}</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-semibold">{settings?.currency || '₹'}{(item.price * item.quantity).toFixed(0)}</span>
+                          <div key={item.itemId} className="flex justify-between text-xs font-semibold">
+                            <span className="text-slate-700 dark:text-slate-300">{item.name} × {item.quantity}</span>
+                            <span className="text-slate-900 dark:text-slate-100 font-black">{settings?.currency || '₹'}{(item.price * item.quantity).toFixed(0)}</span>
                           </div>
                         ))}
                         {order.items.length > 3 && (
-                          <p className="text-[10px] text-slate-400">+{order.items.length - 3} more items</p>
+                          <p className="text-[10px] text-slate-400 font-bold">+{order.items.length - 3} more items</p>
                         )}
                       </div>
 
                       {/* Total + Track button */}
                       <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-slate-700">
-                        <span className="text-sm font-black text-slate-800 dark:text-slate-100">
-                          {settings?.currency || '₹'}{order.grandTotal.toFixed(2)}
+                        <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                          {settings?.currency || '₹'}{order.grandTotal.toFixed(0)}
                         </span>
                         {order.status !== 'completed' && order.status !== 'cancelled' && (
                           <button
@@ -599,10 +680,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                               setIsOrdersOpen(false);
                               window.location.pathname = `/menu/${tableId}/track/${order.id}`;
                             }}
-                            className="flex items-center gap-1 bg-brand-600 hover:bg-brand-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl transition-colors"
+                            className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-md shadow-emerald-600/20 active:scale-95"
                           >
                             <span>Track Order</span>
-                            <ChevronRight className="w-3 h-3" />
+                            <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -614,59 +695,74 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           </div>
         </div>
       )}
-      <main className="max-w-md md:max-w-5xl mx-auto px-4 mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+      <main className="max-w-md md:max-w-5xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-start">
           {/* Left Column: Menu catalogue */}
           <div className="md:col-span-8 space-y-6">
-            <div className="relative mb-5 shadow-sm rounded-2xl">
+            
+            {/* Search Input Box */}
+            <div className="relative mb-4 shadow-sm rounded-2xl">
               <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <Search className="w-4 h-4 text-slate-400" />
+                <Search className="w-4 h-4 text-emerald-500" />
               </span>
               <input
                 type="text"
                 placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl py-3.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium"
+                style={{ fontSize: '16px' }}
+                className="w-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-10 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Quick Filter Tags */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-1.5 no-scrollbar">
+            <div className="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar">
               <button
                 onClick={() => setVegOnly(!vegOnly)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   vegOnly
-                    ? 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400'
-                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-500/20'
+                    : 'bg-white border-slate-250 text-slate-800 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full bg-green-500 border border-white ${vegOnly ? 'bg-green-500' : ''}`}></span>
+                <span className={`w-2 h-2 rounded-full bg-green-500 border border-white ${vegOnly ? 'animate-pulse' : ''}`}></span>
                 {t.vegOnly}
               </button>
               <button
                 onClick={() => setPopularOnly(!popularOnly)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   popularOnly
-                    ? 'bg-brand-500/10 border-brand-550 text-brand-655 dark:text-brand-400'
-                    : 'bg-white border-slate-200 text-slate-555 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                    ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
+                    : 'bg-white border-slate-250 text-slate-800 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-current" />
                 {t.popularOnly}
               </button>
             </div>
 
             {/* Category Horizontal Bar */}
             <div className="mb-6">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3">{t.categories}</h2>
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">{t.categories}</h2>
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{categories.length + 1} sections</span>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar touch-pan-x scroll-smooth">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                  className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
-                      ? 'bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm'
-                      : 'bg-white text-slate-555 border-slate-100 hover:bg-slate-55/50 dark:bg-slate-900 dark:border-slate-805 dark:text-slate-400'
+                      ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/25 scale-[1.02]'
+                      : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-emerald-500'
                   }`}
                 >
                   {t.allItems}
@@ -675,10 +771,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+                    className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
-                        ? 'bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-slate-950 shadow-sm'
-                        : 'bg-white text-slate-555 border-slate-100 hover:bg-slate-55/50 dark:bg-slate-900 dark:border-slate-805 dark:text-slate-400'
+                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/25 scale-[1.02]'
+                        : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-emerald-500'
                     }`}
                   >
                     {cat.name}
@@ -687,44 +783,49 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </div>
             </div>
 
-            {/* Food Items List */}
+            {/* Food Items Grid */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-200">{t.ourMenu}</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-md">{filteredItems.length} {t.options}</span>
+                <h2 className="text-base font-black text-slate-900 dark:text-slate-100 font-sans tracking-tight">{t.ourMenu}</h2>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">{filteredItems.length} {t.options}</span>
               </div>
 
               {filteredItems.length === 0 ? (
-                <div className="bg-white/70 dark:bg-slate-900/60 rounded-3xl p-10 text-center border border-slate-200/50 dark:border-slate-800/80 backdrop-blur-md animate-scale-in">
-                  <Utensils className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-                  <p className="text-slate-555 dark:text-slate-400 text-sm font-semibold">{t.noItemsFound}</p>
+                <div className="bg-white/80 dark:bg-slate-900/60 rounded-3xl p-10 text-center border border-slate-200 dark:border-slate-800 backdrop-blur-md animate-scale-in">
+                  <Utensils className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                  <p className="text-slate-700 dark:text-slate-300 text-sm font-extrabold">{t.noItemsFound}</p>
+                  <p className="text-xs text-slate-400 mt-1 font-medium">Try clearing your search query or switching filters.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredItems.map(item => {
+                  {filteredItems.map((item, index) => {
                     const discountedPrice = item.price * (1 - (item.discountPercentage || 0) / 100);
                     return (
                       <div
                         key={item.id}
                         onClick={() => handleOpenItem(item)}
-                        className="bg-white/90 dark:bg-slate-900/65 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-3.5 flex gap-4 cursor-pointer hover:border-brand-500 dark:hover:border-brand-500/50 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 group backdrop-blur-sm"
+                        className="relative bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 flex gap-4 cursor-pointer transition-all duration-300 ease-out shadow-sm hover:shadow-xl hover:shadow-emerald-600/10 hover:-translate-y-1 hover:border-emerald-500/60 dark:hover:border-emerald-500/50 group backdrop-blur-md overflow-hidden"
                       >
-                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-855 flex-shrink-0">
+                        {/* Hover Gradient Top Line */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
                           <LazyImage 
                             src={item.image} 
                             alt={item.name} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            width={160}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                            width={180}
+                            priority={index < 6}
                           />
                           
                           {item.discountPercentage > 0 && (
-                            <span className="absolute top-1 left-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-sm">
+                            <span className="absolute top-1 left-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-md animate-pulse">
                               {item.discountPercentage}% OFF
                             </span>
                           )}
 
                           {item.isPopular && (
-                            <span className="absolute bottom-1 right-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-sm uppercase tracking-wider">
+                            <span className="absolute bottom-1 right-1 bg-amber-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-md uppercase tracking-wider">
                               <Sparkles className="w-2 h-2 fill-current" />
                               POP
                             </span>
@@ -734,24 +835,24 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                         <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
                           <div>
                             <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm leading-snug group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors truncate">
+                              <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate font-sans">
                                 {item.name}
                               </h3>
-                              <span className={`w-3 h-3 border rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                                item.isVeg ? 'border-green-600' : 'border-red-600'
-                              }`}>
+                              <span className={`w-3.5 h-3.5 border rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                item.isVeg ? 'border-green-600 bg-green-500/10' : 'border-red-600 bg-red-500/10'
+                              }`} title={item.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${
                                   item.isVeg ? 'bg-green-600' : 'bg-red-600'
                                 }`}></span>
                               </span>
                             </div>
                             
-                            <p className="text-slate-550 dark:text-slate-400 text-[11px] line-clamp-2 mt-1 leading-normal font-medium truncate-2-lines">
+                            <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-2 mt-1 leading-normal font-medium truncate-2-lines">
                               {item.description ? item.description.split('||variants:')[0] : ''}
                             </p>
                           </div>
 
-                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/40">
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
                             <div className="flex items-center gap-1.5">
                               {(() => {
                                 if (item.description && item.description.includes('||variants:')) {
@@ -764,13 +865,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                     const discMax = maxPrice * (1 - (item.discountPercentage || 0) / 100);
                                     if (minPrice === maxPrice) {
                                       return (
-                                        <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                        <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
                                           {settings?.currency || '₹'}{discMin.toFixed(0)}
                                         </span>
                                       );
                                     }
                                     return (
-                                      <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                      <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
                                         {settings?.currency || '₹'}{discMin.toFixed(0)} - {settings?.currency || '₹'}{discMax.toFixed(0)}
                                       </span>
                                     );
@@ -778,11 +879,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                 }
                                 return (
                                   <>
-                                    <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
                                       {settings?.currency || '₹'}{discountedPrice.toFixed(0)}
                                     </span>
                                     {item.discountPercentage > 0 && (
-                                      <span className="text-[10px] text-slate-400 line-through">
+                                      <span className="text-[10px] text-slate-400 line-through font-semibold">
                                         {settings?.currency || '₹'}{item.price}
                                       </span>
                                     )}
@@ -791,15 +892,52 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                               })()}
                             </div>
 
-                            <div className="flex items-center gap-2 text-[8px] font-bold text-slate-450 uppercase tracking-wider">
-                              <span>{item.preparationTime} min</span>
-                              {item.spicyLevel > 0 && (
-                                <span className="flex items-center text-orange-550 dark:text-orange-400 font-extrabold gap-0.5">
-                                  <Flame className="w-2.5 h-2.5 fill-current" />
-                                  <span>{item.spicyLevel === 3 ? 'HOT' : item.spicyLevel === 2 ? 'MED' : 'MILD'}</span>
-                                </span>
-                              )}
-                            </div>
+                            {/* Touch-Optimized + ADD / Stepper */}
+                            {(() => {
+                              const existingInCart = cart.find(c => c.itemId === item.id);
+                              const qty = existingInCart ? existingInCart.quantity : 0;
+                              if (qty === 0) {
+                                return (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenItem(item);
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black px-3 py-1.5 rounded-xl shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <span>+ ADD</span>
+                                  </button>
+                                );
+                              }
+                              return (
+                                <div 
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center bg-emerald-600 text-white rounded-xl shadow-md shadow-emerald-600/20 px-2 py-1 gap-2 border border-emerald-500/30"
+                                >
+                                  <button
+                                    onClick={() => {
+                                      if (qty <= 1) {
+                                        removeFromCart(item.id);
+                                      } else {
+                                        updateCartQuantity(item.id, qty - 1);
+                                      }
+                                    }}
+                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-emerald-700 rounded-md transition-colors cursor-pointer"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="text-xs font-black min-w-3 text-center">{qty}</span>
+                                  <button
+                                    onClick={() => {
+                                      updateCartQuantity(item.id, qty + 1);
+                                    }}
+                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-emerald-700 rounded-md transition-colors cursor-pointer"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -845,29 +983,29 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-150/60 dark:border-slate-800/80 p-4 shadow-glass max-w-md mx-auto rounded-t-3xl animate-slide-up md:hidden">
+        <div className="fixed bottom-4 inset-x-4 z-40 bg-emerald-800/95 dark:bg-emerald-950/95 backdrop-blur-xl border border-emerald-500/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-emerald-900/30 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative bg-brand-100 dark:bg-brand-950/40 p-3.5 rounded-2xl text-brand-655 dark:text-brand-400">
-                <ShoppingBag className="w-5 h-5" />
-                <span className="absolute -top-1.5 -right-1.5 bg-brand-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+              <div className="relative bg-white/20 p-2.5 rounded-2xl text-white border border-white/30">
+                <ShoppingBag className="w-5 h-5 animate-pulse" />
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-slate-900 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-white">
                   {totalItemsCount}
                 </span>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Subtotal</p>
-                <p className="text-lg font-black text-slate-800 dark:text-slate-100">
-                  {settings?.currency || '₹'}{getCartSubtotal().toFixed(0)}
+                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-200">Total Basket</p>
+                <p className="text-base font-black tracking-tight text-white">
+                  {settings?.currency || '₹'}{getCartGrandTotal().toFixed(0)}
                 </p>
               </div>
             </div>
             
             <button
               onClick={() => setIsCartOpen(true)}
-              className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-6 py-3.5 rounded-2xl transition-all shadow-lg hover:shadow-brand-500/20 flex items-center gap-1.5 text-sm"
+              className="bg-white hover:bg-emerald-50 text-emerald-900 font-black px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg cursor-pointer"
             >
-              <span>Review Basket</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Review Cart</span>
+              <ArrowRight className="w-4 h-4 text-emerald-700" />
             </button>
           </div>
         </div>
@@ -959,7 +1097,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
                   rows={2}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 text-[16px] sm:text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 />
               </div>
 

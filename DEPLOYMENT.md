@@ -1,208 +1,287 @@
-# 🚀 Deployment & Hosting Guide
+# 🚀 Complete Deployment & Production Hosting Guide
 
-This document provides a detailed, step-by-step guide to hosting, deploying, and configuring the **Digital Order Management for Restaurants** SaaS application.
-
----
-
-## 🏗️ Technical Stack Overview
-- **Frontend**: React (TypeScript) + Vite + Tailwind CSS
-- **Database & Sync**: Supabase (PostgreSQL with Real-time replication)
-- **PDF Exporter**: jsPDF
-- **Hosting**: Vercel (recommended) or Netlify, Cloudflare Pages, Nginx.
+This document provides a complete, step-by-step production deployment guide for **Digital Order Management for Restaurants (RestaurantsOS)** across all major hosting platforms (**Vercel**, **Netlify**, **Linux VPS / Nginx**, **Cloudflare Pages**, and **cPanel Shared Hosting**), along with full database and storage setup steps.
 
 ---
 
-## 🛠️ Step 1: Database Setup (Supabase)
+## 📋 Table of Contents
+1. [Pre-Deployment Requirements & Environment Variables](#1-pre-deployment-requirements--environment-variables)
+2. [Step-by-Step Supabase Database & Storage Setup](#2-step-by-step-supabase-database--storage-setup)
+3. [Deploying to Vercel (Recommended)](#3-deploying-to-vercel-recommended)
+4. [Deploying to Netlify](#4-deploying-to-netlify)
+5. [Deploying to Linux VPS (Nginx + SSL Certbot)](#5-deploying-to-linux-vps-nginx--ssl-certbot)
+6. [Deploying to Cloudflare Pages](#6-deploying-to-cloudflare-pages)
+7. [Deploying to cPanel / Shared Hosting](#7-deploying-to-cpanel--shared-hosting)
+8. [Post-Deployment Verification & Maintenance](#8-post-deployment-verification--maintenance)
 
-The application uses Supabase to handle real-time sync across customer tables, the kitchen display (KDS), waiter consoles, and the cashier POS terminal.
+---
 
-### 1. Create a Supabase Project
-1. Go to [Supabase](https://supabase.com) and sign in.
-2. Click **New Project** and select/create an organization.
-3. Choose a project name, database password, and region.
-4. Wait for the database to finish provisioning (approx. 2 minutes).
+## 1. Pre-Deployment Requirements & Environment Variables
 
-### 2. Configure Database Tables & Policies
-1. In your Supabase dashboard, navigate to the **SQL Editor** tab on the left menu.
-2. Click **New query**.
-3. Paste the contents of the `schema.sql` file located in the root of this project.
-4. Run the query. This sets up all tables, triggers, and Row Level Security (RLS) policies.
+### System Requirements
+- **Node.js**: v18.0.0 or higher
+- **Package Manager**: npm v9+
+- **Git**: Installed locally for version control
 
-### ⚠️ 3. Crucial Step: Drop Foreign Key Constraints
-If you allow dynamic tables, drop foreign key constraints on `table_id` fields to prevent order/notification insertions from failing when tables are deleted or restructured.
-Run the following SQL in the SQL Editor:
+### Required Environment Variables
+Create a `.env` file (or set these inside your hosting platform's Environment Variables panel):
+
+```env
+# Supabase Project URL (found in Supabase -> Project Settings -> API)
+VITE_SUPABASE_URL=https://your-supabase-project-id.supabase.co
+
+# Supabase Anonymous Public API Key
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+---
+
+## 2. Step-by-Step Supabase Database & Storage Setup
+
+### Step 2.1: Create a Supabase Project
+1. Log in to [Supabase Dashboard](https://supabase.com/).
+2. Click **New Project**, choose an organization name, project name, database password, and region.
+3. Wait approximately 2 minutes for database provisioning to complete.
+
+### Step 2.2: Execute Database Schema
+1. In your Supabase project dashboard, navigate to the **SQL Editor** tab on the left sidebar.
+2. Click **New Query**.
+3. Open [schema.sql](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%2520Restaurants/schema.sql) from the repository root, copy the entire SQL content, and paste it into the editor.
+4. Click **Run**. This creates all essential tables:
+   - `restaurants`
+   - `users`
+   - `tables`
+   - `categories`
+   - `food_items`
+   - `orders`
+   - `payments`
+   - `notifications`
+
+### Step 2.3: Drop Foreign Key Constraints (Required for Dynamic Tables)
+Run the following SQL snippet in the SQL Editor to ensure orders and notifications can be created smoothly when table IDs change:
+
 ```sql
 alter table public.orders drop constraint if exists orders_table_id_fkey;
 alter table public.notifications drop constraint if exists notifications_table_id_fkey;
 ```
 
-### 🔒 4. Row Level Security (RLS) & Multi-Tenant Isolation
-The application enforces strict Row Level Security (RLS) to isolate different restaurants (tenants). 
-The database uses custom Postgres functions (`public.belongs_to_restaurant`, `public.get_user_restaurant`, `public.is_admin`) running with `security definer` privileges to check ownership without infinite policy recursion.
-- **Tenant Isolation**: Staff members can only CRUD resources (tables, menus, orders, payments) belonging to their specific `restaurant_id`.
-- **Staff Profile Privacy**: Public/anonymous guest users are blocked from reading staff profiles (`public.users`). Only logged-in staff from the same restaurant can query profiles.
+### Step 2.4: Storage Bucket Setup (For Food Images)
+1. Navigate to **Storage** in your Supabase dashboard menu.
+2. Click **New Bucket**.
+3. Set Bucket Name: `food-images`.
+4. Toggle **Public Bucket** to **ON** (so food item images can be viewed publicly by customers).
+5. Click **Save**.
 
-### ⚡ 5. Supabase Free Plan Optimization
-To prevent exhausting the Supabase Free Plan **Disk IO Budget** and **Active Connections Limit**:
-- **One-Time Data Fetching**: Static or rarely changing tables (like `categories`, `food_items`, and `tables`) are fetched **once** on page load/visibility change instead of keeping heavy realtime WebSocket subscriptions active.
-- **Role-Based Dynamic Subscriptions**: Realtime channel listeners are only opened for essential tables based on the user's role:
-  - **Guest Customers**: Open exactly **1 channel** (only listening to their order status updates).
-  - **Kitchen / Waiters**: Only listen to `orders` or `notifications`.
-  - **Cashiers / Managers**: Listen to `orders`, `notifications`, and `payments`.
-This reduces the real-time WebSocket load by up to **80%**, keeping the project highly cost-efficient and performant.
+### Step 2.5: Initial Super Admin Profile Creation
+To grant a specific account Super Admin privileges, run this query in SQL Editor (replace with your email):
 
----
-
-## 🔐 Step 2: Authentication & Staff Sign Up
-
-The system synchronizes staff user profiles with Supabase Auth.
-1. When a user registers via Supabase Auth (Sign Up), the `on_auth_user_created` trigger in `schema.sql` automatically populates the `public.users` profile table.
-2. By default, the first user created is assigned the `'admin'` role.
-3. You can manage roles (`admin`, `manager`, `cashier`, `kitchen`, `waiter`) directly in the `public.users` table within the **Table Editor** on Supabase.
+```sql
+update public.users 
+set is_super_admin = true, role = 'admin' 
+where email = 'your-email@restaurant.com';
+```
 
 ---
 
-## 🌐 Step 3: Frontend Deployment (Vercel)
+## 3. Deploying to Vercel (Recommended)
 
-### Option A: Deploy via Vercel Dashboard (Recommended)
-1. Push your code repository to GitHub, GitLab, or Bitbucket.
+### Option A: Vercel Dashboard (Zero-Config GUI)
+1. Push your repository to GitHub, GitLab, or Bitbucket.
 2. Log in to [Vercel](https://vercel.com).
-3. Click **Add New** -> **Project** and import your repository.
-4. Configure the following **Environment Variables**:
-   - `VITE_SUPABASE_URL`: Your Supabase Project URL (found in Project Settings -> API).
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase Anon Public API Key (found in Project Settings -> API).
-5. Click **Deploy**. Vercel will automatically build (`npm run build`) and provision a production URL.
+3. Click **Add New** &rarr; **Project** and import your repository.
+4. Configure Project Settings:
+   - **Framework Preset**: Vite
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. Expand **Environment Variables** and add:
+   - `VITE_SUPABASE_URL` = `https://your-project-id.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY` = `your-anon-key`
+6. Click **Deploy**.
 
-### Option B: Deploy via Vercel CLI
-If you have Vercel CLI installed locally, run:
+### Option B: Vercel CLI (Command Line)
 ```bash
+# 1. Install Vercel CLI globally
+npm install -g vercel
+
+# 2. Build local bundle
 npm run build
-npx vercel --prod --yes
+
+# 3. Deploy to production
+vercel --prod
 ```
+
+> [!NOTE]
+> The project includes `vercel.json` which automatically configures SPA routing and `no-cache` edge headers so users always receive fresh code and live data.
 
 ---
 
-## 🌐 Step 4: Self-Hosting on a Linux VPS (Nginx)
+## 4. Deploying to Netlify
 
-If you wish to host this application on your own virtual private server (e.g., AWS EC2, DigitalOcean Droplet, Linode, Hostinger VPS) using Nginx, follow these steps:
+### Step-by-Step Netlify Deployment
+1. Log in to [Netlify](https://netlify.com).
+2. Click **Add new site** &rarr; **Import an existing project**.
+3. Select your Git provider and select the repository.
+4. Build Settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+5. Environment Variables:
+   - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+6. Add `public/_redirects` file for React SPA routing:
+   ```text
+   /*    /index.html   200
+   ```
+7. Click **Deploy site**.
 
-### 1. Build the Production Files Locally or on the VPS
-Ensure you have the production environment variables configured. Run:
+---
+
+## 5. Deploying to Linux VPS (Nginx + SSL Certbot)
+
+### Step 5.1: Prepare Server & Node.js
+Connect to your Linux server (Ubuntu 22.04 LTS / Debian) via SSH:
+
 ```bash
-npm install
-npm run build
-```
-This will compile the TypeScript code and generate a static production folder called `/dist` in your project root.
+sudo apt update && sudo apt upgrade -y
+sudo apt install curl git nginx -y
 
-### 2. Install Nginx on your VPS
-Log into your server via SSH and run:
+# Install Node.js v18 LTS
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+### Step 5.2: Clone & Build Project
 ```bash
-sudo apt update
-sudo apt install nginx -y
+cd /var/www
+sudo git clone https://github.com/your-username/your-repo.git restaurant-pos
+cd restaurant-pos
+
+# Create production .env file
+sudo nano .env
+# Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+
+# Install & compile
+sudo npm install
+sudo npm run build
 ```
 
-### 3. Upload Production Files
-Copy the contents of the local `/dist` folder to your server's web root directory (usually `/var/www/html` or a custom directory like `/var/www/restaurant-pos`):
+### Step 5.3: Configure Nginx Server Block
+Edit the Nginx site configuration file:
+
 ```bash
-# Uploading via SCP from your local machine
-scp -r ./dist/* username@your-server-ip:/var/www/html/
+sudo nano /etc/nginx/sites-available/restaurant-pos
 ```
 
-### 4. Configure Nginx Server Block (Handling Client-Side Routing)
-Create or edit your site's Nginx configuration file (e.g., `/etc/nginx/sites-available/default`):
-```bash
-sudo nano /etc/nginx/sites-available/default
-```
+Paste the following Nginx configuration:
 
-Update the configuration to configure the static file directory and ensure that **React Router client-side routing** falls back to `index.html`:
 ```nginx
 server {
     listen 80;
     server_name your-domain.com www.your-domain.com;
 
-    root /var/www/html;
+    root /var/www/restaurant-pos/dist;
     index index.html;
 
-    # Support React Client-side Router redirection
+    # Bypass browser caching for live data HTML
     location / {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
         try_files $uri $uri/ /index.html;
     }
 
-    # Cache static assets for better performance
-    location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|cur|gz|svg|svgz|mp4|ogg|ogv|webm|htc)$ {
-        expires 1M;
-        access_log off;
-        add_header Cache-Control "public";
+    # Static assets with hash names
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 
     error_page 404 /index.html;
 }
 ```
 
-Test and reload Nginx:
+Enable the configuration and reload Nginx:
+
 ```bash
+sudo ln -s /etc/nginx/sites-available/restaurant-pos /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### 5. Setup SSL (HTTPS) with Let's Encrypt
+### Step 5.4: Install Free SSL Certificate (Let's Encrypt Certbot)
 ```bash
 sudo apt install certbot python3-certbot-nginx -y
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
-Follow the prompts to enable automatic HTTPS redirection.
 
 ---
 
-## 📁 Step 5: Hosting on Shared Hosting (cPanel / Hostinger)
+## 6. Deploying to Cloudflare Pages
 
-If you are uploading to a traditional cPanel or shared hosting service:
+1. Log in to your [Cloudflare Dashboard](https://dash.cloudflare.com/) and navigate to **Workers & Pages**.
+2. Click **Create Application** &rarr; **Pages** &rarr; **Connect to Git**.
+3. Select your repository.
+4. Build Settings:
+   - **Framework preset**: Vite
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+5. Add Environment Variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+6. Click **Save and Deploy**.
 
-1. Run `npm run build` on your local machine.
-2. Compress the contents of the `/dist` folder into a `.zip` file (do not zip the `/dist` folder itself, zip only its *contents*).
-3. Log into your hosting provider's File Manager and upload the zip to your target folder (e.g., `public_html` for your primary domain).
-4. Extract the zip file in that folder.
-5. Create or append to a `.htaccess` file in that folder to ensure React Router client-side routes work when refreshed:
-   ```apache
-   <IfModule mod_rewrite.c>
-     RewriteEngine On
-     RewriteBase /
-     RewriteRule ^index\.html$ - [L]
-     RewriteCond %{REQUEST_FILENAME} !-f
-     RewriteCond %{REQUEST_FILENAME} !-d
-     RewriteCond %{REQUEST_FILENAME} !-l
-     RewriteRule . /index.html [L]
-   </IfModule>
-   ```
+---
 
-## 🖥️ Step 6: Local Setup & Verification
+## 7. Deploying to cPanel / Shared Hosting
 
-To run and verify the codebase locally:
-
-1. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-2. **Environment Configuration**:
-   Create a `.env` file in the root directory (using `.env.example` as a template):
-   ```env
-   VITE_SUPABASE_URL=https://your-project-id.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-   ```
-3. **Run Dev Server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-4. **Verify Production Bundle**:
-   Ensure compilation succeeds before deployment:
+1. **Build Production Files Locally**:
    ```bash
    npm run build
    ```
+2. **Compress Output**:
+   Go into the `dist/` folder, select all files inside, and compress them into a `build.zip` file.
+3. **Upload to Hosting**:
+   - Log into cPanel File Manager.
+   - Navigate to `public_html/` (or your subdomain folder).
+   - Upload `build.zip` and extract its contents directly in `public_html/`.
+4. **Create `.htaccess` File for React SPA Routing**:
+   Create a `.htaccess` file inside `public_html/` with the following content:
+
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+```
 
 ---
 
-## 🧹 Step 7: Data Retention & Cleanup Policies
-- **Order History Pruning**: The application contains a built-in background cleaner (`cleanupExpiredOrders` in `database.ts`). Upon dashboard login, any completed orders older than **30 days** are permanently deleted from the database.
-- **Completed Orders Removal**: Completed orders automatically fade out of the customer's active menu page (`CustomerMenu.tsx`) after **2 minutes** via dynamic `localStorage` tracking.
+## 8. Post-Deployment Verification & Maintenance
+
+### Post-Deployment Checklist
+- [ ] **Customer QR Menu**: Open `https://your-domain.com/menu/table-1` and verify live menu items load cleanly.
+- [ ] **Instant Real-Time Sync**: Open POS in Tab 1 and Customer Menu in Tab 2. Add/edit/delete a food item in POS to confirm Tab 2 updates instantly.
+- [ ] **Order Placement**: Place a test order from customer view and confirm POS receives audio chime & voice notification.
+- [ ] **Super Admin Panel**: Login to `https://your-domain.com/#superadmin` to verify SaaS tenant controls.
+- [ ] **PWA & Cache Control**: Verify browser inspect network tab shows `Cache-Control: no-cache, no-store, must-revalidate` for `index.html`.
+
+### Maintenance Commands
+```bash
+# Verify build clean status
+npm run build
+
+# Clear local cache & node_modules if needed
+rm -rf node_modules dist
+npm install
+```

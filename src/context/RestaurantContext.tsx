@@ -18,7 +18,12 @@ import {
   ConfirmModalConfig,
 } from '../types';
 
+import { translations, Language } from '../translations';
+
 interface RestaurantContextType {
+  lang: Language;
+  setLang: (lang: Language) => void;
+  t: typeof translations.en;
   settings: RestaurantSettings | null;
   categories: MenuCategory[];
   foodItems: FoodItem[];
@@ -68,6 +73,8 @@ interface RestaurantContextType {
   loginMockUser: (email: string, role: UserRole) => Promise<UserProfile>;
   logoutUser: () => Promise<void>;
 
+  refreshData: () => Promise<void>;
+
   // Toast & Modal Helper State API
   toasts: ToastConfig[];
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -89,6 +96,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (tableId) {
       const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
       if (cached) return cached;
+      return ''; // On QR menu routes, do NOT load staff/demo restaurant while resolving table URL
     }
     
     const storedStaffRest = localStorage.getItem('last_active_staff_restaurant_id');
@@ -126,6 +134,23 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
+
+  // Global Language & Translation state
+  const [lang, setLangState] = useState<Language>(() => {
+    return (localStorage.getItem('app_language') as Language) || 
+           (localStorage.getItem('customer_lang') as Language) || 
+           (localStorage.getItem('admin_lang') as Language) || 
+           'en';
+  });
+
+  const setLang = (newLang: Language) => {
+    setLangState(newLang);
+    localStorage.setItem('app_language', newLang);
+    localStorage.setItem('customer_lang', newLang);
+    localStorage.setItem('admin_lang', newLang);
+  };
+
+  const t = translations[lang] || translations.en;
 
   // Toast & Modal popup states
   const [toasts, setToasts] = useState<ToastConfig[]>([]);
@@ -168,8 +193,28 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
   const isFirstLoad = useRef(true);
   const prevNotificationsCount = useRef(0);
+  const sessionStartTime = useRef<number>(Date.now());
+  const originalDocTitle = useRef<string>(document.title);
 
-  // Silent audio loop to keep browser tab active in background, and visibility listener to re-sync
+  // Update session start time whenever user logs in or switches
+  useEffect(() => {
+    sessionStartTime.current = Date.now();
+    isFirstLoad.current = true;
+    prevNotificationsCount.current = 0;
+  }, [currentUser?.id, restaurantId]);
+
+  // Handle Tab Focus to clear flashing title
+  useEffect(() => {
+    const handleFocus = () => {
+      if (originalDocTitle.current) {
+        document.title = originalDocTitle.current;
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Silent audio loop & User Interaction Audio Unlocker for Mac, Windows, and Android
   useEffect(() => {
     let interval: any;
     let audioCtx: AudioContext | null = null;
@@ -179,9 +224,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         
-        // Play tiny silent sound every 10 seconds to keep the process running in the background
+        // Play tiny silent sound every 10 seconds to keep Web Audio process active in background
         interval = setInterval(() => {
           if (!audioCtx) return;
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+          }
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.connect(gain);
@@ -195,9 +243,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     };
 
-    // Trigger on first user interaction to bypass browser autoplay policies
+    // Trigger on first user interaction to unlock audio & request native web notifications
     const handleInteraction = () => {
       startKeepAlive();
+      if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
@@ -392,12 +446,45 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (loading) return;
 
-    // Reset loaded states for the new restaurant to avoid displaying stale data/race conditions
+    // Reset tablesLoaded for new restaurantId to prevent flash of wrong table cache
     setTablesLoaded(false);
-    setTables([]);
-    setCategories([]);
-    setFoodItems([]);
-    setSettings(null);
+
+    // Hydrate local cache immediately for low-connectivity support (0ms load)
+    try {
+      const cachedTables = localStorage.getItem(`cached_tables_${restaurantId}`);
+      if (cachedTables) {
+        const parsed = JSON.parse(cachedTables);
+        if (parsed && parsed.length > 0) {
+          setTables(parsed);
+          setTablesLoaded(true);
+        } else {
+          setTables([]);
+        }
+      } else {
+        setTables([]);
+      }
+      const cachedCats = localStorage.getItem(`cached_categories_${restaurantId}`);
+      if (cachedCats) {
+        const parsed = JSON.parse(cachedCats);
+        if (parsed && parsed.length > 0) setCategories(parsed);
+        else setCategories([]);
+      } else {
+        setCategories([]);
+      }
+      const cachedFood = localStorage.getItem(`cached_food_${restaurantId}`);
+      if (cachedFood) {
+        const parsed = JSON.parse(cachedFood);
+        if (parsed && parsed.length > 0) setFoodItems(parsed);
+        else setFoodItems([]);
+      } else {
+        setFoodItems([]);
+      }
+      const cachedSet = localStorage.getItem(`cached_settings_${restaurantId}`);
+      if (cachedSet) {
+        const parsed = JSON.parse(cachedSet);
+        if (parsed) setSettings(parsed);
+      }
+    } catch (e) {}
 
     let unsubSettings: () => void = () => {};
     let unsubTables: () => void = () => {};
@@ -414,86 +501,100 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         console.warn('cleanupExpiredOrders error:', e);
       }
 
-      // 1. Subscribe to settings dynamically
-      try {
-        unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
-          setSettings(data);
-        });
-      } catch (e) {
-        console.error('subscribeSettings error:', e);
-      }
-
-      // 2. Subscribe to tables dynamically
-      try {
-        unsubTables = dbService.subscribeTables(restaurantId, (data) => {
-          setTables(data);
-          setTablesLoaded(true);
-          if (currentTable) {
-            const fresh = data.find(t => t.id === currentTable.id);
-            if (fresh) setCurrentTable(fresh);
-          }
-        });
-      } catch (e) {
-        console.error('subscribeTables error:', e);
-        setTablesLoaded(true); // Failsafe to unblock UI
-      }
-
-      // 3. Subscribe to categories dynamically
+      const isStaffUser = !!currentUser;
+      // Subscriptions active for all users (Staff & Guest Customers) so menu updates/deletions reflect instantly on Customer Menu
       try {
         unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
           setCategories(data);
+          try { localStorage.setItem(`cached_categories_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
         });
-      } catch (e) {
-        console.error('subscribeCategories error:', e);
-      }
+      } catch (e) { console.error('subscribeCategories error:', e); }
 
-      // 4. Subscribe to food items dynamically
       try {
         unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
           setFoodItems(data);
+          try { localStorage.setItem(`cached_food_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
         });
-      } catch (e) {
-        console.error('subscribeFoodItems error:', e);
-      }
+      } catch (e) { console.error('subscribeFoodItems error:', e); }
 
-      // 5. Optimized Subscriptions - only open WebSocket channels if necessary
-      try {
-        const isStaffUser = !!currentUser;
+      if (isStaffUser) {
+        // Staff Users (Admin, Manager, Waiter, Kitchen, Cashier) need full Real-time WebSockets
+        try {
+          unsubSettings = dbService.subscribeSettings(restaurantId, (data) => {
+            setSettings(data);
+            try { localStorage.setItem(`cached_settings_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+          });
+        } catch (e) { console.error('subscribeSettings error:', e); }
 
-        if (isStaffUser) {
-          // Staff needs Live Orders, Notifications
+        try {
+          unsubTables = dbService.subscribeTables(restaurantId, (data) => {
+            setTables(data);
+            setTablesLoaded(true);
+            try { localStorage.setItem(`cached_tables_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+            if (currentTable) {
+              const updated = data.find(t => t.id === currentTable.id);
+              if (updated) setCurrentTable(updated);
+            }
+          });
+        } catch (e) {
+          console.error('subscribeTables error:', e);
+          setTablesLoaded(true);
+        }
+
+        try {
           unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
             setOrders(data);
           });
+        } catch (e) { console.error('subscribeOrders error:', e); }
 
+        try {
           unsubNotifications = dbService.subscribeNotifications(restaurantId, (data) => {
             setNotifications(data);
-            
-            // Audio alert / Speech Synthesis on new notification (Order/Request)
             if (!isFirstLoad.current && data.length > prevNotificationsCount.current) {
-              const newNotify = data[0]; // assumes sorted desc
-              if (newNotify && !newNotify.isRead) {
+              const newNotify = data[0];
+              const notifyTime = newNotify?.createdAt ? new Date(newNotify.createdAt).getTime() : 0;
+              // STRICT GUARD: Sound ONLY plays for fresh live customer orders created AFTER current session started
+              const isLiveCreatedDuringSession = notifyTime >= (sessionStartTime.current - 2000);
+
+              if (newNotify && !newNotify.isRead && newNotify.type === 'new_order' && isLiveCreatedDuringSession) {
                 triggerNotificationSoundAndSpeech(newNotify);
               }
             }
             prevNotificationsCount.current = data.length;
             isFirstLoad.current = false;
           });
+        } catch (e) { console.error('subscribeNotifications error:', e); }
 
-          // Staff Cashier/Admin/Manager needs Payments logs
-          if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier') {
+        if (currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.role === 'cashier') {
+          try {
             unsubPayments = dbService.subscribePayments(restaurantId, (data) => {
               setPayments(data);
             });
+          } catch (e) { console.error('subscribePayments error:', e); }
+        }
+      } else {
+        // Guest Customer Mode
+        try {
+          const [sData, tData] = await Promise.all([
+            dbService.getSettings(restaurantId),
+            dbService.getTables(restaurantId)
+          ]);
+          if (sData) setSettings(sData);
+          if (tData) {
+            setTables(tData);
+            setTablesLoaded(true);
           }
-        } else {
-          // Guest Customer - only needs orders subscription (to track status)
+        } catch (err) {
+          console.error('Guest data fetch error:', err);
+          setTablesLoaded(true);
+        }
+
+        // Guest customer only subscribes to live orders for their table
+        try {
           unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
             setOrders(data);
           });
-        }
-      } catch (e) {
-        console.error('Additional subscriptions error:', e);
+        } catch (e) { console.error('subscribeOrders error:', e); }
       }
     };
 
@@ -510,7 +611,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id, loading]);
 
-  // Trigger Sound & Speech Synthesis
+  // Trigger Sound, Speech Synthesis & Background Notifications
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
     // Only play sound and announce speech for new customer orders
     if (n.type !== 'new_order') return;
@@ -519,27 +620,41 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const soundEnabled = settings?.enableSoundNotification ?? true;
       if (!soundEnabled) return;
 
-      // Rich 4-note ascending chime with smooth fade-in/out envelopes
+      const tableCleanName = n.tableName.replace(/Table\s*/i, '');
+
+      // 1. Native Desktop / Mobile Background Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(`🔔 NEW ORDER - Table ${tableCleanName}`, {
+            body: `Order received from Table ${tableCleanName}. Tap to view.`,
+            icon: '/favicon.ico',
+            tag: n.id,
+          });
+        } catch (e) {
+          console.warn('Native notification error:', e);
+        }
+      }
+
+      // 2. Background Tab Title Flashing
+      if (document.hidden) {
+        document.title = `🔔 (1) NEW ORDER - Table ${tableCleanName}!`;
+      }
+
+      // 3. Rich 4-note ascending chime with smooth fade-in/out envelopes
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Explicitly resume audio context (fixes browser auto-play policies/suspensions on Windows/Mac)
+      // Explicitly resume audio context (fixes browser auto-play policies/suspensions on macOS, Windows, Android)
       if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().catch(() => {});
       }
 
       const playNote = (freq: number, startTime: number, duration: number, peakGain: number) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         
-        // Smoother waveform for a bell-like tone
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, startTime);
         
-        // Cross-platform envelope layout: 
-        // 1. Start at silence
-        // 2. Linear ramp to peak (Attack)
-        // 3. Exponential decay to near-silence (Release)
-        // Removes mid-sustain setValueAtTime scheduling, resolving CoreAudio (macOS) vs. WASAPI (Windows) volume curve differences.
         gain.gain.setValueAtTime(0, startTime);
         gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
@@ -552,39 +667,39 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       const t = audioCtx.currentTime;
 
-      // 4-note ascending bell sequence: C5 → E5 → G5 → C6 (Louder version)
+      // 4-note ascending bell sequence: C5 → E5 → G5 → C6
       playNote(523.25, t + 0.0,  0.35, 0.95); // C5
       playNote(659.25, t + 0.22, 0.35, 0.95); // E5
       playNote(783.99, t + 0.44, 0.35, 0.95); // G5
-      playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6 - held longer for a satisfying ring
+      playNote(1046.5, t + 0.66, 0.55, 1.0);  // C6
 
-      // Speech Synthesis Voice Announcement (strictly for new orders)
-      if ('speechSynthesis' in window && n.type === 'new_order') {
-        const tableCleanName = n.tableName.replace(/Table\s*/i, '');
+      // 4. Speech Synthesis Voice Announcement (strictly for new customer orders)
+      if ('speechSynthesis' in window) {
         const speechMessage = `New order received from Table ${tableCleanName}.`;
 
-        // Delay speech slightly so chime plays first
         setTimeout(() => {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
           const speech = new SpeechSynthesisUtterance(speechMessage);
           speech.rate = 0.78;   // Slower for clarity
-          speech.pitch = 1.05;  // Slightly higher for a warm restaurant tone
-          speech.volume = 1.0;  // Max volume
+          speech.pitch = 1.05;  // Warm tone
+          speech.volume = 1.0;
           speech.lang = 'en-US';
 
-          // Prefer a high-quality natural voice
           const voices = window.speechSynthesis.getVoices();
           const preferredVoice =
             voices.find(v => v.name.includes('Samantha')) ||     // macOS premium
-            voices.find(v => v.name.includes('Google US English')) || // Chrome
-            voices.find(v => v.name.includes('Microsoft Aria')) ||    // Edge
-            voices.find(v => v.lang === 'en-US' && v.localService) || // any local en-US
-            voices.find(v => v.lang.startsWith('en'));                 // any English
+            voices.find(v => v.name.includes('Google US English')) || // Chrome / Android
+            voices.find(v => v.name.includes('Microsoft Aria')) ||    // Edge / Windows
+            voices.find(v => v.lang === 'en-US' && v.localService) ||
+            voices.find(v => v.lang.startsWith('en'));
 
           if (preferredVoice) speech.voice = preferredVoice;
 
-          window.speechSynthesis.cancel(); // clear any queued speech
+          window.speechSynthesis.cancel();
           window.speechSynthesis.speak(speech);
-        }, 900); // let the chime finish before speaking
+        }, 900);
       }
     } catch (e) {
       console.warn('Notification audio/speech synthesis blocked by browser:', e);
@@ -680,7 +795,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const getCartTax = () => {
-    const taxRate = settings ? settings.taxPercentage : 18;
+    const taxRate = settings?.taxPercentage ?? 0;
     const tax = getCartSubtotal() * (taxRate / 100);
     return Math.round(tax * 100) / 100;
   };
@@ -695,7 +810,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (cart.length === 0) throw new Error('Cart is empty');
     if (!currentTable) throw new Error('Table not assigned');
 
-    const taxRate = settings ? settings.taxPercentage : 18;
+    const taxRate = settings?.taxPercentage ?? 0;
     const subtotal = getCartSubtotal();
     const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
@@ -786,7 +901,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!order) return;
     
     const updatedOrder = { ...order, status };
-    // If order was served or completed, we might reset table status
+    
+    // Instant Optimistic UI Update
+    setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
+    
+    // Persist to Database
     await dbService.saveOrder(restaurantId, updatedOrder);
 
     // If order completed or cancelled, release the table status if no other active order
@@ -795,6 +914,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (activeTableOrders.length === 0) {
         const table = tables.find(t => t.id === order.tableId);
         if (table && table.status === 'occupied') {
+          setTables(prev => prev.map(t => t.id === table.id ? { ...t, status: 'available' } : t));
           await dbService.updateTableStatus(restaurantId, table.id, 'available');
         }
       }
@@ -802,15 +922,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const saveOrder = async (order: RestaurantOrder) => {
+    // Instant Optimistic UI Update
+    setOrders(prev => {
+      const exists = prev.some(o => o.id === order.id);
+      return exists ? prev.map(o => o.id === order.id ? order : o) : [order, ...prev];
+    });
     await dbService.saveOrder(restaurantId, order);
   };
 
   const updateTableStatus = async (tableId: string, status: TableStatus) => {
+    // Instant Optimistic UI Update
+    setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
     await dbService.updateTableStatus(restaurantId, tableId, status);
   };
 
   const addTable = async (table: RestaurantTable) => {
-    await dbService.saveTable(restaurantId, table);
+    // Instant Optimistic UI Update
     setTables(prev => {
       const exists = prev.some(t => t.id === table.id);
       if (exists) {
@@ -818,56 +945,68 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return [...prev, table].sort((a, b) => a.number.localeCompare(b.number));
     });
+    await dbService.saveTable(restaurantId, table);
   };
 
   const deleteTable = async (tableId: string) => {
-    await dbService.deleteTable(restaurantId, tableId);
+    // Instant Optimistic UI Update
     setTables(prev => prev.filter(t => t.id !== tableId));
+    await dbService.deleteTable(restaurantId, tableId);
   };
 
   const addCategory = async (category: MenuCategory) => {
-    await dbService.saveCategory(restaurantId, category);
+    // Instant Optimistic UI Update
     setCategories(prev => {
       const exists = prev.some(c => c.id === category.id);
       if (exists) return prev.map(c => c.id === category.id ? category : c);
       return [...prev, category].sort((a, b) => a.order - b.order);
     });
+    await dbService.saveCategory(restaurantId, category);
   };
 
   const deleteCategory = async (categoryId: string) => {
-    await dbService.deleteCategory(restaurantId, categoryId);
+    // Instant Optimistic UI Update
     setCategories(prev => prev.filter(c => c.id !== categoryId));
+    await dbService.deleteCategory(restaurantId, categoryId);
   };
 
   const addFoodItem = async (item: FoodItem) => {
-    await dbService.saveFoodItem(restaurantId, item);
+    // Instant Optimistic UI Update
     setFoodItems(prev => {
       const exists = prev.some(f => f.id === item.id);
       if (exists) return prev.map(f => f.id === item.id ? item : f);
       return [...prev, item];
     });
+    await dbService.saveFoodItem(restaurantId, item);
   };
 
   const deleteFoodItem = async (itemId: string) => {
-    await dbService.deleteFoodItem(restaurantId, itemId);
+    // Instant Optimistic UI Update
     setFoodItems(prev => prev.filter(f => f.id !== itemId));
+    await dbService.deleteFoodItem(restaurantId, itemId);
   };
 
   const updateSettings = async (updates: Partial<RestaurantSettings>) => {
+    // Instant Optimistic UI Update
+    setSettings(prev => prev ? { ...prev, ...updates } : null);
     await dbService.updateSettings(restaurantId, updates);
-    const newSettings = await dbService.getSettings(restaurantId);
-    setSettings(newSettings);
   };
 
   const addPaymentRecord = async (payment: PaymentRecord) => {
+    // Instant Optimistic UI Update
+    setPayments(prev => [payment, ...prev]);
     await dbService.addPayment(restaurantId, payment);
   };
 
   const markNotificationRead = async (id: string) => {
+    // Instant Optimistic UI Update
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     await dbService.markNotificationRead(restaurantId, id);
   };
 
   const clearAllNotifications = async () => {
+    // Instant Optimistic UI Update
+    setNotifications([]);
     await dbService.clearAllNotifications(restaurantId);
   };
 
@@ -898,8 +1037,40 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  const refreshData = async () => {
+    try {
+      showToast('Refreshing live restaurant details & orders...', 'info');
+      const [fetchedSettings, fetchedTables, fetchedCats, fetchedFood, fetchedOrders, fetchedPayments, fetchedNotifs] = await Promise.all([
+        dbService.getSettings(restaurantId),
+        dbService.getTables(restaurantId),
+        dbService.getCategories(restaurantId),
+        dbService.getFoodItems(restaurantId),
+        dbService.getOrders(restaurantId),
+        dbService.getPaymentRecords(restaurantId),
+        dbService.getNotifications(restaurantId),
+      ]);
+      if (fetchedSettings) setSettings(fetchedSettings);
+      if (fetchedTables) {
+        setTables(fetchedTables);
+        setTablesLoaded(true);
+      }
+      if (fetchedCats) setCategories(fetchedCats);
+      if (fetchedFood) setFoodItems(fetchedFood);
+      if (fetchedOrders) setOrders(fetchedOrders);
+      if (fetchedPayments) setPayments(fetchedPayments);
+      if (fetchedNotifs) setNotifications(fetchedNotifs);
+      showToast('All details & live orders refreshed!', 'success');
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+      showToast('Failed to refresh details. Please try again.', 'error');
+    }
+  };
+
   return (
     <RestaurantContext.Provider value={{
+      lang,
+      setLang,
+      t,
       settings,
       categories,
       foodItems,
@@ -942,6 +1113,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       clearAllNotifications,
       loginMockUser,
       logoutUser,
+      refreshData,
       toasts,
       showToast,
       removeToast,

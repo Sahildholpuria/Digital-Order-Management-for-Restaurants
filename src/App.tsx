@@ -4,17 +4,35 @@ import { useTheme } from './context/ThemeContext';
 import { CustomerMenu } from './pages/customer/CustomerMenu';
 import { OrderTracker } from './pages/customer/OrderTracker';
 
-const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
-const AdminDashboard = lazy(() => import('./pages/owner/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const OrdersManager = lazy(() => import('./pages/owner/OrdersManager').then(m => ({ default: m.OrdersManager })));
-const TablesManager = lazy(() => import('./pages/owner/TablesManager').then(m => ({ default: m.TablesManager })));
-const MenuManager = lazy(() => import('./pages/owner/MenuManager').then(m => ({ default: m.MenuManager })));
-const BillingManager = lazy(() => import('./pages/owner/BillingManager').then(m => ({ default: m.BillingManager })));
-const ReportsManager = lazy(() => import('./pages/owner/ReportsManager').then(m => ({ default: m.ReportsManager })));
-const SettingsManager = lazy(() => import('./pages/owner/SettingsManager').then(m => ({ default: m.SettingsManager })));
-const KitchenDisplay = lazy(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
-const WaiterDashboard = lazy(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
-const SuperAdminDashboard = lazy(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  lazy(async () => {
+    const pageHasBeenRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page_has_been_refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page_has_been_refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenRefreshed) {
+        window.sessionStorage.setItem('page_has_been_refreshed', 'true');
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+
+const Login = lazyWithRetry(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const AdminDashboard = lazyWithRetry(() => import('./pages/owner/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const OrdersManager = lazyWithRetry(() => import('./pages/owner/OrdersManager').then(m => ({ default: m.OrdersManager })));
+const TablesManager = lazyWithRetry(() => import('./pages/owner/TablesManager').then(m => ({ default: m.TablesManager })));
+const MenuManager = lazyWithRetry(() => import('./pages/owner/MenuManager').then(m => ({ default: m.MenuManager })));
+const BillingManager = lazyWithRetry(() => import('./pages/owner/BillingManager').then(m => ({ default: m.BillingManager })));
+const ReportsManager = lazyWithRetry(() => import('./pages/owner/ReportsManager').then(m => ({ default: m.ReportsManager })));
+const SettingsManager = lazyWithRetry(() => import('./pages/owner/SettingsManager').then(m => ({ default: m.SettingsManager })));
+const KitchenDisplay = lazyWithRetry(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
+const WaiterDashboard = lazyWithRetry(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
+const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 
 import { 
   TrendingUp, 
@@ -40,12 +58,10 @@ import {
   Info
 } from 'lucide-react';
 import { translations, Language } from './translations';
+import { PageLoader } from './components/PageLoader';
 
 const LazyLoader = () => (
-  <div className="min-h-[50vh] bg-transparent flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-    <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin shadow-md mb-2"></div>
-    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center block">Loading Panel...</span>
-  </div>
+  <PageLoader message="LOADING DASHBOARD..." subtext="Fetching live restaurant menus and orders" />
 );
 
 const ToastContainer: React.FC = () => {
@@ -135,11 +151,8 @@ const CustomConfirmModal: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId } = useRestaurant();
+  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t } = useRestaurant();
   const { theme, toggleTheme } = useTheme();
-
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('admin_lang') as Language) || 'en');
-  const t = translations[lang];
 
   // Navigation Routing States
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -218,39 +231,11 @@ export const App: React.FC = () => {
   const renderAppContent = () => {
     if (loading || isNavigating) {
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
-          {/* Glowing background aura */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
-          
-          <div className="space-y-6 max-w-sm w-full z-10">
-            {/* Animated Branded Logo Container */}
-            <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
-              {/* Pulsating glowing outline rings */}
-              <div className="absolute inset-0 rounded-3xl border-2 border-brand-500/30 animate-ping duration-1000"></div>
-              <div className="absolute inset-0.5 rounded-3xl border border-brand-500/20 animate-pulse"></div>
-              
-              {/* Core Logo Panel */}
-              <div className="w-16 h-16 bg-brand-600 text-white rounded-3xl flex items-center justify-center shadow-lg shadow-brand-500/30 relative">
-                <ChefHat className="w-8 h-8 animate-bounce duration-2000" />
-              </div>
-            </div>
-
-            {/* Text Title */}
-            <div className="space-y-1">
-              <h2 className="text-xl font-black text-slate-805 dark:text-slate-100 tracking-tight leading-tight uppercase font-sans">
-                RestaurantsOS
-              </h2>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest animate-pulse">
-                Bootstrapping digital ecosystem...
-              </p>
-            </div>
-
-            {/* Premium Progress Bar */}
-            <div className="h-1 w-32 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto overflow-hidden relative shadow-inner">
-              <div className="h-full bg-gradient-to-r from-brand-500 to-pink-500 w-1/2 rounded-full absolute top-0 left-0 animate-loading-bar"></div>
-            </div>
-          </div>
-        </div>
+        <PageLoader
+          fullScreen={true}
+          message="SYNCHRONIZING RESTAURANT OS..."
+          subtext="Bootstrapping live gourmet ecosystem & active orders"
+        />
       );
     }
 
@@ -295,9 +280,9 @@ export const App: React.FC = () => {
         <div className="relative">
           <button 
             onClick={() => navigateTo('/')}
-            className="absolute top-4 left-4 bg-slate-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 transition-colors shadow-lg"
+            className="absolute top-5 left-6 bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-2xl text-xs font-black hover:bg-emerald-600 hover:border-emerald-500 z-50 transition-all shadow-xl cursor-pointer flex items-center gap-1.5"
           >
-            &larr; Exit KDS
+            <span>&larr; Exit KDS</span>
           </button>
           <Suspense fallback={<LazyLoader />}>
             <KitchenDisplay />
@@ -468,23 +453,33 @@ export const App: React.FC = () => {
         );
       }
 
-      // Sidebar items based on role permissions
-      const sidebarItems = [
-        ...(currentUser?.isSuperAdmin ? [{ id: 'superadmin', label: 'Super Admin', icon: Shield, roles: ['admin'] }] : []),
-        { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, roles: ['admin', 'manager'] },
-        { id: 'orders', label: 'Live Orders', icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
-        { id: 'tables', label: 'Table & QR', icon: QrCode, roles: ['admin', 'manager'] },
-        { id: 'menu', label: 'Menu List', icon: Utensils, roles: ['admin', 'manager'] },
-        { id: 'billing', label: 'POS Billing', icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
-        { id: 'reports', label: 'Analytics', icon: FileText, roles: ['admin'] },
-        { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
-      ].filter(item => isRole(item.roles));
+      // Sidebar items based on role
+      let sidebarItems: Array<{ id: string; label: string; icon: any; roles: string[] }> = [];
+
+      if (currentUser?.isSuperAdmin) {
+        // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
+        sidebarItems = [
+          { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
+        ];
+      } else {
+        // Regular restaurant staff account
+        sidebarItems = [
+          { id: 'dashboard', label: t.dashboard, icon: TrendingUp, roles: ['admin', 'manager'] },
+          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['admin', 'manager'] },
+          { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin', 'manager'] },
+          { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
+          { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
+        ].filter(item => item.roles.includes(currentUser.role));
+      }
 
       // Render active tab body
       const renderActiveTabContent = () => {
-
+        if (currentUser?.isSuperAdmin) {
+          return <SuperAdminDashboard />;
+        }
         switch (activeTab) {
-          case 'superadmin': return <SuperAdminDashboard />;
           case 'dashboard': return <AdminDashboard />;
           case 'orders': return <OrdersManager />;
           case 'tables': return <TablesManager />;
@@ -492,7 +487,7 @@ export const App: React.FC = () => {
           case 'billing': return <BillingManager />;
           case 'reports': return <ReportsManager />;
           case 'settings': return <SettingsManager />;
-          default: return currentUser?.isSuperAdmin ? <SuperAdminDashboard /> : <AdminDashboard />;
+          default: return <AdminDashboard />;
         }
       };
 
@@ -505,7 +500,9 @@ export const App: React.FC = () => {
               <div className="w-8 h-8 bg-brand-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-brand-500/10">
                 <ChefHat className="w-4 h-4" />
               </div>
-              <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">POS Portal</span>
+              <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                {currentUser?.isSuperAdmin ? 'Super Admin' : 'POS Portal'}
+              </span>
             </div>
             <div className="flex gap-2">
               <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -528,9 +525,11 @@ export const App: React.FC = () => {
                   <ChefHat className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">Restaurant OS</span>
-                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={settings?.name || 'RestaurantsOS'}>
-                    {settings?.name || 'Bistro System'}
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">
+                    {currentUser?.isSuperAdmin ? 'Super Admin SaaS' : 'Restaurant OS'}
+                  </span>
+                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? 'Tenant Central' : settings?.name}>
+                    {currentUser?.isSuperAdmin ? 'Tenant Central' : (settings?.name || 'Bistro System')}
                   </span>
                 </div>
               </div>
@@ -580,16 +579,16 @@ export const App: React.FC = () => {
                   setLang(nextLang);
                   localStorage.setItem('admin_lang', nextLang);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/20 border border-slate-200/40 dark:border-slate-800/50 hover:bg-slate-105 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 text-slate-900 dark:text-slate-100 rounded-2xl text-xs font-black transition-all cursor-pointer shadow-sm"
               >
-                <Globe className="w-4.5 h-4.5 text-brand-500" />
+                <Globe className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" />
                 <span>{lang === 'en' ? 'हिन्दी (Hindi)' : 'English (EN)'}</span>
               </button>
 
               {/* User Logged Details */}
-              <div className="bg-slate-50/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-800/50 p-3 rounded-2xl text-xs space-y-1">
-                <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate">{currentUser.name}</p>
-                <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+              <div className="bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 p-3 rounded-2xl text-xs space-y-1 shadow-sm">
+                <p className="font-black text-slate-900 dark:text-slate-100 truncate">{currentUser.name}</p>
+                <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 truncate">{currentUser.email}</p>
               </div>
 
               <button
@@ -597,13 +596,13 @@ export const App: React.FC = () => {
                   await logoutUser();
                   navigateTo('/');
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all cursor-pointer"
               >
                 <LogOut className="w-4.5 h-4.5" />
                 <span>{t.logOut}</span>
               </button>
-              <div className="text-center pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/50">
-                <span className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase block">
+              <div className="text-center pt-2 mt-1 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold tracking-wider uppercase block">
                   Build by RestaurantsOS Pvt. Ltd
                 </span>
               </div>

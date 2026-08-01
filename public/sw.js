@@ -1,28 +1,18 @@
-const CACHE_NAME = 'restaurants-os-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/favicon.svg',
-  '/manifest.json'
-];
+const CACHE_NAME = 'restaurants-os-v5';
+const IMAGE_CACHE_NAME = 'restaurants-os-images-v1';
 
 // Install Event
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate Event
+// Activate Event: Clear all legacy caches automatically to force latest deployment & fresh data
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
+          if (cache !== IMAGE_CACHE_NAME) {
             return caches.delete(cache);
           }
         })
@@ -32,29 +22,60 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event (Stale-While-Revalidate for swift loading)
+// Fetch Event (Network-First Strategy: Always fetch latest live data from server)
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and local assets
-  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
+  if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchedResponse = fetch(event.request).then((networkResponse) => {
-          // Cache the fresh resource
-          if (networkResponse.status === 200) {
+  const url = new URL(event.request.url);
+
+  // Handle CDN food images (Unsplash, Supabase Storage, Cloudinary)
+  if (
+    url.hostname.includes('unsplash.com') ||
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('cloudinary.com')
+  ) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE_NAME).then(async (cache) => {
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
             cache.put(event.request, networkResponse.clone());
           }
           return networkResponse;
-        }).catch(() => {
-          // Fallback if completely offline
-          return cachedResponse;
-        });
+        } catch (e) {
+          const cachedResponse = await cache.match(event.request);
+          return cachedResponse || new Response('', { status: 408, statusText: 'Image Request Failed' });
+        }
+      })
+    );
+    return;
+  }
 
-        return cachedResponse || fetchedResponse;
-      });
-    })
-  );
+  // Handle Local Application Code & Data Requests — Always fetch fresh network response first
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      (async () => {
+        try {
+          // Force network fetch first to guarantee latest code & data
+          const networkResponse = await fetch(event.request, { cache: 'no-store' });
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        } catch (err) {
+          // Only fallback to cache if user is completely offline
+          const cachedFallback = await caches.match(event.request);
+          if (cachedFallback) return cachedFallback;
+
+          if (event.request.mode === 'navigate') {
+            const indexCache = await caches.match('/index.html');
+            if (indexCache) return indexCache;
+          }
+
+          return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
+        }
+      })()
+    );
+  }
 });

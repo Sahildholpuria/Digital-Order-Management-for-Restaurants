@@ -15,8 +15,13 @@ import {
   X, 
   HelpCircle,
   EyeOff,
-  Eye
+  Eye,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { isSupabaseConfigured, supabase } from '../../services/supabase';
 
 export const MenuManager: React.FC = () => {
   const { 
@@ -28,7 +33,8 @@ export const MenuManager: React.FC = () => {
     deleteFoodItem, 
     settings,
     showToast,
-    askConfirmation
+    askConfirmation,
+    restaurantId
   } = useRestaurant();
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
@@ -56,6 +62,8 @@ export const MenuManager: React.FC = () => {
   const [itemRecommended, setItemRecommended] = useState(false);
   const [itemSpicy, setItemSpicy] = useState<number>(0);
   const [itemDiscount, setItemDiscount] = useState<number>(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const currency = settings?.currency || '₹';
 
@@ -143,6 +151,8 @@ export const MenuManager: React.FC = () => {
     setItemRecommended(false);
     setItemSpicy(0);
     setItemDiscount(0);
+    setImageError(null);
+    setIsUploadingImage(false);
     setIsItemOpen(true);
   };
 
@@ -159,6 +169,8 @@ export const MenuManager: React.FC = () => {
     setItemRecommended(item.isRecommended);
     setItemSpicy(item.spicyLevel);
     setItemDiscount(item.discountPercentage);
+    setImageError(null);
+    setIsUploadingImage(false);
 
     // Extract variants if serialized in description
     let cleanDesc = item.description || '';
@@ -176,9 +188,85 @@ export const MenuManager: React.FC = () => {
     setIsItemOpen(true);
   };
 
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Strict 1 MB (1,048,576 bytes) limit check
+    const MAX_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
+    if (file.size > MAX_SIZE_BYTES) {
+      const actualMB = (file.size / (1024 * 1024)).toFixed(2);
+      const errMsg = `File size (${actualMB} MB) exceeds the 1 MB upload limit. Please select an image smaller than 1 MB.`;
+      setImageError(errMsg);
+      showToast(errMsg, 'error');
+      e.target.value = '';
+      return;
+    }
+
+    setImageError(null);
+    setIsUploadingImage(true);
+
+    try {
+      if (restaurantId && isSupabaseConfigured) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${restaurantId}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        const { data, error } = await supabase.storage.from('food-images').upload(filePath, file);
+        if (!error && data) {
+          const { data: publicUrlData } = supabase.storage.from('food-images').getPublicUrl(filePath);
+          if (publicUrlData?.publicUrl) {
+            setItemImage(publicUrlData.publicUrl);
+            showToast('Food image uploaded successfully!', 'success');
+            setIsUploadingImage(false);
+            return;
+          }
+        }
+      }
+
+      // Fallback to compressed Data URL
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          setItemImage(result);
+          showToast('Food image attached successfully!', 'success');
+        }
+        setIsUploadingImage(false);
+      };
+      reader.onerror = () => {
+        showToast('Failed to process image file.', 'error');
+        setIsUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Image upload error:', err);
+      showToast('Error uploading image.', 'error');
+      setIsUploadingImage(false);
+    }
+  };
+
+  const deleteSupabaseStorageImage = async (imageUrl: string) => {
+    if (!imageUrl || !isSupabaseConfigured) return;
+    try {
+      if (imageUrl.includes('/storage/v1/object/public/food-images/')) {
+        const relativePath = imageUrl.split('/storage/v1/object/public/food-images/')[1];
+        if (relativePath) {
+          const cleanPath = decodeURIComponent(relativePath);
+          await supabase.storage.from('food-images').remove([cleanPath]);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to cleanup old image from Supabase storage:', err);
+    }
+  };
+
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName || !itemCat) return;
+
+    // Automatically delete previous image from Supabase Storage if replaced or removed
+    if (editingItem && editingItem.image && editingItem.image !== itemImage) {
+      deleteSupabaseStorageImage(editingItem.image);
+    }
 
     // Serialize variants to description string
     let finalDesc = itemDesc;
@@ -209,10 +297,14 @@ export const MenuManager: React.FC = () => {
   };
 
   const handleDeleteItem = async (itemId: string) => {
+    const itemToDelete = foodItems.find(i => i.id === itemId);
     askConfirmation(
       'Delete Menu Item?',
       'Are you sure you want to permanently delete this menu item from your restaurant menu?',
       async () => {
+        if (itemToDelete?.image) {
+          deleteSupabaseStorageImage(itemToDelete.image);
+        }
         await deleteFoodItem(itemId);
         showToast('Menu item deleted successfully.', 'success');
       }
@@ -404,9 +496,29 @@ export const MenuManager: React.FC = () => {
                             {item.name}
                           </h3>
                         </div>
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
-                          {item.description}
-                        </p>
+                        {(() => {
+                          const rawDesc = item.description || '';
+                          const hasVariants = rawDesc.includes('||variants:');
+                          const [cleanText, variantsStr] = hasVariants ? rawDesc.split('||variants:') : [rawDesc, ''];
+                          const variantNames = variantsStr
+                            ? variantsStr.split(';').map(v => v.split('=')[0]).filter(Boolean).join(', ')
+                            : '';
+
+                          return (
+                            <div className="space-y-1">
+                              {cleanText.trim() ? (
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
+                                  {cleanText.trim()}
+                                </p>
+                              ) : null}
+                              {variantNames ? (
+                                <span className="inline-block bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                  Variants: {variantNames}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Tags & Badges */}
@@ -601,16 +713,80 @@ export const MenuManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image URL */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Food Image URL</label>
-                <input
-                  type="text"
-                  placeholder="https://unsplash.com/..."
-                  value={itemImage}
-                  onChange={(e) => setItemImage(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
+              {/* Food Image Upload & URL */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Food Image <span className="text-rose-500 font-extrabold text-[10px]">(Max 1 MB)</span>
+                  </label>
+                  {itemImage && (
+                    <button
+                      type="button"
+                      onClick={() => { setItemImage(''); setImageError(null); }}
+                      className="text-[11px] text-rose-500 hover:underline font-semibold"
+                    >
+                      Remove Image
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                  {/* Thumbnail Preview */}
+                  <div className="sm:col-span-1 h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-750 flex items-center justify-center relative group">
+                    {itemImage ? (
+                      <img src={itemImage} alt="Food Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500">
+                        <ImageIcon className="w-6 h-6 stroke-[1.5]" />
+                        <span className="text-[10px] font-semibold">No Image</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* File Upload Dropzone & URL Input */}
+                  <div className="sm:col-span-2 space-y-2">
+                    <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-3 cursor-pointer transition-all ${
+                      imageError 
+                        ? 'border-rose-400 bg-rose-50/50 dark:bg-rose-950/20' 
+                        : 'border-slate-250 dark:border-slate-700 hover:border-brand-500 bg-slate-50/70 dark:bg-slate-850/50'
+                    }`}>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageFileUpload} 
+                        disabled={isUploadingImage}
+                        className="hidden" 
+                      />
+                      {isUploadingImage ? (
+                        <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400 py-1">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-xs font-bold">Uploading (Max 1 MB)...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 py-0.5">
+                          <Upload className="w-4 h-4 text-brand-500" />
+                          <span className="text-xs font-bold">Click to Upload Image</span>
+                          <span className="text-[9px] bg-slate-200 dark:bg-slate-750 px-1.5 py-0.5 rounded font-black text-slate-500">1MB MAX</span>
+                        </div>
+                      )}
+                    </label>
+
+                    <input
+                      type="text"
+                      placeholder="Or paste image URL (https://...)"
+                      value={itemImage}
+                      onChange={(e) => { setItemImage(e.target.value); setImageError(null); }}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                </div>
+
+                {imageError && (
+                  <div className="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 p-2.5 rounded-xl text-xs font-semibold">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{imageError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

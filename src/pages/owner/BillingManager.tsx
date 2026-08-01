@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantOrder, PaymentRecord } from '../../types';
+import { printHTMLContent } from '../../utils/printUtils';
 import { 
   FileText, 
   Printer, 
@@ -40,19 +41,23 @@ export const BillingManager: React.FC = () => {
   const selectedOrder = orders.find(o => o.id === selectedOrderId) || billableOrders[0];
 
   // Calculations
-  const subtotal = selectedOrder ? selectedOrder.subtotal : 0;
-  const taxPercentage = settings ? settings.taxPercentage : 18;
+  const subtotal = selectedOrder 
+    ? Math.round(selectedOrder.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 100) / 100 
+    : 0;
+  const taxPercentage = settings?.taxPercentage ?? 0;
   const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100;
   const taxableAmount = Math.round((subtotal - discountAmount) * 100) / 100;
   const taxAmount = Math.round(taxableAmount * (taxPercentage / 100) * 100) / 100;
   const grandTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
 
+  const [autoPrintOnSettle, setAutoPrintOnSettle] = useState(true);
+
   const handleMarkPaid = async () => {
     if (!selectedOrder) return;
     setIsProcessing(true);
-
     try {
-      const payment: PaymentRecord = {
+      // 1. Log payment settlement
+      await addPaymentRecord({
         id: `pay-${Date.now()}`,
         orderId: selectedOrder.id,
         orderNumber: selectedOrder.orderNumber,
@@ -63,18 +68,21 @@ export const BillingManager: React.FC = () => {
         grandTotal,
         paymentMethod,
         createdAt: new Date().toISOString()
-      };
-
-      // 1. Add payment log
-      await addPaymentRecord(payment);
+      });
       
       // 2. Mark order completed (releases table status automatically in Context)
       await updateOrderStatus(selectedOrder.id, 'completed');
       
+      showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
+
+      // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
+      if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
+        triggerPrint('80mm');
+      }
+
       // Reset POS terminal selection
       setSelectedOrderId('');
       setDiscountPercent(0);
-      showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Settlement failed.', 'error');
@@ -108,39 +116,165 @@ export const BillingManager: React.FC = () => {
     }
   };
 
-  // Trigger Browser Print Dialog
-  const triggerPrint = () => {
-    const printContent = receiptRef.current?.innerHTML;
-    if (!printContent) return;
+  // Trigger POS Thermal Receipt Print (80mm / 58mm POS billing machine)
+  const triggerPrint = (paperWidth: '80mm' | '58mm' = '80mm') => {
+    if (!selectedOrder) return;
 
-    const originalContent = document.body.innerHTML;
-    
-    // Create print window layout
-    const printWindow = window.open('', '', 'height=600,width=400');
-    if (!printWindow) return;
+    const itemsHtml = selectedOrder.items.map(item => `
+      <tr>
+        <td style="padding: 3px 0; vertical-align: top;">
+          <div style="font-weight: bold;">${item.name}</div>
+          ${item.specialInstructions ? `<div style="font-size: 9px; color: #444;">(${item.specialInstructions})</div>` : ''}
+        </td>
+        <td style="text-align: center; vertical-align: top; padding: 3px 0;">${item.quantity}</td>
+        <td style="text-align: right; vertical-align: top; padding: 3px 0;">${currency}${item.price.toFixed(2)}</td>
+        <td style="text-align: right; vertical-align: top; font-weight: bold; padding: 3px 0;">${currency}${(item.price * item.quantity).toFixed(2)}</td>
+      </tr>
+    `).join('');
 
-    printWindow.document.write(`
+    const restName = settings?.name || 'Restaurant OS';
+    const restAddress = settings?.address || '';
+    const restPhone = settings?.phone ? `Tel: ${settings.phone}` : '';
+    const gstNo = settings?.gstNumber ? `GSTIN: ${settings.gstNumber}` : '';
+    const websiteStr = settings?.websiteUrl || '';
+    const bodyWidth = paperWidth === '58mm' ? '58mm' : '80mm';
+
+    const receiptHtml = `
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>POS Receipt</title>
+          <title>Receipt_${selectedOrder.orderNumber}</title>
+          <meta charset="utf-8" />
           <style>
-            body { font-family: monospace; padding: 20px; font-size: 12px; line-height: 1.4; color: #000; width: 300px; margin: 0 auto; }
+            @page {
+              size: ${bodyWidth} auto;
+              margin: 0;
+            }
+            @media print {
+              html, body {
+                width: ${bodyWidth};
+                margin: 0 auto;
+                padding: 0;
+              }
+              .no-print { display: none !important; }
+            }
+            body {
+              font-family: 'Courier New', Courier, monospace, sans-serif;
+              width: ${bodyWidth};
+              margin: 0 auto;
+              padding: 8px;
+              box-sizing: border-box;
+              font-size: 11px;
+              line-height: 1.35;
+              color: #000;
+              background: #fff;
+            }
             .text-center { text-align: center; }
             .text-right { text-align: right; }
+            .text-left { text-align: left; }
             .font-bold { font-weight: bold; }
-            .divider { border-top: 1px dashed #000; margin: 8px 0; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { text-align: left; padding: 3px 0; }
-            .mt-4 { margin-top: 16px; }
-            .mb-2 { margin-bottom: 8px; }
+            .dashed-divider {
+              border-top: 1px dashed #000;
+              margin: 6px 0;
+            }
+            .double-divider {
+              border-top: 2px double #000;
+              margin: 6px 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th {
+              border-bottom: 1px dashed #000;
+              padding: 4px 0;
+              font-size: 10px;
+            }
+            .total-row {
+              font-size: 13px;
+              font-weight: bold;
+            }
           </style>
         </head>
-        <body onload="window.print();window.close()">
-          ${printContent}
+        <body>
+          <div class="text-center">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 900; text-transform: uppercase;">${restName}</h2>
+            ${restAddress ? `<div style="font-size: 9.5px;">${restAddress}</div>` : ''}
+            ${restPhone ? `<div style="font-size: 9.5px;">${restPhone}</div>` : ''}
+            ${gstNo ? `<div style="font-size: 9.5px; font-weight: bold;">${gstNo}</div>` : ''}
+          </div>
+
+          <div class="dashed-divider"></div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 10px;">
+            <span>Bill #${selectedOrder.orderNumber}</span>
+            <span>Table: <strong>${selectedOrder.tableName || 'N/A'}</strong></span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px;">
+            <span>Date: ${new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
+            <span>Time: ${new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+
+          <div class="dashed-divider"></div>
+
+          <table>
+            <thead>
+              <tr>
+                <th class="text-left" style="width: 45%;">Item</th>
+                <th class="text-center" style="width: 15%;">Qty</th>
+                <th class="text-right" style="width: 20%;">Price</th>
+                <th class="text-right" style="width: 20%;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="dashed-divider"></div>
+
+          <table>
+            <tr>
+              <td class="text-left">Subtotal:</td>
+              <td class="text-right">${currency}${subtotal.toFixed(2)}</td>
+            </tr>
+            ${discountAmount > 0 ? `
+              <tr>
+                <td class="text-left">Discount (${discountPercent}%):</td>
+                <td class="text-right">-${currency}${discountAmount.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            ${taxAmount > 0 ? `
+              <tr>
+                <td class="text-left">Taxes / GST:</td>
+                <td class="text-right">+${currency}${taxAmount.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+          </table>
+
+          <div class="double-divider"></div>
+
+          <table class="total-row">
+            <tr>
+              <td class="text-left">GRAND TOTAL:</td>
+              <td class="text-right">${currency}${grandTotal.toFixed(2)}</td>
+            </tr>
+          </table>
+
+          <div class="dashed-divider"></div>
+
+          <div class="text-center" style="font-size: 10px; margin-top: 4px;">
+            <div>Payment: <strong>${paymentMethod.toUpperCase()}</strong></div>
+            <div style="margin-top: 6px;" class="font-bold">Thank you for dining with us!</div>
+            ${websiteStr ? `<div style="font-size: 9px; color: #555; margin-top: 2px;">${websiteStr}</div>` : '<div style="font-size: 9px; color: #555; margin-top: 2px;">Please visit again</div>'}
+          </div>
+
+          <div style="height: 35px;"></div>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    printHTMLContent(receiptHtml, 'pos-receipt-print-frame');
   };
 
   return (
@@ -230,7 +364,9 @@ export const BillingManager: React.FC = () => {
                   <p className="text-[10px] text-slate-500 leading-tight">
                     {settings?.address || '102 Gourmet Blvd, Culinary District'}
                   </p>
-                  <p className="text-[10px] text-slate-500">GSTIN: {settings?.gstNumber || '22AAAAA1111A1Z1'}</p>
+                  {settings?.gstNumber && (
+                    <p className="text-[10px] text-slate-500 font-bold">GSTIN: {settings.gstNumber}</p>
+                  )}
                 </div>
 
                 <div className="border-t border-dashed border-slate-300 my-2"></div>
@@ -300,7 +436,11 @@ export const BillingManager: React.FC = () => {
                 <div className="text-center text-[9px] text-slate-550 space-y-0.5">
                   <p>Settled via {paymentMethod.toUpperCase()}</p>
                   <p>Thank you for dining with us!</p>
-                  <p>www.{settings?.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bistro'}.com</p>
+                  {settings?.websiteUrl ? (
+                    <p className="font-mono text-[9px] text-slate-600 font-semibold">{settings.websiteUrl}</p>
+                  ) : (
+                    <p className="text-[9px] text-slate-400">Please visit again</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -356,23 +496,64 @@ export const BillingManager: React.FC = () => {
               </div>
 
               <div className="border-t border-slate-100 dark:border-slate-800 pt-5 space-y-4">
-                {/* Print and PDF download commands */}
-                <div className="flex gap-2.5">
-                  <button
-                    onClick={triggerPrint}
-                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-205 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-150 dark:border-slate-850"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Print Receipt</span>
-                  </button>
-                  <button
-                    onClick={downloadReceiptPDF}
-                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-205 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-150 dark:border-slate-850"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
+                {/* POS Thermal Printing & Download Commands */}
+                {settings?.enableBillPrinting !== false ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => triggerPrint('80mm')}
+                        className="py-3 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm"
+                      >
+                        <Printer className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                        <span>Print Bill (80mm)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerPrint('58mm')}
+                        className="py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-800"
+                      >
+                        <Printer className="w-4 h-4 text-slate-500" />
+                        <span>Mini Bill (58mm)</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-400">
+                        <input
+                          type="checkbox"
+                          checked={autoPrintOnSettle}
+                          onChange={(e) => setAutoPrintOnSettle(e.target.checked)}
+                          className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                        />
+                        <span>Auto-print receipt on settlement</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={downloadReceiptPDF}
+                        className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF Invoice</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Printer className="w-4 h-4 text-amber-500" />
+                      <span>Thermal Bill Printing Disabled</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={downloadReceiptPDF}
+                      className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>PDF Invoice</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Final Checkout settled button */}
                 <button

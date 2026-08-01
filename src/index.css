@@ -4,16 +4,34 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+}
+
+.dark {
+  --brand-50: #064e3b;
+  --brand-100: #065f46;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+}
+
 @theme {
-  --color-brand-50: var(--brand-50, #f5f3ff);
-  --color-brand-100: var(--brand-100, #ede9fe);
-  --color-brand-405: #818cf8;
-  --color-brand-500: var(--brand-500, #6366f1);
-  --color-brand-550: #6366f1;
-  --color-brand-600: var(--brand-600, #4f46e5);
-  --color-brand-650: #4f46e5;
-  --color-brand-655: #4f46e5;
-  --color-brand-700: var(--brand-700, #4338ca);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-405: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-550: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-650: var(--brand-600);
+  --color-brand-655: var(--brand-600);
+  --color-brand-700: var(--brand-700);
   
   /* Custom/Legacy Theme Color Mapping Extensions */
   --color-slate-105: #f1f5f9;
@@ -70,12 +88,67 @@
     50% { left: 25%; width: 75%; }
     100% { left: 100%; width: 50%; }
   }
+  @keyframes cloche-lift {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    35%, 65% {
+      transform: translateY(-18px) rotate(-3deg);
+    }
+  }
+  @keyframes steam-rise {
+    0% {
+      stroke-dashoffset: 30;
+      opacity: 0;
+      transform: translateY(0) scaleX(1);
+    }
+    40% {
+      opacity: 0.9;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 0;
+      transform: translateY(-16px) scaleX(1.2);
+    }
+  }
+}
+
+.animate-cloche-lift {
+  animation: cloche-lift 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: bottom center;
+}
+
+.animate-steam-1 {
+  animation: steam-rise 1.8s ease-out infinite;
+}
+
+.animate-steam-2 {
+  animation: steam-rise 1.8s ease-out 0.4s infinite;
+}
+
+.animate-steam-3 {
+  animation: steam-rise 1.8s ease-out 0.8s infinite;
 }
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased selection:bg-indigo-100 dark:bg-slate-955 dark:text-slate-100;
+    @apply bg-slate-50 text-slate-900 antialiased selection:bg-slate-200 dark:selection:bg-slate-800 dark:bg-slate-955 dark:text-slate-100;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Instant 1-Click Touch & Click Responsiveness */
+  button, a, input, select, label {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent inner icons or text spans from swallowing click events */
+  button > svg,
+  button > span,
+  button > div,
+  button > strong,
+  button > p {
+    pointer-events: none;
   }
 }
 
@@ -97,17 +170,17 @@
 .bg-mesh {
   background-attachment: fixed;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.03) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(79, 70, 229, 0.02) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.04) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.03) 0px, transparent 50%);
 }
 
 .dark .bg-mesh {
   background-attachment: fixed;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.06) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(79, 70, 229, 0.04) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(2, 6, 23, 0.05) 0px, transparent 50%);
 }
 
 /* Premium Card Styles */
@@ -143,4 +216,9 @@ input[type=number] {
 }
 .animate-ping-slow {
   animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Prevent iOS Safari from auto-zooming / distorting viewport when tapping search & form inputs */
+input, select, textarea {
+  font-size: 16px !important;
 }
