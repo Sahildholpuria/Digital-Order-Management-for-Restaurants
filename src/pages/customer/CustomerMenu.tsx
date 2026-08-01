@@ -528,86 +528,72 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
-      {/* Ultra-Luxury Welcome Splash Screen Overlay */}
+      {/* Minimal & Classy Welcome Splash Screen Overlay */}
       {showSplash && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 text-white animate-fade-in overflow-hidden">
-          {/* Ambient Lighting Orbs */}
-          <div className="absolute top-1/6 -left-16 w-80 h-80 bg-emerald-500/25 rounded-full blur-[100px] animate-pulse pointer-events-none" />
-          <div className="absolute bottom-1/6 -right-16 w-80 h-80 bg-teal-500/20 rounded-full blur-[100px] animate-pulse pointer-events-none" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-400/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 bg-slate-950 text-slate-100 animate-fade-in overflow-hidden">
+          {/* Subtle Ambient Radial Lighting */}
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-          {/* Top Brand Tag */}
-          <div className="relative z-10 pt-4 sm:pt-6 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-[10px] font-black uppercase tracking-widest text-emerald-300 shadow-2xl shadow-emerald-900/30">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span>Digital Order & Dining</span>
+          {/* Top Status Header */}
+          <div className="relative z-10 flex items-center justify-between w-full max-w-lg mx-auto">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/90">Digital Menu</span>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-bold text-slate-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Table #{getTableDisplayNumber()}</span>
             </div>
           </div>
 
-          {/* Center Welcome Container */}
-          <div className="relative z-10 max-w-sm w-full text-center space-y-6 my-auto px-2">
-            {/* Logo / Avatar with animated multi-layer glowing rings */}
-            <div className="relative mx-auto w-28 h-28 sm:w-32 sm:h-32">
-              <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 opacity-80 blur-lg animate-pulse" />
-              <div className="relative w-full h-full rounded-full bg-slate-950 p-1.5 border-2 border-white/30 overflow-hidden shadow-2xl flex items-center justify-center">
-                {settings?.logoUrl ? (
-                  <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover rounded-full" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 rounded-full flex items-center justify-center shadow-inner">
-                    <Utensils className="w-14 h-14 text-emerald-300 stroke-[1.75]" />
-                  </div>
-                )}
-              </div>
+          {/* Center Brand Identity */}
+          <div className="relative z-10 max-w-sm w-full mx-auto text-center space-y-6 my-auto">
+            {/* Clean Minimalist Logo Frame */}
+            <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-slate-900 border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden">
+              {settings?.logoUrl ? (
+                <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-emerald-400">
+                  <Utensils className="w-8 h-8 stroke-[1.5]" />
+                </div>
+              )}
             </div>
 
-            {/* Restaurant Title & Subtitle */}
-            <div className="space-y-1.5">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-emerald-200 font-sans drop-shadow-lg leading-tight">
-                {settings?.name || 'Gourmet Restaurant'}
+            {/* Restaurant Name & Tagline */}
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
+                {settings?.name || 'Gourmet Dining'}
               </h1>
-              <p className="text-xs text-emerald-200/80 font-medium max-w-xs mx-auto leading-relaxed line-clamp-2">
-                {settings?.address || 'Fresh gourmet dishes crafted with passion & served hot to your table.'}
-              </p>
+              {settings?.address && (
+                <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto leading-relaxed line-clamp-2">
+                  {settings.address}
+                </p>
+              )}
             </div>
 
-            {/* Table Badge */}
-            <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-xs font-black uppercase tracking-wider text-emerald-200">
-                Seated at Table <span className="text-amber-300 font-black text-base font-mono">#{getTableDisplayNumber()}</span>
-              </span>
-            </div>
+            {/* Subtle Divider */}
+            <div className="w-12 h-px bg-slate-800 mx-auto" />
 
-            {/* Warm Luxury Greeting Card */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/20 text-slate-100 text-xs sm:text-sm font-medium leading-relaxed shadow-2xl space-y-2">
-              <div className="flex items-center justify-center gap-1.5 font-black text-amber-300 text-xs uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Welcome & Bon Appétit</span>
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <p className="text-slate-200 text-xs leading-relaxed font-medium">
-                We are delighted to serve you today! Explore our delicious gourmet menu, customize your order, and send it straight to our kitchen.
-              </p>
-            </div>
+            {/* Classy Welcome Note */}
+            <p className="text-xs text-slate-300 font-medium leading-relaxed max-w-xs mx-auto">
+              Welcome. Explore our freshly prepared menu and place your order directly from your table.
+            </p>
           </div>
 
-          {/* Bottom Controls & Progress */}
-          <div className="relative z-10 w-full max-w-sm pb-4 sm:pb-6 space-y-4 text-center">
-            {/* Animated Progress Bar */}
-            <div className="w-full bg-white/15 rounded-full h-1.5 overflow-hidden backdrop-blur-md border border-white/20 p-0.5">
+          {/* Bottom Action CTA & Progress Bar */}
+          <div className="relative z-10 max-w-sm w-full mx-auto space-y-4 text-center pb-2">
+            {/* Thin Minimal Progress Bar */}
+            <div className="w-full bg-slate-900 rounded-full h-1 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 h-full rounded-full transition-all duration-100 ease-out shadow-lg"
+                className="bg-emerald-500 h-full transition-all duration-100 ease-out"
                 style={{ width: `${splashProgress}%` }}
               />
             </div>
 
-            {/* High-Contrast Interactive CTA Button */}
+            {/* Elegant Minimalist Button */}
             <button
               onClick={handleDismissSplash}
-              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-widest shadow-2xl shadow-emerald-950/80 border border-emerald-400/40 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-xl bg-slate-100 hover:bg-white text-slate-950 font-bold text-xs uppercase tracking-widest transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
-              <span>Explore Menu</span>
-              <ArrowRight className="w-4 h-4 text-emerald-200" />
+              <span>View Menu</span>
+              <ArrowRight className="w-4 h-4 text-slate-900" />
             </button>
           </div>
         </div>
