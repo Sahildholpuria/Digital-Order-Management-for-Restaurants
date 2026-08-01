@@ -217,3 +217,17 @@ input[type=number] {
 .animate-ping-slow {
   animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* Prevent iOS Safari from auto-zooming / distorting viewport when tapping search & form inputs */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  select,
+  textarea,
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  input[type="email"],
+  input[type="search"],
+  input[type="tel"] {
+    font-size: 16px !important;
+  }
+}
