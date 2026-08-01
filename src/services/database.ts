@@ -1150,7 +1150,7 @@ export const dbService = {
           const newCat = mapCategoryToFrontend(payload.new);
           currentCategories = [...currentCategories.filter(c => c.id !== newCat.id), newCat]
             .sort((a, b) => a.order - b.order);
-          callback(currentCategories);
+          callback([...currentCategories]);
         })
         .on('postgres_changes', { 
           event: 'UPDATE', 
@@ -1162,17 +1162,21 @@ export const dbService = {
           const updated = mapCategoryToFrontend(payload.new);
           currentCategories = currentCategories.map(c => c.id === updated.id ? updated : c)
             .sort((a, b) => a.order - b.order);
-          callback(currentCategories);
+          callback([...currentCategories]);
         })
         .on('postgres_changes', { 
           event: 'DELETE', 
           schema: 'public', 
-          table: 'categories', 
-          filter: `restaurant_id=eq.${restaurantId}` 
+          table: 'categories'
         }, (payload) => {
-          if (!payload.old?.id) return;
-          currentCategories = currentCategories.filter(c => c.id !== payload.old.id);
-          callback(currentCategories);
+          const deletedId = payload.old?.id;
+          if (deletedId) {
+            const beforeLen = currentCategories.length;
+            currentCategories = currentCategories.filter(c => c.id !== deletedId);
+            if (currentCategories.length !== beforeLen) {
+              callback([...currentCategories]);
+            }
+          }
         })
         .subscribe();
 
@@ -1254,7 +1258,7 @@ export const dbService = {
           .eq('restaurant_id', restaurantId);
         if (!error && data) {
           currentItems = data.map(mapFoodItemToFrontend);
-          callback(currentItems);
+          callback([...currentItems]);
         }
       };
 
@@ -1271,8 +1275,8 @@ export const dbService = {
         }, (payload) => {
           if (!payload.new) return;
           const newItem = mapFoodItemToFrontend(payload.new);
-          currentItems = [...currentItems.filter(i => i.id !== newItem.id), newItem];
-          callback(currentItems);
+          currentItems = [newItem, ...currentItems.filter(i => i.id !== newItem.id)];
+          callback([...currentItems]);
         })
         .on('postgres_changes', { 
           event: 'UPDATE', 
@@ -1283,17 +1287,21 @@ export const dbService = {
           if (!payload.new) return;
           const updated = mapFoodItemToFrontend(payload.new);
           currentItems = currentItems.map(i => i.id === updated.id ? updated : i);
-          callback(currentItems);
+          callback([...currentItems]);
         })
         .on('postgres_changes', { 
           event: 'DELETE', 
           schema: 'public', 
-          table: 'food_items', 
-          filter: `restaurant_id=eq.${restaurantId}` 
+          table: 'food_items'
         }, (payload) => {
-          if (!payload.old?.id) return;
-          currentItems = currentItems.filter(i => i.id !== payload.old.id);
-          callback(currentItems);
+          const deletedId = payload.old?.id;
+          if (deletedId) {
+            const beforeLen = currentItems.length;
+            currentItems = currentItems.filter(i => i.id !== deletedId);
+            if (currentItems.length !== beforeLen) {
+              callback([...currentItems]);
+            }
+          }
         })
         .subscribe();
 
