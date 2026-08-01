@@ -528,72 +528,58 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
-      {/* Minimal & Classy Welcome Splash Screen Overlay */}
+      {/* Modern App-Style Welcome Card Overlay */}
       {showSplash && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 bg-slate-950 text-slate-100 animate-fade-in overflow-hidden">
-          {/* Subtle Ambient Radial Lighting */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl overflow-hidden animate-scale-in">
+            {/* Vibrant Top Gradient Line */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />
 
-          {/* Top Status Header */}
-          <div className="relative z-10 flex items-center justify-between w-full max-w-lg mx-auto">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/90">Digital Menu</span>
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-bold text-slate-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Table #{getTableDisplayNumber()}</span>
-            </div>
-          </div>
-
-          {/* Center Brand Identity */}
-          <div className="relative z-10 max-w-sm w-full mx-auto text-center space-y-6 my-auto">
-            {/* Clean Minimalist Logo Frame */}
-            <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-slate-900 border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden">
+            {/* Restaurant Logo / Avatar */}
+            <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 p-1 mx-auto shadow-md overflow-hidden flex items-center justify-center mb-4 mt-2">
               {settings?.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover rounded-full" />
+                <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover rounded-xl" />
               ) : (
-                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-emerald-400">
-                  <Utensils className="w-8 h-8 stroke-[1.5]" />
+                <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-800 rounded-xl flex items-center justify-center text-white">
+                  <Utensils className="w-9 h-9" />
                 </div>
               )}
             </div>
 
-            {/* Restaurant Name & Tagline */}
-            <div className="space-y-2">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
-                {settings?.name || 'Gourmet Dining'}
-              </h1>
-              {settings?.address && (
-                <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto leading-relaxed line-clamp-2">
-                  {settings.address}
-                </p>
-              )}
+            {/* Restaurant Name */}
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight font-sans">
+              {settings?.name || 'Gourmet Restaurant'}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed line-clamp-2">
+              {settings?.address || 'Fresh gourmet dishes crafted & served hot to your table.'}
+            </p>
+
+            {/* Table Badge */}
+            <div className="mt-4 mb-5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 text-xs font-black">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Seated at Table #{getTableDisplayNumber()}</span>
             </div>
 
-            {/* Subtle Divider */}
-            <div className="w-12 h-px bg-slate-800 mx-auto" />
-
-            {/* Classy Welcome Note */}
-            <p className="text-xs text-slate-300 font-medium leading-relaxed max-w-xs mx-auto">
-              Welcome. Explore our freshly prepared menu and place your order directly from your table.
+            {/* Warm Greeting Message */}
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed mb-6 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+              Welcome! We are excited to serve you. Browse our digital menu and place your order directly from your phone.
             </p>
-          </div>
 
-          {/* Bottom Action CTA & Progress Bar */}
-          <div className="relative z-10 max-w-sm w-full mx-auto space-y-4 text-center pb-2">
-            {/* Thin Minimal Progress Bar */}
-            <div className="w-full bg-slate-900 rounded-full h-1 overflow-hidden">
+            {/* Animated Progress Line */}
+            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1 overflow-hidden mb-4">
               <div 
-                className="bg-emerald-500 h-full transition-all duration-100 ease-out"
+                className="bg-emerald-600 dark:bg-emerald-500 h-full transition-all duration-100 ease-out"
                 style={{ width: `${splashProgress}%` }}
               />
             </div>
 
-            {/* Elegant Minimalist Button */}
+            {/* Primary Action Button */}
             <button
               onClick={handleDismissSplash}
-              className="w-full py-3.5 px-6 rounded-xl bg-slate-100 hover:bg-white text-slate-950 font-bold text-xs uppercase tracking-widest transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 px-5 rounded-2xl shadow-lg shadow-emerald-600/25 active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>View Menu</span>
-              <ArrowRight className="w-4 h-4 text-slate-900" />
+              <span>Browse Menu</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
