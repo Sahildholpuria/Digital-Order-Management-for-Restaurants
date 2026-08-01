@@ -888,13 +888,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                     const discMax = maxPrice * (1 - (item.discountPercentage || 0) / 100);
                                     if (minPrice === maxPrice) {
                                       return (
-                                        <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                        <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
                                           {settings?.currency || '₹'}{discMin.toFixed(0)}
                                         </span>
                                       );
                                     }
                                     return (
-                                      <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                      <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
                                         {settings?.currency || '₹'}{discMin.toFixed(0)} - {settings?.currency || '₹'}{discMax.toFixed(0)}
                                       </span>
                                     );
@@ -902,7 +902,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                 }
                                 return (
                                   <>
-                                    <span className="text-xs sm:text-sm font-black text-slate-850 dark:text-slate-100">
+                                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
                                       {settings?.currency || '₹'}{discountedPrice.toFixed(0)}
                                     </span>
                                     {item.discountPercentage > 0 && (
@@ -915,15 +915,52 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                               })()}
                             </div>
 
-                            <div className="flex items-center gap-2 text-[8px] font-bold text-slate-450 uppercase tracking-wider">
-                              <span>{item.preparationTime} min</span>
-                              {item.spicyLevel > 0 && (
-                                <span className="flex items-center text-orange-550 dark:text-orange-400 font-extrabold gap-0.5">
-                                  <Flame className="w-2.5 h-2.5 fill-current" />
-                                  <span>{item.spicyLevel === 3 ? 'HOT' : item.spicyLevel === 2 ? 'MED' : 'MILD'}</span>
-                                </span>
-                              )}
-                            </div>
+                            {/* Direct Touch-Optimized + ADD / Quantity Stepper */}
+                            {(() => {
+                              const existingInCart = cart.find(c => c.itemId === item.id);
+                              const qty = existingInCart ? existingInCart.quantity : 0;
+                              if (qty === 0) {
+                                return (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenItem(item);
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black px-3 py-1.5 rounded-xl shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <span>+ ADD</span>
+                                  </button>
+                                );
+                              }
+                              return (
+                                <div 
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center bg-emerald-600 text-white rounded-xl shadow-md shadow-emerald-600/20 px-2 py-1 gap-2 border border-emerald-500/30"
+                                >
+                                  <button
+                                    onClick={() => {
+                                      if (qty <= 1) {
+                                        removeFromCart(item.id);
+                                      } else {
+                                        updateCartQuantity(item.id, qty - 1);
+                                      }
+                                    }}
+                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-emerald-700 rounded-md transition-colors cursor-pointer"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="text-xs font-black min-w-3 text-center">{qty}</span>
+                                  <button
+                                    onClick={() => {
+                                      updateCartQuantity(item.id, qty + 1);
+                                    }}
+                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-emerald-700 rounded-md transition-colors cursor-pointer"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -969,17 +1006,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-4 inset-x-4 z-40 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/20 dark:border-slate-800 text-white p-3.5 pl-4 pr-3 shadow-2xl max-w-md mx-auto rounded-3xl animate-slide-up hover:-translate-y-0.5 transition-all duration-300 md:hidden">
+        <div className="fixed bottom-4 inset-x-4 z-40 bg-emerald-800/95 dark:bg-emerald-950/95 backdrop-blur-xl border border-emerald-500/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-emerald-900/30 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative bg-brand-500/20 p-3 rounded-2xl text-amber-300 border border-brand-500/30">
-                <ShoppingBag className="w-5 h-5 animate-pulse-slow" />
-                <span className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-brand-500 to-indigo-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-white/20">
+              <div className="relative bg-white/20 p-2.5 rounded-2xl text-white border border-white/30">
+                <ShoppingBag className="w-5 h-5 animate-pulse" />
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-slate-900 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-white">
                   {totalItemsCount}
                 </span>
               </div>
               <div>
-                <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Total Basket</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-200">Total Basket</p>
                 <p className="text-base font-black tracking-tight text-white">
                   {settings?.currency || '₹'}{getCartGrandTotal().toFixed(0)}
                 </p>
@@ -988,10 +1025,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             
             <button
               onClick={() => setIsCartOpen(true)}
-              className="bg-gradient-to-r from-brand-500 via-indigo-600 to-purple-600 hover:shadow-brand-500/30 text-white font-extrabold px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-105 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg cursor-pointer"
+              className="bg-white hover:bg-emerald-50 text-emerald-900 font-black px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg cursor-pointer"
             >
               <span>Review Cart</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-emerald-700" />
             </button>
           </div>
         </div>
