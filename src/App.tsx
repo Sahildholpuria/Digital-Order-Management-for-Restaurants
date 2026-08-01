@@ -280,9 +280,9 @@ export const App: React.FC = () => {
         <div className="relative">
           <button 
             onClick={() => navigateTo('/')}
-            className="absolute top-4 left-4 bg-slate-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-700 z-50 transition-colors shadow-lg"
+            className="absolute top-5 left-6 bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-2xl text-xs font-black hover:bg-emerald-600 hover:border-emerald-500 z-50 transition-all shadow-xl cursor-pointer flex items-center gap-1.5"
           >
-            &larr; Exit KDS
+            <span>&larr; Exit KDS</span>
           </button>
           <Suspense fallback={<LazyLoader />}>
             <KitchenDisplay />
