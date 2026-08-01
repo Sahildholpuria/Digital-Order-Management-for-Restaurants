@@ -200,7 +200,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2">
                   <div 
-                    className="bg-gradient-to-r from-brand-500 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm shadow-brand-500/25" 
+                    className="bg-brand-500 dark:bg-brand-400 h-2 rounded-full transition-all duration-500 shadow-sm shadow-brand-500/25" 
                     style={{ width: `${(tables.filter(t => t.status === 'occupied').length / Math.max(1, tables.length)) * 100}%` }}
                   />
                 </div>

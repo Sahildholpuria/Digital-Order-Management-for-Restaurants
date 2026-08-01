@@ -700,7 +700,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       )}
       <main className="max-w-md md:max-w-5xl mx-auto px-4 mt-6">
         {/* Eye-catching Hero Welcome Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 text-white p-6 shadow-xl shadow-brand-500/15 mb-6 group transition-all duration-500 hover:shadow-brand-500/25">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-600 via-slate-900 to-black text-white p-6 shadow-xl shadow-brand-500/15 mb-6 group transition-all duration-500 hover:shadow-brand-500/25">
           <div className="absolute -top-12 -right-12 w-44 h-44 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-purple-500/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
           
@@ -775,7 +775,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   onClick={() => setSelectedCategory('all')}
                   className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
-                      ? 'bg-gradient-to-r from-brand-600 to-indigo-600 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
+                      ? 'bg-brand-600 dark:bg-brand-500 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
                       : 'bg-white text-slate-555 border-slate-200/60 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:scale-105'
                   }`}
                 >
@@ -787,7 +787,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                     onClick={() => setSelectedCategory(cat.id)}
                     className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
-                        ? 'bg-gradient-to-r from-brand-600 to-indigo-600 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
+                        ? 'bg-brand-600 dark:bg-brand-500 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
                         : 'bg-white text-slate-555 border-slate-200/60 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:scale-105'
                     }`}
                   >
