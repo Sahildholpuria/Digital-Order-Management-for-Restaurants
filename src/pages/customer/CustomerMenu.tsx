@@ -704,9 +704,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       )}
       <main className="max-w-md md:max-w-5xl mx-auto px-4 mt-6">
         {/* Eye-catching Hero Welcome Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-600 via-slate-900 to-black text-white p-6 shadow-xl shadow-brand-500/15 mb-6 group transition-all duration-500 hover:shadow-brand-500/25">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 text-white p-6 shadow-xl shadow-brand-500/20 mb-6 group transition-all duration-500 hover:shadow-brand-500/30">
           <div className="absolute -top-12 -right-12 w-44 h-44 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-purple-500/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-emerald-400/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
           
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

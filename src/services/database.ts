@@ -68,7 +68,7 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
   };
 
   if (model.themeColor !== undefined || model.websiteUrl !== undefined || model.enableWaiterCall !== undefined || model.enableBillPrinting !== undefined) {
-    const color = model.themeColor || '#6366F1';
+    const color = model.themeColor || '#10B981';
     const waiter = model.enableWaiterCall ?? true;
     const bill = model.enableBillRequest ?? true;
     const sound = model.enableSoundNotification ?? true;
@@ -260,7 +260,7 @@ const DEFAULT_SETTINGS = {
   currency: '₹',
   openingHours: '09:00',
   closingHours: '23:00',
-  themeColor: '#6366F1',
+  themeColor: '#10B981',
   createdAt: new Date().toISOString(),
 };
 
