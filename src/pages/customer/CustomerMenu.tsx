@@ -321,7 +321,13 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   // Show loading state while the initial context or settings list hasn't arrived yet.
   if (loading || !tablesLoaded || !settings) {
-    return <CustomerMenuLoader restaurantName={settings?.name} />;
+    return (
+      <PageLoader
+        message="LOADING GOURMET MENU..."
+        subtext="Syncing live restaurant items & kitchen status"
+        fullScreen={true}
+      />
+    );
   }
 
   if (isPlacingOrder) {
