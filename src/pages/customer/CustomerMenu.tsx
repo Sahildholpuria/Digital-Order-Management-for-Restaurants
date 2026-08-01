@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
 import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
@@ -524,19 +524,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
           {/* Quick Staff Interactions */}
           <div className="flex gap-1.5 sm:gap-2 items-center">
-            {/* Language Switcher */}
-            <button
-              onClick={() => {
-                const nextLang = lang === 'en' ? 'hi' : 'en';
-                setLang(nextLang);
-                localStorage.setItem('customer_lang', nextLang);
-              }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border bg-slate-100 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer active:scale-95 shadow-sm"
-              title="Change Language"
-            >
-              <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>{lang === 'en' ? 'हिन्दी' : 'EN'}</span>
-            </button>
 
             {(settings?.enableWaiterCall ?? true) && (
               <button
