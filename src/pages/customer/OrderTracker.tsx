@@ -177,7 +177,15 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl text-right">
                   <p className="text-[10px] text-slate-455 font-bold uppercase">Table</p>
                   <p className="text-base font-extrabold text-slate-800 dark:text-slate-100">
-                    {currentTable?.number || tableId.replace('table-', '')}
+                    {(() => {
+                      if (currentTable?.number) {
+                        const clean = currentTable.number.replace(/^table[\s\-_]*/i, '').trim();
+                        if (clean && !/^\d{7,}$/.test(clean)) return clean;
+                      }
+                      const cleanId = tableId ? tableId.replace(/^table[\s\-_]*/i, '').trim() : '';
+                      if (cleanId && !/^\d{7,}$/.test(cleanId)) return cleanId;
+                      return '1';
+                    })()}
                   </p>
                 </div>
               </div>
