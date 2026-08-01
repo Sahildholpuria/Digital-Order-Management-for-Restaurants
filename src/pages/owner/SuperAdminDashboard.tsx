@@ -725,25 +725,6 @@ export const SuperAdminDashboard: React.FC = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => handleAccessPortal(r.id)}
-                              className="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-800 dark:bg-emerald-950/40 dark:hover:bg-emerald-500 dark:hover:text-white dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                              title="Switch to this Restaurant's POS Dashboard"
-                            >
-                              <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                              <span>POS Portal</span>
-                            </button>
-                            <a
-                              href={`/menu/${r.id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                              title="Preview Live Customer QR Menu"
-                            >
-                              <ExternalLink className="w-3 h-3 text-slate-500" />
-                              <span>QR Menu</span>
-                            </a>
-                            <button
-                              type="button"
                               onClick={() => handleOpenSubModal(r)}
                               className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
                               title="Manage Subscription"
