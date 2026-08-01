@@ -21,7 +21,7 @@ import {
 import { printKOTReceipt } from '../../utils/printUtils';
 
 export const OrdersManager: React.FC = () => {
-  const { orders, settings, updateOrderStatus, saveOrder, refreshData } = useRestaurant();
+  const { orders, settings, tables, updateOrderStatus, saveOrder, refreshData } = useRestaurant();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -63,8 +63,18 @@ export const OrdersManager: React.FC = () => {
     return Math.floor(diffMs / 60000);
   };
 
-  // Get unique tables in active orders for filter dropdown
-  const activeTables = Array.from(new Set(orders.map(o => o.tableName)));
+  // Build the set of valid table display-names from currently-existing tables only.
+  // orders.tableName is stored as e.g. "Table 1"; RestaurantTable.number is "1".
+  // We cross-reference both so deleted tables no longer pollute the dropdown.
+  const validTableNames: Set<string> = tables.length > 0
+    ? new Set(tables.map(t => `Table ${t.number}`))
+    : new Set(orders.map(o => o.tableName));
+
+  const activeTables = Array.from(validTableNames).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ''), 10);
+    const numB = parseInt(b.replace(/\D/g, ''), 10);
+    return numA - numB;
+  });
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
