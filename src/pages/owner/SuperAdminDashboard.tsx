@@ -707,6 +707,15 @@ export const SuperAdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleAccessPortal(r.id)}
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/20 dark:hover:bg-blue-950/30 dark:text-blue-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                              title="Switch to this Restaurant's POS Dashboard"
+                            >
+                              <Zap className="w-3 h-3 text-blue-500" />
+                              <span>POS Portal</span>
+                            </button>
                             <a
                               href={`/menu/${r.id}`}
                               target="_blank"
