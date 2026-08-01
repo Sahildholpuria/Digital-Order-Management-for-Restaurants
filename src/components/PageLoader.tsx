@@ -18,8 +18,8 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
 }) => {
   const iconSizes = {
     sm: 'w-5 h-5',
-    md: 'w-8 h-8',
-    lg: 'w-10 h-10'
+    md: 'w-7 h-7',
+    lg: 'w-9 h-9'
   };
 
   const containerSizes = {
@@ -30,38 +30,38 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
 
   return (
     <div className={`flex flex-col items-center justify-center text-center animate-fade-in transition-all ${
-      fullScreen ? 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md text-white p-8' : 
-      compact ? 'py-12 px-4 w-full' : 'min-h-[45vh] w-full p-8'
+      fullScreen ? 'fixed inset-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl text-slate-900 dark:text-white p-8' : 
+      compact ? 'py-10 px-4 w-full' : 'min-h-[45vh] w-full p-8'
     }`}>
       {/* Top Animated Progress Bar for fullscreen */}
       {fullScreen && (
-        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 via-amber-400 to-brand-600 animate-loading-bar z-50"></div>
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-600 via-slate-900 to-black dark:from-brand-400 dark:via-white dark:to-slate-200 animate-loading-bar z-50"></div>
       )}
 
-      <div className="relative mb-4">
-        {/* Outer Pulsing Glow */}
-        <div className="absolute -inset-3 rounded-full bg-brand-500/20 dark:bg-brand-500/30 blur-xl animate-pulse"></div>
+      <div className="relative mb-5">
+        {/* Outer Pulsing Ambient Glow */}
+        <div className="absolute -inset-4 rounded-full bg-brand-500/20 dark:bg-white/10 blur-2xl animate-pulse"></div>
 
         {/* Dual Ring Spinning Loader */}
         <div className={`relative ${containerSizes[size]} flex items-center justify-center`}>
-          <div className="absolute inset-0 border-4 border-brand-500/20 dark:border-brand-500/10 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-brand-500 border-t-transparent border-r-transparent rounded-full animate-spin"></div>
-          <div className="absolute inset-1.5 border-2 border-amber-400/80 border-b-transparent border-l-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.75s' }}></div>
+          <div className="absolute inset-0 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute inset-2 border-2 border-brand-500 border-b-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
 
-          <div className="p-2.5 bg-white dark:bg-slate-900 rounded-full shadow-lg border border-slate-100 dark:border-slate-800 text-brand-600 dark:text-brand-400">
+          <div className="p-3 bg-white dark:bg-slate-900 rounded-full shadow-xl border border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-white">
             <ChefHat className={`${iconSizes[size]} animate-bounce`} />
           </div>
         </div>
       </div>
 
       {message && (
-        <div className="space-y-1 max-w-sm">
-          <h3 className="text-xs font-black tracking-widest text-slate-700 dark:text-slate-200 uppercase flex items-center justify-center gap-1.5">
+        <div className="space-y-1.5 max-w-sm">
+          <h3 className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-100 uppercase flex items-center justify-center gap-1.5">
             <span>{message}</span>
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-pulse" />
           </h3>
           {subtext && (
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 leading-relaxed">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
               {subtext}
             </p>
           )}
