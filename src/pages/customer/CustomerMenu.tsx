@@ -168,38 +168,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [billRequested, setBillRequested] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // Splash Screen state for QR scan greeting
-  const [showSplash, setShowSplash] = useState(() => {
-    const key = `splash_seen_${tableId}`;
-    return !sessionStorage.getItem(key);
-  });
-  const [splashProgress, setSplashProgress] = useState(0);
-
-  useEffect(() => {
-    if (!showSplash) return;
-
-    const interval = setInterval(() => {
-      setSplashProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setShowSplash(false);
-            sessionStorage.setItem(`splash_seen_${tableId}`, 'true');
-          }, 250);
-          return 100;
-        }
-        return prev + 4;
-      });
-    }, 90);
-
-    return () => clearInterval(interval);
-  }, [showSplash, tableId]);
-
-  const handleDismissSplash = () => {
-    setShowSplash(false);
-    sessionStorage.setItem(`splash_seen_${tableId}`, 'true');
-  };
-
   // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
   const tableOrders = useMemo(() => {
     return orders
@@ -528,63 +496,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
-      {/* Modern App-Style Welcome Card Overlay */}
-      {showSplash && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl overflow-hidden animate-scale-in">
-            {/* Vibrant Top Gradient Line */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />
-
-            {/* Restaurant Logo / Avatar */}
-            <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 p-1 mx-auto shadow-md overflow-hidden flex items-center justify-center mb-4 mt-2">
-              {settings?.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-cover rounded-xl" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-800 rounded-xl flex items-center justify-center text-white">
-                  <Utensils className="w-9 h-9" />
-                </div>
-              )}
-            </div>
-
-            {/* Restaurant Name */}
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight font-sans">
-              {settings?.name || 'Gourmet Restaurant'}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed line-clamp-2">
-              {settings?.address || 'Fresh gourmet dishes crafted & served hot to your table.'}
-            </p>
-
-            {/* Table Badge */}
-            <div className="mt-4 mb-5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 text-xs font-black">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Seated at Table #{getTableDisplayNumber()}</span>
-            </div>
-
-            {/* Warm Greeting Message */}
-            <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed mb-6 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
-              Welcome! We are excited to serve you. Browse our digital menu and place your order directly from your phone.
-            </p>
-
-            {/* Animated Progress Line */}
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1 overflow-hidden mb-4">
-              <div 
-                className="bg-emerald-600 dark:bg-emerald-500 h-full transition-all duration-100 ease-out"
-                style={{ width: `${splashProgress}%` }}
-              />
-            </div>
-
-            {/* Primary Action Button */}
-            <button
-              onClick={handleDismissSplash}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 px-5 rounded-2xl shadow-lg shadow-emerald-600/25 active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Browse Menu</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Sticky Top Header */}
       <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-3 sm:px-4 py-2.5 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
@@ -785,29 +696,45 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       )}
       <main className="max-w-md md:max-w-5xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
-        {/* Eye-catching Hero Welcome Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 text-white p-5 sm:p-6 shadow-xl shadow-emerald-900/10 mb-6 group transition-all duration-500">
+        {/* Stunning Non-Blocking Animated Hero Welcome Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 text-white p-5 sm:p-6 shadow-xl shadow-emerald-900/15 mb-6 group transition-all duration-500 hover:shadow-emerald-900/25 border border-emerald-500/20">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-400/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
           
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="inline-block bg-white/20 backdrop-blur-md text-emerald-100 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-2 border border-white/20">
-                Digital Order & Dining
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                {settings?.name || 'Gourmet Restaurant'}
-              </h2>
-              <p className="text-xs text-white/80 font-medium mt-1">
-                {settings?.address || 'Fresh gourmet dishes crafted & served hot to your table.'}
-              </p>
+            <div className="flex items-center gap-4">
+              {/* Restaurant Logo Avatar */}
+              {settings?.logoUrl ? (
+                <img 
+                  src={settings.logoUrl} 
+                  alt={settings.name} 
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-white/30 shadow-lg flex-shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/15 backdrop-blur-md border-2 border-white/25 flex items-center justify-center text-white flex-shrink-0 shadow-lg">
+                  <Utensils className="w-7 h-7" />
+                </div>
+              )}
+
+              <div>
+                <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-emerald-100 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-1.5 border border-white/20 shadow-sm">
+                  <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                  <span>Digital Order & Dining</span>
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-white">
+                  Welcome to {settings?.name || 'Gourmet Restaurant'}!
+                </h2>
+                <p className="text-xs text-white/85 font-medium mt-0.5 line-clamp-2 max-w-lg">
+                  {settings?.address || 'Fresh gourmet dishes crafted with passion & served hot to your table.'}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-              <div className="bg-white/15 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/25 text-center shadow-lg">
-                <span className="text-[9px] uppercase tracking-widest text-white/80 block font-black">Your Table</span>
-                <span className="text-lg font-black tracking-wider text-amber-300">
-                  #{getTableDisplayNumber()}
+              <div className="bg-white/15 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/25 text-center shadow-lg whitespace-nowrap">
+                <span className="text-[9px] uppercase tracking-widest text-white/80 block font-black">Seated At</span>
+                <span className="text-lg font-black tracking-wider text-amber-300 font-mono">
+                  Table #{getTableDisplayNumber()}
                 </span>
               </div>
             </div>
