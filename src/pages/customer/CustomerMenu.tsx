@@ -696,39 +696,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       )}
       <main className="max-w-md md:max-w-5xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
-        {/* Clean, Modern Restaurant Header Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm mb-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              {settings?.logoUrl ? (
-                <img 
-                  src={settings.logoUrl} 
-                  alt={settings.name} 
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0"
-                />
-              ) : (
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 flex-shrink-0 shadow-sm">
-                  <Utensils className="w-6 h-6" />
-                </div>
-              )}
-              <div className="min-w-0">
-                <h1 className="text-base sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight truncate">
-                  {settings?.name || 'Gourmet Restaurant'}
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
-                  {settings?.address || 'Fresh gourmet dishes crafted with passion & served hot.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Table Badge Pill */}
-            <div className="px-3.5 py-2 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 flex-shrink-0 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-black tracking-wider uppercase">Table #{getTableDisplayNumber()}</span>
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-start">
           {/* Left Column: Menu catalogue */}
           <div className="md:col-span-8 space-y-6">
