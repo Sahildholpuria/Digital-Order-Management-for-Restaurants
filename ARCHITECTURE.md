@@ -1,97 +1,66 @@
 # 🏗️ RestaurantsOS Architecture & Developer Guide
 
-This document provides a comprehensive technical overview of the **RestaurantsOS** application codebase, state management flow, database design, and core feature implementations for developers and maintainers.
+This document provides a technical overview of the **RestaurantsOS** application architecture, state management flow, database design, caching strategy, and security model.
 
 ---
 
 ## 🗺️ 1. Architecture Overview
-RestaurantsOS is built as a highly responsive Single Page Application (SPA) that supports two operational models:
-1. **Cloud Sync Mode (Supabase)**: Real-time, multi-device sync utilizing PostgreSQL databases, Row Level Security (RLS) policies, and WebSockets (Supabase Realtime).
-2. **Local Demo Mode (LocalStorage Fallback)**: A zero-config fallback that synchronizes multiple browser tabs in real time on the same device using standard HTML5 LocalStorage and custom event notifications.
+RestaurantsOS is built as a highly responsive Single Page Application (SPA) supporting real-time cloud data synchronization and low-latency client rendering.
 
 ```mermaid
 graph TD
-  A[Customer Mobile Device] -->|Scans QR / Views Menu| B(Vite React Frontend SPA)
-  C[Kitchen Display Screen] -->|Checks Plating Status| B
-  D[Staff POS Billing Panel] -->|Settle Bills / Admin| B
+  A[Customer QR Code Menu] -->|Scans Table QR / Instant Live Sync| B(Vite React Frontend SPA)
+  C[Kitchen Display KDS] -->|Chef Plating & Timers| B
+  D[Staff POS Console] -->|Billing & Order Management| B
+  E[Super Admin Panel] -->|SaaS Tenant & Billing Control| B
   
-  B -->|Supabase Client JS| E{Supabase Cloud Backend}
-  B -.->|LocalStorage Fallback| F[Local Browser Sandbox]
+  B -->|Supabase Client JS / WebSockets| F{Supabase Cloud Backend}
+  B -.->|LocalStorage Offline Fallback| G[Local Storage Sandbox]
   
-  E -->|Auth| G[Supabase Auth / Session]
-  E -->|PostgreSQL DB| H[DB Tables & Indexes]
-  E -->|WebSocket Channels| I[Real-time Subscriptions]
+  F -->|Auth & Profile Claims| H[Supabase Auth]
+  F -->|PostgreSQL DB| I[PostgreSQL Tables & Indices]
+  F -->|Realtime Channels| J[WebSocket Live Subscriptions]
 ```
 
 ---
 
-## 🗄️ 2. Database Schema & Data Models
-All database models are located under `src/types/index.ts` and initialized via `schema.sql`.
+## 🗄️ 2. Database Schema & Multi-Tenancy
 
-### Core Tables
-1. **`restaurants`**: Central tenant configuration table for SaaS restaurants.
-   - Holds company meta (name, address, logo, currency, GST parameters) and subscription metadata (plan types: `starter`, `pro_6m`, `pro_1y`, and `plan_expiry_date`).
-2. **`users`**: Extended profile schema for restaurant employees linked directly to Supabase Auth (`auth.users.id`).
-   - Stores account credentials and role levels (`admin`, `manager`, `cashier`, `kitchen`, `waiter`).
-3. **`tables`**: Physical restaurant dining tables.
-   - Fields: `id`, `number` (identifier), `capacity`, `status` (`available`, `occupied`, `reserved`), and `qr_code_url`.
-4. **`categories`**: Menu groups (e.g. *Beverages, Appetizers, Desserts*).
-   - Fields: `id`, `name`, `order` (for user-controlled sorting layout).
-5. **`food_items`**: Dish configurations.
-   - Fields: `id`, `name`, `price`, `description` (with variant overrides), `image`, `is_available`, `spicy_level`, and `discount_percentage`.
-6. **`orders`**: Customer checkout receipts.
-   - Fields: `id`, `order_number`, `table_name`, `items` (JSON payload of ordered food), `status` (`pending`, `accepted`, `preparing`, `ready`, `served`, `completed`), and price calculations (`subtotal`, `tax`, `grand_total`).
-7. **`payments`**: Final invoices and tax reports.
-   - Tracks cashouts, totals, discounts, and payment methods (`cash`, `card`, `upi`, `wallet`).
-8. **`notifications`**: Real-time staff notifications for waiter calls and bill requests.
-
-### Performance Indexes
-For massive enterprise scaling, the database uses 13 custom indices on foreign keys and compound querying fields:
-* `idx_users_restaurant_id` / `idx_tables_restaurant_id` / `idx_orders_restaurant_id` (enforces instant multi-tenant separation).
-* `idx_orders_status` (speeds up active kitchen/waiter Kanban dashboards).
-* `idx_orders_created_at` (orders historical reports query index).
+### Core Tables (`schema.sql`)
+1. **`restaurants`**: Central tenant configuration table (Name, Address, Logo, Currency, GST parameters, Subscription Plan: `starter`, `pro_6m`, `pro_1y`, Status: `trial`, `active`, `expired`, `suspended`).
+2. **`users`**: Extended profile schema linked to `auth.users.id`. Roles: `admin`, `manager`, `cashier`, `kitchen`, `waiter`, plus `is_super_admin` flag.
+3. **`tables`**: Physical dining tables (`id`, `number`, `capacity`, `status`, `qr_code_url`).
+4. **`categories`**: Menu categories (`id`, `name`, `order`).
+5. **`food_items`**: Dish configurations (`id`, `name`, `price`, `description`, `image`, `is_available`, `spicy_level`, `discount_percentage`).
+6. **`orders`**: Customer checkout receipts (`id`, `order_number`, `table_name`, `items` JSON, `status`).
+7. **`payments`**: Final invoices and tax transaction logs.
+8. **`notifications`**: Real-time staff alerts.
 
 ---
 
-## 🔄 3. State Management & Real-time Flow
-State management is centralized inside [RestaurantContext.tsx](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/src/context/RestaurantContext.tsx).
+## 🔄 3. State Management & Real-time Synchronization
 
-### Data Subscription Strategy (Free-Plan Friendly)
-To prevent rate-limiting or exceeding active connection thresholds on Supabase's Free Tier, RestaurantsOS runs a **dynamic client subscription router**:
-* **Guest Customers**: Only subscribe to a single row-specific stream to track their specific order status changes. They do not subscribe to KDS updates, notifications, or store revenue.
-* **Kitchen / Waiters**: Only subscribe to active `orders` and `notifications` logs.
-* **Administrators / Cashiers**: Open channels to `orders`, `notifications`, and `payments` tables.
-* **Static Assets**: Tables like `food_items` and `categories` are fetched as a single REST request on page load and cached locally instead of maintaining persistent WebSocket connections.
+### ⚡ Instant Menu Real-Time Sync
+- **Subscriptions for All Sessions**: Both POS staff and customer QR menu sessions subscribe to `subscribeFoodItems` and `subscribeCategories` WebSocket channels.
+- **0-Second Propagation**: Any dish addition, price edit, stock availability toggle, or deletion performed in `MenuManager.tsx` propagates **instantly in 0 seconds** to all connected customer screens without requiring a page refresh.
+- **DELETE Event Optimization**: Supabase Realtime channel for `food_items` and `categories` listens to `DELETE` events without table filter restrictions, guaranteeing instant deletion handling even when default PK replica identity is used.
 
-### Audio alerts & Voice Announcements
-When a new order or waiter request is broadcasted, the staff dashboard handles notification audio:
-1. **Web Audio API Sequence**: Synthesizes a high-fidelity 4-note bell chime directly on the browser tab (using custom AudioNode sine oscillators) to avoid downloading heavy audio media assets.
-2. **Text-to-Speech API**: Calls the browser's native SpeechSynthesis window to verbally call out the ticket: *"New order for Table 4 received."*
+### 🔔 Sound & Voice Notification Guard
+- **Strict Trigger Guard**: Notification bell chimes (synthesized on-device via Web Audio API) and text-to-speech announcements run **exclusively when a customer places a new order** during an active session. Speech/sound alerts do NOT trigger when a restaurant owner or staff member logs into the application.
 
 ---
 
-## 🛠️ 4. Key Feature Walkthroughs
+## 🛡️ 4. Security & Access Control
 
-### portion Pricing (Half/Full)
-Dish variants are encoded directly inside the food item's `description` field using a structural suffix parser:
-```
-Description text ||variants:Half=150;Full=280
-```
-* **How it works**: The parser splits the string on the double-pipe (`||variants:`). It generates selectable buttons in the UI for the customer, recalculates cart item prices dynamically, and safely saves the custom size and price to the order receipt payload.
-
-### Secure Table Status Transitions
-1. **Order Checkouts**: When a customer orders, the table updates to `occupied`.
-   - *Security note*: Direct public write is disabled. The client triggers the update securely via a custom PostgreSQL RPC function `update_table_status(p_table_id, p_status)` which runs with `security definer` privileges, avoiding direct table edit exposure.
-2. **Bill Settlement**: When a cashier settles a table, the system sets the order to `'completed'`. 
-   - A handler checks if there are any remaining unpaid active orders on the same table. If no other orders are open, it automatically marks the table status back to `available`.
-
-### Expiry Lockout Scrim
-Inside [App.tsx](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/src/App.tsx), a central check verifies `plan_expiry_date` against the current timezone-safe local date on dashboard entry:
-- If expired, it triggers a full-screen glassmorphic lockout overlay, blocking route changes and dashboard access while offering a direct billing logout action.
+### Super Admin Access Guard
+- `<SuperAdminDashboard />` enforces an explicit authorization guard (`if (!currentUser?.isSuperAdmin)`). Unauthorized users are blocked and presented with a security notice.
+- **1-Click Tenant POS Switcher**: Super Admin can switch active tenant context (`setRestaurantId(tenantId)`) to inspect or configure any onboarded restaurant. A banner allows 1-click return to the Super Admin Control Panel.
 
 ---
 
-## 🎨 5. Styling & Visual Polish
-* **Tailwind CSS v4**: Built entirely with customized premium layout tokens. Use variables defined in `tailwind.config.js` or `index.css` for consistent styling.
-* **Glassmorphic Toasts & Modals**: Built custom responsive alerts in place of browser defaults (`alert()`, `confirm()`) for premium UX styling.
-* **Dark Mode**: All screens inherit adaptive tailwind classes (`dark:bg-slate-900`, `dark:text-slate-100`) and automatically respond to client theme settings.
+## 🚀 5. Cache Bypassing & Performance
+
+1. **Edge CDN Headers (`vercel.json`)**: Configured with `Cache-Control: no-cache, no-store, must-revalidate` across application routes.
+2. **HTML Meta Tags (`index.html`)**: Includes `Pragma: no-cache` and `Expires: 0` directives.
+3. **Network-First Service Worker (`public/sw.js`)**: Forces network requests for application code and data (`cache: 'no-store'`), using cache only as an offline fallback.
+4. **Universal Gourmet Cloche Animation (`PageLoader.tsx`)**: Reusable vector SVG animation depicting a gourmet cloche dome lifting with rising steam, standardizing loading UX across initial startup, Suspense fallbacks, and tab transitions.

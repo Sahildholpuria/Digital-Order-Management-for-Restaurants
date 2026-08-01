@@ -2,49 +2,63 @@
 
 A modern, production-ready, and highly aesthetic QR-based self-ordering and POS dashboard system designed for both single-location diners and multi-branch restaurant chains.
 
-Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, and **Supabase** (with an intelligent real-time fallback mock engine).
+Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, **Supabase** (with real-time WebSocket subscriptions & fallback mock engine), and a high-contrast **Monochrome Black & White Design System**.
 
 ---
 
 ## 🌟 Core Features
 
 ### 1. Customer Self-Ordering (QR Flow)
-- **Zero Friction**: Customers scan a table-specific QR Code (e.g. `/menu/table-3`) and browse menus instantly without login.
-- **Dietary & Taste Selectors**: Veg/Non-veg indicators, custom spicy level rankings, and special cooking instruction drawers.
-- **Multi-Language Selector**: High-fidelity translation switcher (English & Hindi) covering the entire customer interface.
-- **Portion Selection (Half/Full)**: Support for custom portion variants (e.g. `Half` or `Full` sizes with independent pricing) encoded directly into dish descriptions (using format: `||variants:Half=150;Full=280`).
-- **Cart Manager**: Slick slide-up mobile cart drawer with real-time tax/discount parameters and quantity controls.
+- **Zero Friction**: Customers scan a table-specific QR Code (e.g. `/menu/table-3`) and browse live menus instantly without login.
+- **Instant Real-time Menu Sync**: Any menu addition, price edit, availability toggle, or item deletion made in POS reflects **instantly in 0 seconds** on customer screens without requiring a page refresh.
+- **Smart Table Display**: Automatically sanitizes raw database timestamps (e.g. `1785560211444`) into clean, human-readable table labels (`1`, `2`, `3`).
+- **Dietary Selectors**: Veg/Non-veg indicators, custom spicy level rankings, and special cooking instruction drawers.
+- **Portion Selection (Half/Full)**: Support for custom portion variants (e.g. `Half` or `Full` sizes with independent pricing) encoded directly into dish descriptions (format: `||variants:Half=150;Full=280`).
+- **Cart Manager**: Mobile cart drawer with real-time tax/discount parameters and quantity controls.
 - **Real-Time Tracker**: Progress timeline tracking preparation states (Pending &rarr; Accepted &rarr; Preparing &rarr; Ready &rarr; Served).
-- **Auto-Removal Timeout**: Settled completed orders are automatically hidden from the active customer view exactly **2 minutes** after payment completion, keeping the screen clean for next guests.
+- **Auto-Removal Timeout**: Settled completed orders automatically clear from active customer view 2 minutes after payment completion.
 
 ### 2. Live Order POS Console
-- **Loud & Smooth Audio Notifications**: High-volume, smooth oscillator 4-note bell chime sequence synthesized on-device (via Web Audio API) paired with browser **Speech Synthesis (Web Speech API)** to speak incoming tickets ("*New order received from Table 4*").
+- **Loud & Smooth Audio Notifications**: High-volume, smooth oscillator 4-note bell chime sequence synthesized on-device (via Web Audio API) paired with browser **Speech Synthesis (Web Speech API)** to speak incoming tickets ("*New order received from Table 4*"). Sound triggers exclusively when customers place new orders.
 - **Kanban Board**: Drag/stage boards separating orders into New Pending, In-Kitchen cooking, and Ready/Serving.
 - **Order Editor**: Modifies quantities, items, and comments on orders before final settlements.
 
-### 3. Smart Tables & QR Flyers
+### 3. Super Admin SaaS Tenant Manager & Security
+- **SaaS Tenant Control**: Manage onboarded restaurants, subscription billing lifecycles (`starter`, `pro_6m`, `pro_1y`), free trial periods, and account statuses (`active`, `trial`, `expired`, `suspended`).
+- **1-Click POS Portal Switcher**: Super Admin can switch into any onboarded restaurant's POS dashboard with 1 click to inspect or assist with menu/table setup.
+- **Strict Access Security**: Strict client-side and server-side authorization guards (`!currentUser.isSuperAdmin`) block unauthorized users from accessing SaaS controls.
+- **Credential Share Modal**: Generates 1-click shareable login credentials for restaurant owners and staff.
+
+### 4. Smart Tables & QR Flyers
 - **Capacity Controls**: Edit seating capacity, table name tags, and occupancy status.
 - **Instant Export**: Generates table standees and download options for high-quality **PNG** and **PDF print-ready flyers** dynamically using `html2canvas-pro` and `jspdf`.
 
-### 4. Menu & Category Organizer
-- **Interactive Sidebar**: Add, delete, and re-order category lists (Shift Up/Down).
+### 5. Menu & Category Organizer
+- **Interactive Sidebar**: Add, edit, delete, and re-order category lists (Shift Up/Down).
 - **Dish Configurator**: Toggle stock availability, duplicate items, set discount percentages, and flag bestseller/recommended dishes.
+- **Instant Real-Time DB Deletion**: Deleted items are removed from Supabase `food_items` database table and pushed to all open customer screens instantly via WebSockets.
 
-### 5. Settlement Terminal (Billing)
+### 6. Settlement Terminal (Billing)
 - **Taxes & Receipts**: Automatically calculates subtotals, custom discounts, and GST.
-- **Thermal Invoice Generator**: Renders beautiful 3-inch POS thermal receipts. Supports printing via browser and downloading as PDF.
+- **Thermal Invoice Generator**: Renders 3-inch POS thermal receipts with browser print and PDF export options.
 - **Settle Methods**: Clear tickets using Cash, Card, UPI, or Mobile Wallets.
 
-### 6. Kitchen Display Screen (KDS)
+### 7. Kitchen Display Screen (KDS)
 - **Chef Board**: High-contrast, large typography panel displaying items grouped by table.
-- **Individual Plating**: Chefs can cross off individual items as they cook before marking the entire ticket ready.
-- **Timer Alerts**: Tickers highlight delayed tables (turning red/flashing if cooking exceeds 15 minutes).
+- **Individual Plating**: Chefs cross off individual items as they cook before marking the entire ticket ready.
+- **Timer Alerts**: Highlights delayed tables if cooking exceeds 15 minutes.
 
-### 7. Staff Roles & Reports
-- **Role Permissions**: Visual controls and interface filtering for Admin, Store Manager, Cashier, Kitchen Staff, and Waiter.
+### 8. Staff Roles & Reports
+- **Role Permissions**: Interface filtering for SaaS Owner, Admin, Store Manager, Cashier, Kitchen Staff, and Waiter.
 - **Analytics Dashboard**: Deep charts displaying peak dining hour heat maps, bestselling item distributions, category revenue shares, and weekly revenue trends.
-- **Historical Reports**: Downloadable list of 30-day order history logs in CSV or PDF formats before auto-deletion scheduler runs.
-- **Data Export**: Exposes transactional reports downloadable as CSV.
+
+---
+
+## 🎨 Design Language & Animations
+
+- **Monochrome Black & White Theme**: Sleek high-contrast black, white, and charcoal theme with native dark and light mode support across all screens.
+- **Gourmet Cloche Loader Animation**: Universal vector SVG animation (`PageLoader.tsx`) depicting a gourmet cloche dome lifting smoothly with rising steam, applied consistently across initial bootstrapping, page routing, and tab transitions.
+- **Bypass Browser Caches**: Edge CDN `Cache-Control: no-cache, no-store, must-revalidate` headers (`vercel.json`), HTML meta tags (`index.html`), and a **Network-First** Service Worker strategy (`public/sw.js`) ensure users always view the latest code and live database state.
 
 ---
 
@@ -53,7 +67,7 @@ Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, a
 - **Analytics & Graphs**: Recharts.
 - **Document Exporter**: jsPDF & html2canvas-pro.
 - **QR Engine**: qrcode.react.
-- **Database / Backend**: Supabase (PostgreSQL, Realtime, Auth).
+- **Database / Backend**: Supabase (PostgreSQL, Realtime WebSockets, Auth).
 
 ---
 
@@ -65,101 +79,22 @@ Clone the project, navigate to the directory, and install dependencies:
 npm install
 ```
 
-### 2. Running Locally (Demo Mode)
+### 2. Running Locally
 Run the development server:
 ```bash
 npm run dev
 ```
 
-> [!TIP]
-> **Intelligent Multi-Tab Sync (No Supabase Required)**
-> By default, if no Supabase environment keys are provided in `.env`, the app launches in **Real-time Mock Mode**. 
-> - Open two browser tabs side-by-side:
->   1. **Tab A (Customer View)**: Go to `http://localhost:5173/menu/table-3` and add items to place an order.
->   2. **Tab B (POS Console)**: Go to `http://localhost:5173/` and click **Staff Dashboard**. Login as any role.
-> - When you place an order in Tab A, Tab B will instantly play a notification chime, speak the warning message, and add the order to the Kanban board using HTML5 local storage synchronization!
+### 3. Production Build
+Verify compilation and create the production bundle:
+```bash
+npm run build
+```
 
 ---
 
 ## ☁️ Supabase Backend Setup Guide
 
-To connect the application to a live database for restaurant operations:
-
-### Step 1: Create a Supabase Project
-1. Log in to the [Supabase Dashboard](https://supabase.com/).
-2. Click **New Project**, choose a name, set a database password, select your region, and click **Create**.
-
-### Step 2: Initialize the Database Schema
-1. In your Supabase dashboard sidebar, navigate to the **SQL Editor**.
-2. Click **New Query** to create a blank editor.
-3. Open the file [schema.sql](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%2520Restaurants/schema.sql) in this repository, copy the entire SQL script, and paste it into the editor.
-4. Click **Run** to execute the script. This creates all tables: `tables`, `categories`, `food_items`, `orders`, `payments`, and `notifications`.
-
-### Step 3: Run Database Rule Modifiers
-Run the following commands in the SQL Editor to ensure customer menus can place orders without strict foreign key blocking:
-```sql
-alter table public.orders drop constraint if exists orders_table_id_fkey;
-alter table public.notifications drop constraint if exists notifications_table_id_fkey;
-```
-
-### Step 4: Add Environment Variables
-1. Go to your Supabase project dashboard and click **Project Settings** (gear icon) -> **API**.
-2. Copy the **Project URL** and the **anon (public) API key**.
-3. Create a `.env` file in the root of your local project workspace:
-```env
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-public-api-key
-```
-4. Restart your dev server (`npm run dev`) to enable the database integration.
-
-
----
-
-## 📦 Vercel Deployment Guide
-
-Deploy the React SPA to Vercel in 3 simple steps:
-
-### Step 1: Import Project to Vercel
-1. Push your code repository to GitHub, GitLab, or Bitbucket.
-2. Log in to the [Vercel Dashboard](https://vercel.com/) and click **Add New** -> **Project**.
-3. Import your code repository.
-
-### Step 2: Configure Environment Keys
-Under the **Environment Variables** accordion section of the setup dashboard, add the two keys:
-- `VITE_SUPABASE_URL` = `https://your-project-id.supabase.co`
-- `VITE_SUPABASE_ANON_KEY` = `your-anon-public-api-key`
-
-### Step 3: Deploy & Route Check
-1. Click **Deploy**. Vercel will build the Vite assets automatically.
-2. The included `vercel.json` file is pre-configured with a rewrite rule to redirect all routes to `index.html` for single-page routing (SPA):
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
-*This ensures pathnames like `/menu/table-3` resolve correctly when scanned by customer phones.*
-
-## 📖 Interactive Demo & Journey Guide
-* **User Journeys Guide**: A step-by-step walkthrough covering both **The Customer self-ordering journey** and **The Restaurant Owner dashboard/KDS/POS operations** has been created as a dedicated guide. See [DEMO_GUIDE.md](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/DEMO_GUIDE.md) for full details.
-* **Technical Developer Reference**: A detailed architectural reference covering data models, performance indexes, state subscriptions, portion pricing mechanisms, and secure transitions is located in [ARCHITECTURE.md](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%20Restaurants/ARCHITECTURE.md).
-
----
-
-## 📂 Project Structure
-```
-/src
-  /assets        - Images, audio alerts
-  /components    - Generic layouts
-  /context       - State Providers (Theme, Restaurant context)
-  /pages
-    /customer    - Menu, Cart, Order Tracker
-    /owner       - POS Dashboard, Tables, Menu, Settlements, Reports, Settings
-    /kitchen     - KDS Displays
-    /waiter      - Service Requests
-    /auth        - Login portal
-  /services      - Supabase service, Mock service (fallback)
-  /types         - TS type definitions
-  /utils         - PDF exports, formatting helpers
-```
+1. Log in to your [Supabase Dashboard](https://supabase.com/).
+2. Run the SQL schema from [schema.sql](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%2520Restaurants/schema.sql) in the Supabase SQL Editor.
+3. Configure `.env` with your `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
