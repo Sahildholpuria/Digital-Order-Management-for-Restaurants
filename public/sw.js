@@ -1,30 +1,18 @@
-const CACHE_NAME = 'restaurants-os-v4';
+const CACHE_NAME = 'restaurants-os-v5';
 const IMAGE_CACHE_NAME = 'restaurants-os-images-v1';
-
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/favicon.svg',
-  '/manifest.json'
-];
 
 // Install Event
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate Event
+// Activate Event: Clear all legacy caches automatically to force latest deployment & fresh data
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME && cache !== IMAGE_CACHE_NAME) {
+          if (cache !== IMAGE_CACHE_NAME) {
             return caches.delete(cache);
           }
         })
@@ -34,7 +22,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event (High-Performance Caching & Low Internet Resilience)
+// Fetch Event (Network-First Strategy: Always fetch latest live data from server)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
@@ -48,8 +36,6 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       caches.open(IMAGE_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(event.request);
-        if (cachedResponse) return cachedResponse;
         try {
           const networkResponse = await fetch(event.request);
           if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
@@ -57,33 +43,28 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         } catch (e) {
-          return new Response('', { status: 408, statusText: 'Image Request Failed' });
+          const cachedResponse = await cache.match(event.request);
+          return cachedResponse || new Response('', { status: 408, statusText: 'Image Request Failed' });
         }
       })
     );
     return;
   }
 
-  // Handle Local Application Assets & Bundles
+  // Handle Local Application Code & Data Requests — Always fetch fresh network response first
   if (url.origin === self.location.origin) {
     event.respondWith(
       (async () => {
-        const isAsset = url.pathname.startsWith('/assets/');
-        
         try {
-          if (isAsset) {
-            const cachedAsset = await caches.match(event.request);
-            if (cachedAsset) return cachedAsset;
-          }
-
-          const networkResponse = await fetch(event.request);
-          // Only cache successful 200 OK responses (don't cache 404 HTML fallback responses!)
+          // Force network fetch first to guarantee latest code & data
+          const networkResponse = await fetch(event.request, { cache: 'no-store' });
           if (networkResponse && networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }
           return networkResponse;
         } catch (err) {
+          // Only fallback to cache if user is completely offline
           const cachedFallback = await caches.match(event.request);
           if (cachedFallback) return cachedFallback;
 
