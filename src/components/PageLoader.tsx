@@ -24,21 +24,21 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
 
   return (
     <div className={`flex flex-col items-center justify-center text-center animate-fade-in transition-all ${
-      fullScreen ? 'fixed inset-0 z-50 bg-white/95 dark:bg-slate-955/95 backdrop-blur-xl text-slate-900 dark:text-white p-8' : 
+      fullScreen ? 'fixed inset-0 z-50 bg-slate-50/95 dark:bg-slate-955/95 backdrop-blur-xl text-slate-900 dark:text-white p-8' : 
       compact ? 'py-10 px-4 w-full' : 'min-h-[45vh] w-full p-8'
     }`}>
       {/* Top Animated Progress Bar for fullscreen */}
       {fullScreen && (
-        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-900 via-slate-700 to-black dark:from-white dark:via-slate-300 dark:to-slate-500 animate-loading-bar z-50"></div>
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-800 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-600 animate-loading-bar z-50"></div>
       )}
 
       <div className="relative mb-6">
         {/* Outer Pulsing Glow */}
-        <div className="absolute -inset-6 rounded-full bg-slate-900/10 dark:bg-white/10 blur-3xl animate-pulse"></div>
+        <div className="absolute -inset-6 rounded-full bg-emerald-500/20 dark:bg-emerald-400/15 blur-3xl animate-pulse"></div>
 
         {/* Gourmet Cloche Lifting + Steam SVG Animation */}
         <div className={`relative ${loaderSizes[size]} flex items-center justify-center`}>
-          <svg viewBox="0 0 100 100" className="w-full h-full text-slate-900 dark:text-white drop-shadow-md">
+          <svg viewBox="0 0 100 100" className="w-full h-full text-emerald-600 dark:text-emerald-400 drop-shadow-md">
             {/* Rising Steam Lines */}
             <g>
               <path d="M 40 38 Q 37 32 40 26 Q 43 20 40 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" className="animate-steam-1" />
@@ -65,12 +65,12 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
 
       {message && (
         <div className="space-y-1.5 max-w-sm">
-          <h3 className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-100 uppercase flex items-center justify-center gap-1.5">
+          <h3 className="text-xs font-black tracking-widest text-slate-900 dark:text-slate-100 uppercase flex items-center justify-center gap-1.5">
             <span>{message}</span>
-            <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
           </h3>
           {subtext && (
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-[11px] font-extrabold text-slate-600 dark:text-slate-400 leading-relaxed">
               {subtext}
             </p>
           )}
