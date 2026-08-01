@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory } from '../../types';
 import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, Globe } from 'lucide-react';
@@ -152,16 +152,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
-  const tableOrders = orders
-    .filter(o => {
-      if (o.tableId !== tableId) return false;
-      // Immediately clear completed/settled and cancelled orders from live order history
-      if (o.status === 'completed' || o.status === 'cancelled') {
-        return false;
-      }
-      return true;
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const tableOrders = useMemo(() => {
+    return orders
+      .filter(o => {
+        if (o.tableId !== tableId) return false;
+        if (o.status === 'completed' || o.status === 'cancelled') {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [orders, tableId]);
 
   useEffect(() => {
     if (tableId) {
@@ -169,16 +170,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   }, [tableId, setCurrentTableById]);
 
-  // Filter items
-  const filteredItems = foodItems.filter(item => {
-    if (!item.isAvailable) return false;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
-    const matchesVeg = !vegOnly || item.isVeg;
-    const matchesPopular = !popularOnly || item.isPopular || item.isRecommended;
-    return matchesSearch && matchesCategory && matchesVeg && matchesPopular;
-  });
+  // Filter items memoized for zero-lag UI response
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return foodItems.filter(item => {
+      if (!item.isAvailable) return false;
+      const matchesSearch = !query || 
+                            item.name.toLowerCase().includes(query) || 
+                            item.description.toLowerCase().includes(query);
+      const matchesCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
+      const matchesVeg = !vegOnly || item.isVeg;
+      const matchesPopular = !popularOnly || item.isPopular || item.isRecommended;
+      return matchesSearch && matchesCategory && matchesVeg && matchesPopular;
+    });
+  }, [foodItems, searchQuery, selectedCategory, vegOnly, popularOnly]);
 
   const handleOpenItem = (item: FoodItem) => {
     setSelectedItem(item);
