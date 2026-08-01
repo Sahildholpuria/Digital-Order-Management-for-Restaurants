@@ -777,10 +777,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
+                  className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
-                      ? 'bg-brand-600 dark:bg-brand-500 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
-                      : 'bg-white text-slate-555 border-slate-200/60 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:scale-105'
+                      ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]'
+                      : 'bg-white text-slate-900 border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:scale-105'
                   }`}
                 >
                   {t.allItems}
@@ -789,10 +789,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
+                    className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
-                        ? 'bg-brand-600 dark:bg-brand-500 border-brand-500 text-white shadow-lg shadow-brand-500/25 scale-[1.02]'
-                        : 'bg-white text-slate-555 border-slate-200/60 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:scale-105'
+                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]'
+                        : 'bg-white text-slate-900 border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:scale-105'
                     }`}
                   >
                     {cat.name}
