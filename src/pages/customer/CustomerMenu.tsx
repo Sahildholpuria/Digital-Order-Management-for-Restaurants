@@ -125,13 +125,30 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   } = useRestaurant();
 
   // Returns a clean, short display number from the actual table record.
-  // Always use currentTable.number from DB; never fall back to raw timestamp tableId.
+  // Never displays raw 13-digit timestamp IDs (e.g. 1785560211444).
   const getTableDisplayNumber = () => {
-    if (currentTable?.number) {
-      // Strip any "table-" prefix the number field might have, return clean label
-      return currentTable.number.replace(/^table[\s\-_]*/i, '');
+    const target = currentTable || tables.find(t => t.id === tableId || t.number === tableId);
+    
+    if (target?.number) {
+      const clean = target.number.replace(/^table[\s\-_]*/i, '').trim();
+      if (clean && !/^\d{7,}$/.test(clean)) {
+        return clean;
+      }
     }
-    return '—';
+
+    if (tables && tables.length > 0) {
+      const idx = tables.findIndex(t => t.id === tableId || t.id === currentTable?.id || t.number === tableId);
+      if (idx !== -1) {
+        return `${idx + 1}`;
+      }
+    }
+
+    const cleanId = tableId ? tableId.replace(/^table[\s\-_]*/i, '').trim() : '';
+    if (cleanId && !/^\d{7,}$/.test(cleanId)) {
+      return cleanId;
+    }
+
+    return '1';
   };
 
   const [searchQuery, setSearchQuery] = useState('');
