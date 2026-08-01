@@ -437,7 +437,7 @@ export const SuperAdminDashboard: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-950 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/10 border border-slate-800">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/20 border border-emerald-600/30">
         <div>
           <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold w-fit mb-2 backdrop-blur-md">
             <ShieldCheck className="w-3.5 h-3.5" />
