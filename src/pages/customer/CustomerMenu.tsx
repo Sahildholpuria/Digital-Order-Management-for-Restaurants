@@ -696,47 +696,35 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       )}
       <main className="max-w-md md:max-w-5xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
-        {/* Stunning Non-Blocking Animated Hero Welcome Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 text-white p-5 sm:p-6 shadow-xl shadow-emerald-900/15 mb-6 group transition-all duration-500 hover:shadow-emerald-900/25 border border-emerald-500/20">
-          <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-400/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
-          
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {/* Restaurant Logo Avatar */}
+        {/* Clean, Modern Restaurant Header Card */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm mb-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               {settings?.logoUrl ? (
                 <img 
                   src={settings.logoUrl} 
                   alt={settings.name} 
-                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-white/30 shadow-lg flex-shrink-0"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm flex-shrink-0"
                 />
               ) : (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/15 backdrop-blur-md border-2 border-white/25 flex items-center justify-center text-white flex-shrink-0 shadow-lg">
-                  <Utensils className="w-7 h-7" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 flex-shrink-0 shadow-sm">
+                  <Utensils className="w-6 h-6" />
                 </div>
               )}
-
-              <div>
-                <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-emerald-100 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-1.5 border border-white/20 shadow-sm">
-                  <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
-                  <span>Digital Order & Dining</span>
-                </span>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-white">
-                  Welcome to {settings?.name || 'Gourmet Restaurant'}!
-                </h2>
-                <p className="text-xs text-white/85 font-medium mt-0.5 line-clamp-2 max-w-lg">
-                  {settings?.address || 'Fresh gourmet dishes crafted with passion & served hot to your table.'}
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight truncate">
+                  {settings?.name || 'Gourmet Restaurant'}
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                  {settings?.address || 'Fresh gourmet dishes crafted with passion & served hot.'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-              <div className="bg-white/15 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/25 text-center shadow-lg whitespace-nowrap">
-                <span className="text-[9px] uppercase tracking-widest text-white/80 block font-black">Seated At</span>
-                <span className="text-lg font-black tracking-wider text-amber-300 font-mono">
-                  Table #{getTableDisplayNumber()}
-                </span>
-              </div>
+            {/* Table Badge Pill */}
+            <div className="px-3.5 py-2 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 flex-shrink-0 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-black tracking-wider uppercase">Table #{getTableDisplayNumber()}</span>
             </div>
           </div>
         </div>
