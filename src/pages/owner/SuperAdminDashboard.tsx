@@ -437,30 +437,30 @@ export const SuperAdminDashboard: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 p-8 rounded-3xl text-white shadow-xl shadow-brand-500/20 border border-emerald-600/30">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 p-6 sm:p-8 rounded-3xl text-white shadow-xl shadow-emerald-900/15 border border-emerald-500/30">
         <div>
-          <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold w-fit mb-2 backdrop-blur-md">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Super Admin Central Control</span>
+          <div className="flex items-center gap-2 bg-white/20 px-3.5 py-1 rounded-full text-xs font-black w-fit mb-2 backdrop-blur-md border border-white/20">
+            <ShieldCheck className="w-4 h-4 text-emerald-300" />
+            <span>Super Admin Central Portal</span>
           </div>
-          <h1 className="text-3xl font-black tracking-tight">SaaS Tenant Manager</h1>
-          <p className="text-brand-100 text-sm mt-1 max-w-xl">Manage restaurant subscription billing lifecycle, plans, and onboard settings.</p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-sans">SaaS Tenant Manager</h1>
+          <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-xl font-medium">Onboard restaurant client accounts, manage subscription billing lifecycles, and monitor system metrics.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto">
           <div className="flex gap-2 w-full sm:w-auto">
             <button 
               onClick={fetchAllData}
-              className="bg-white/10 hover:bg-white/20 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center flex-1 sm:flex-none"
+              className="bg-white/20 hover:bg-white/30 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center flex-1 sm:flex-none text-white border border-white/30 active:scale-95"
               title="Refresh database"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
             <button
               onClick={handleOpenOnboard}
-              className="flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer flex-[3] sm:flex-none whitespace-nowrap"
+              className="flex items-center justify-center gap-2 bg-white text-emerald-950 hover:bg-emerald-50 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer flex-[3] sm:flex-none whitespace-nowrap active:scale-95"
             >
-              <Plus className="w-4 h-4" />
-              <span>Onboard Restaurant</span>
+              <Plus className="w-4 h-4 text-emerald-700" />
+              <span>+ Onboard Restaurant</span>
             </button>
           </div>
           <button
@@ -472,53 +472,53 @@ export const SuperAdminDashboard: React.FC = () => {
               setUserRestaurantId(restaurants[0].id);
               setIsUserModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3 rounded-2xl shadow-lg transition-all text-sm cursor-pointer backdrop-blur-md w-full sm:w-auto whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white border border-white/30 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer backdrop-blur-md w-full sm:w-auto whitespace-nowrap active:scale-95"
           >
-            <Plus className="w-4 h-4" />
-            <span>Create Staff User</span>
+            <Plus className="w-4 h-4 text-emerald-300" />
+            <span>+ Create Staff User</span>
           </button>
         </div>
       </div>
 
       {/* Grid Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
             <Building className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Total Onboarded</p>
-            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{totalCount}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total Onboarded</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{totalCount}</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center border border-green-500/20">
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Active Pro</p>
-            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{activeCount}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Active Paid Pro</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{activeCount}</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
             <Calendar className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Free Trials</p>
-            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{trialCount}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Free Trials</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{trialCount}</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-500/20">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Expired / Suspended</p>
-            <p className="text-2xl font-black text-slate-850 dark:text-slate-100">{expiredCount}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Expired / Suspended</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{expiredCount}</p>
           </div>
         </div>
       </div>
