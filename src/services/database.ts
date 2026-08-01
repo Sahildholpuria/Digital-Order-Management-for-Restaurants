@@ -597,7 +597,8 @@ export const dbService = {
     } else {
       const data = localStorage.getItem('restaurant_tables');
       const parsed = data ? JSON.parse(data) : [];
-      return parsed.map(mapTableToFrontend);
+      const filtered = parsed.filter((t: any) => !t.restaurant_id || t.restaurant_id === restaurantId || t.restaurantId === restaurantId);
+      return filtered.map(mapTableToFrontend);
     }
   },
 
@@ -613,7 +614,8 @@ export const dbService = {
     } else {
       const data = localStorage.getItem('restaurant_categories');
       const parsed = data ? JSON.parse(data) : [];
-      return parsed.map(mapCategoryToFrontend);
+      const filtered = parsed.filter((c: any) => !c.restaurant_id || c.restaurant_id === restaurantId || c.restaurantId === restaurantId);
+      return filtered.map(mapCategoryToFrontend);
     }
   },
 
@@ -629,7 +631,8 @@ export const dbService = {
     } else {
       const data = localStorage.getItem('restaurant_foodItems');
       const parsed = data ? JSON.parse(data) : [];
-      return parsed.map(mapFoodItemToFrontend);
+      const filtered = parsed.filter((i: any) => !i.restaurant_id || i.restaurant_id === restaurantId || i.restaurantId === restaurantId);
+      return filtered.map(mapFoodItemToFrontend);
     }
   },
 
@@ -644,9 +647,10 @@ export const dbService = {
       return (data || []).map(mapOrderToFrontend);
     } else {
       const data = localStorage.getItem('restaurant_orders');
-      const parsed: RestaurantOrder[] = data ? JSON.parse(data) : [];
-      parsed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return parsed.map(mapOrderToFrontend);
+      const parsed: any[] = data ? JSON.parse(data) : [];
+      const filtered = parsed.filter((o: any) => !o.restaurant_id || o.restaurant_id === restaurantId || o.restaurantId === restaurantId);
+      filtered.sort((a, b) => new Date(b.createdAt || b.created_at).getTime() - new Date(a.createdAt || a.created_at).getTime());
+      return filtered.map(mapOrderToFrontend);
     }
   },
 
@@ -661,8 +665,9 @@ export const dbService = {
       return (data || []).map(mapPaymentToFrontend);
     } else {
       const data = localStorage.getItem('restaurant_payments');
-      const parsed: PaymentRecord[] = data ? JSON.parse(data) : [];
-      return parsed.map(mapPaymentToFrontend);
+      const parsed: any[] = data ? JSON.parse(data) : [];
+      const filtered = parsed.filter((p: any) => !p.restaurant_id || p.restaurant_id === restaurantId || p.restaurantId === restaurantId);
+      return filtered.map(mapPaymentToFrontend);
     }
   },
 
@@ -677,7 +682,8 @@ export const dbService = {
       return (data || []).map(mapNotificationToFrontend);
     } else {
       const data = localStorage.getItem('restaurant_notifications');
-      const parsed: RestaurantNotification[] = data ? JSON.parse(data) : [];
+      const parsed: any[] = data ? JSON.parse(data) : [];
+      const filtered = parsed.filter((n: any) => !n.restaurant_id || n.restaurant_id === restaurantId || n.restaurantId === restaurantId);
       return parsed.map(mapNotificationToFrontend);
     }
   },
@@ -1069,12 +1075,13 @@ export const dbService = {
       if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_tables');
-      const tables: RestaurantTable[] = data ? JSON.parse(data) : [];
+      const tables: any[] = data ? JSON.parse(data) : [];
+      const itemWithTenant = { ...table, restaurant_id: restaurantId };
       const index = tables.findIndex(t => t.id === table.id);
       if (index > -1) {
-        tables[index] = table;
+        tables[index] = itemWithTenant;
       } else {
-        tables.push(table);
+        tables.push(itemWithTenant);
       }
       localStorage.setItem('restaurant_tables', JSON.stringify(tables));
       notifyLocalSubscribers();
@@ -1217,12 +1224,13 @@ export const dbService = {
       if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_categories');
-      const categories: MenuCategory[] = data ? JSON.parse(data) : [];
+      const categories: any[] = data ? JSON.parse(data) : [];
+      const itemWithTenant = { ...category, restaurant_id: restaurantId };
       const index = categories.findIndex(c => c.id === category.id);
       if (index > -1) {
-        categories[index] = category;
+        categories[index] = itemWithTenant;
       } else {
-        categories.push(category);
+        categories.push(itemWithTenant);
       }
       localStorage.setItem('restaurant_categories', JSON.stringify(categories));
       notifyLocalSubscribers();
@@ -1341,12 +1349,13 @@ export const dbService = {
       if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_foodItems');
-      const items: FoodItem[] = data ? JSON.parse(data) : [];
+      const items: any[] = data ? JSON.parse(data) : [];
+      const itemWithTenant = { ...item, restaurant_id: restaurantId };
       const index = items.findIndex(i => i.id === item.id);
       if (index > -1) {
-        items[index] = item;
+        items[index] = itemWithTenant;
       } else {
-        items.push(item);
+        items.push(itemWithTenant);
       }
       localStorage.setItem('restaurant_foodItems', JSON.stringify(items));
       notifyLocalSubscribers();
@@ -1433,9 +1442,10 @@ export const dbService = {
     } else {
       const emitData = () => {
         const data = localStorage.getItem('restaurant_orders');
-        const parsed: RestaurantOrder[] = data ? JSON.parse(data) : [];
-        parsed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(parsed.map(mapOrderToFrontend));
+        const parsed: any[] = data ? JSON.parse(data) : [];
+        const filtered = parsed.filter((o: any) => !o.restaurant_id || o.restaurant_id === restaurantId || o.restaurantId === restaurantId);
+        filtered.sort((a, b) => new Date(b.createdAt || b.created_at).getTime() - new Date(a.createdAt || a.created_at).getTime());
+        callback(filtered.map(mapOrderToFrontend));
       };
 
       emitData();
@@ -1464,12 +1474,13 @@ export const dbService = {
       if (error) throw error;
     } else {
       const data = localStorage.getItem('restaurant_orders');
-      const orders: RestaurantOrder[] = data ? JSON.parse(data) : [];
+      const orders: any[] = data ? JSON.parse(data) : [];
+      const itemWithTenant = { ...order, restaurant_id: restaurantId };
       const index = orders.findIndex(o => o.id === order.id);
       if (index > -1) {
-        orders[index] = order;
+        orders[index] = itemWithTenant;
       } else {
-        orders.push(order);
+        orders.push(itemWithTenant);
       }
       localStorage.setItem('restaurant_orders', JSON.stringify(orders));
       notifyLocalSubscribers();
