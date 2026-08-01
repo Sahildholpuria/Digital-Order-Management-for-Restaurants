@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChefHat, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface PageLoaderProps {
   message?: string;
@@ -10,47 +10,56 @@ interface PageLoaderProps {
 }
 
 export const PageLoader: React.FC<PageLoaderProps> = ({
-  message = "SYNCHRONIZING RESTAURANT DATA...",
-  subtext = "Please wait a moment while we load live menus & orders",
+  message = "PREPARING LIVE GOURMET EXPERIENCE...",
+  subtext = "Syncing live restaurant menus & active orders",
   fullScreen = false,
   compact = false,
   size = 'md'
 }) => {
-  const iconSizes = {
-    sm: 'w-5 h-5',
-    md: 'w-7 h-7',
-    lg: 'w-9 h-9'
-  };
-
-  const containerSizes = {
-    sm: 'w-12 h-12',
-    md: 'w-20 h-20',
-    lg: 'w-24 h-24'
+  const loaderSizes = {
+    sm: 'w-16 h-16',
+    md: 'w-24 h-24',
+    lg: 'w-32 h-32'
   };
 
   return (
     <div className={`flex flex-col items-center justify-center text-center animate-fade-in transition-all ${
-      fullScreen ? 'fixed inset-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl text-slate-900 dark:text-white p-8' : 
+      fullScreen ? 'fixed inset-0 z-50 bg-white/95 dark:bg-slate-955/95 backdrop-blur-xl text-slate-900 dark:text-white p-8' : 
       compact ? 'py-10 px-4 w-full' : 'min-h-[45vh] w-full p-8'
     }`}>
       {/* Top Animated Progress Bar for fullscreen */}
       {fullScreen && (
-        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-600 via-slate-900 to-black dark:from-brand-400 dark:via-white dark:to-slate-200 animate-loading-bar z-50"></div>
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-900 via-slate-700 to-black dark:from-white dark:via-slate-300 dark:to-slate-500 animate-loading-bar z-50"></div>
       )}
 
-      <div className="relative mb-5">
-        {/* Outer Pulsing Ambient Glow */}
-        <div className="absolute -inset-4 rounded-full bg-brand-500/20 dark:bg-white/10 blur-2xl animate-pulse"></div>
+      <div className="relative mb-6">
+        {/* Outer Pulsing Glow */}
+        <div className="absolute -inset-6 rounded-full bg-slate-900/10 dark:bg-white/10 blur-3xl animate-pulse"></div>
 
-        {/* Dual Ring Spinning Loader */}
-        <div className={`relative ${containerSizes[size]} flex items-center justify-center`}>
-          <div className="absolute inset-0 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin"></div>
-          <div className="absolute inset-2 border-2 border-brand-500 border-b-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
+        {/* Gourmet Cloche Lifting + Steam SVG Animation */}
+        <div className={`relative ${loaderSizes[size]} flex items-center justify-center`}>
+          <svg viewBox="0 0 100 100" className="w-full h-full text-slate-900 dark:text-white drop-shadow-md">
+            {/* Rising Steam Lines */}
+            <g>
+              <path d="M 40 38 Q 37 32 40 26 Q 43 20 40 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" className="animate-steam-1" />
+              <path d="M 50 35 Q 47 29 50 23 Q 53 17 50 11" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.8" className="animate-steam-2" />
+              <path d="M 60 38 Q 57 32 60 26 Q 63 20 60 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" className="animate-steam-3" />
+            </g>
 
-          <div className="p-3 bg-white dark:bg-slate-900 rounded-full shadow-xl border border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-white">
-            <ChefHat className={`${iconSizes[size]} animate-bounce`} />
-          </div>
+            {/* Cloche Dome & Knob (Lifting Up & Down Motion) */}
+            <g className="animate-cloche-lift">
+              {/* Handle Knob */}
+              <circle cx="50" cy="41" r="3.5" fill="currentColor" />
+              {/* Main Dome */}
+              <path d="M 22 68 C 22 46 78 46 78 68 Z" fill="currentColor" />
+              {/* Rim Line */}
+              <path d="M 18 68 L 82 68 C 82 70 80 71.5 78 71.5 L 22 71.5 C 20 71.5 18 70 18 68 Z" fill="currentColor" opacity="0.9" />
+            </g>
+
+            {/* Bottom Serving Platter Base Plate */}
+            <path d="M 12 77 L 88 77 C 90 77 92 78.5 91 80 L 85 84 C 84 85 82 85.5 80 85.5 L 20 85.5 C 18 85.5 16 85 15 84 L 9 80 C 8 78.5 10 77 12 77 Z" fill="currentColor" />
+            <rect x="25" y="87" width="50" height="2.5" rx="1.2" fill="currentColor" opacity="0.4" />
+          </svg>
         </div>
       </div>
 
