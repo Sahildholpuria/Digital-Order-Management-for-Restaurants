@@ -502,6 +502,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
 
       const isStaffUser = !!currentUser;
+      // Subscriptions active for all users (Staff & Guest Customers) so menu updates/deletions reflect instantly on Customer Menu
+      try {
+        unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
+          setCategories(data);
+          try { localStorage.setItem(`cached_categories_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+        });
+      } catch (e) { console.error('subscribeCategories error:', e); }
+
+      try {
+        unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
+          setFoodItems(data);
+          try { localStorage.setItem(`cached_food_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
+        });
+      } catch (e) { console.error('subscribeFoodItems error:', e); }
 
       if (isStaffUser) {
         // Staff Users (Admin, Manager, Waiter, Kitchen, Cashier) need full Real-time WebSockets
@@ -518,28 +532,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             setTablesLoaded(true);
             try { localStorage.setItem(`cached_tables_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
             if (currentTable) {
-              const fresh = data.find(t => t.id === currentTable.id);
-              if (fresh) setCurrentTable(fresh);
+              const updated = data.find(t => t.id === currentTable.id);
+              if (updated) setCurrentTable(updated);
             }
           });
         } catch (e) {
           console.error('subscribeTables error:', e);
           setTablesLoaded(true);
         }
-
-        try {
-          unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
-            setCategories(data);
-            try { localStorage.setItem(`cached_categories_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
-          });
-        } catch (e) { console.error('subscribeCategories error:', e); }
-
-        try {
-          unsubFoodItems = dbService.subscribeFoodItems(restaurantId, (data) => {
-            setFoodItems(data);
-            try { localStorage.setItem(`cached_food_${restaurantId}`, JSON.stringify(data)); } catch (e) {}
-          });
-        } catch (e) { console.error('subscribeFoodItems error:', e); }
 
         try {
           unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
@@ -573,21 +573,17 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           } catch (e) { console.error('subscribePayments error:', e); }
         }
       } else {
-        // Guest Customer Mode: Ultra-efficient REST API one-time fetching to save 90% Supabase Realtime resources & stay FREE
+        // Guest Customer Mode
         try {
-          const [sData, tData, cData, fData] = await Promise.all([
+          const [sData, tData] = await Promise.all([
             dbService.getSettings(restaurantId),
-            dbService.getTables(restaurantId),
-            dbService.getCategories(restaurantId),
-            dbService.getFoodItems(restaurantId)
+            dbService.getTables(restaurantId)
           ]);
           if (sData) setSettings(sData);
           if (tData) {
             setTables(tData);
             setTablesLoaded(true);
           }
-          if (cData) setCategories(cData);
-          if (fData) setFoodItems(fData);
         } catch (err) {
           console.error('Guest data fetch error:', err);
           setTablesLoaded(true);
