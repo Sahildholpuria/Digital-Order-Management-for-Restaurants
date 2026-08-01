@@ -579,16 +579,16 @@ export const App: React.FC = () => {
                   setLang(nextLang);
                   localStorage.setItem('admin_lang', nextLang);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/20 border border-slate-200/40 dark:border-slate-800/50 hover:bg-slate-105 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 text-slate-900 dark:text-slate-100 rounded-2xl text-xs font-black transition-all cursor-pointer shadow-sm"
               >
-                <Globe className="w-4.5 h-4.5 text-brand-500" />
+                <Globe className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" />
                 <span>{lang === 'en' ? 'हिन्दी (Hindi)' : 'English (EN)'}</span>
               </button>
 
               {/* User Logged Details */}
-              <div className="bg-slate-50/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-800/50 p-3 rounded-2xl text-xs space-y-1">
-                <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate">{currentUser.name}</p>
-                <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+              <div className="bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 p-3 rounded-2xl text-xs space-y-1 shadow-sm">
+                <p className="font-black text-slate-900 dark:text-slate-100 truncate">{currentUser.name}</p>
+                <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 truncate">{currentUser.email}</p>
               </div>
 
               <button
@@ -596,13 +596,13 @@ export const App: React.FC = () => {
                   await logoutUser();
                   navigateTo('/');
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all cursor-pointer"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all cursor-pointer"
               >
                 <LogOut className="w-4.5 h-4.5" />
                 <span>{t.logOut}</span>
               </button>
-              <div className="text-center pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/50">
-                <span className="text-[9px] text-slate-400 font-semibold tracking-wider uppercase block">
+              <div className="text-center pt-2 mt-1 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold tracking-wider uppercase block">
                   Build by RestaurantsOS Pvt. Ltd
                 </span>
               </div>
