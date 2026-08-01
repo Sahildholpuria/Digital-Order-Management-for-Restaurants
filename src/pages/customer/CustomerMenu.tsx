@@ -497,27 +497,27 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
       {/* Sticky Top Header */}
-      <header className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-3 sm:px-4 py-2.5 shadow-sm">
-        <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
+        <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {settings?.logoUrl ? (
               <img 
                 src={settings.logoUrl} 
                 alt={settings.name} 
-                className="w-9 h-9 rounded-2xl object-cover border border-slate-200 dark:border-slate-800 shadow-sm"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl object-cover border border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0"
               />
             ) : (
-              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-sm">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-sm flex-shrink-0">
                 <Utensils className="w-4 h-4" />
               </div>
             )}
-            <div>
-              <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-slate-100 font-sans leading-tight">
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-base font-black tracking-tight text-slate-900 dark:text-slate-100 font-sans leading-tight truncate max-w-[120px] xs:max-w-[170px] sm:max-w-none">
                 {settings?.name || 'Gourmet Restaurant'}
               </h1>
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-emerald-700 dark:text-emerald-400">Table #{getTableDisplayNumber()}</span>
+              <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-mono">Table #{getTableDisplayNumber()}</span>
               </div>
             </div>
           </div>
@@ -710,7 +710,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 placeholder={t.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 shadow-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                className="w-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-10 text-[16px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 shadow-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400"
               />
               {searchQuery && (
                 <button
@@ -755,10 +755,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{categories.length + 1} sections</span>
               </div>
 
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar touch-pan-x scroll-smooth">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
+                  className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
                       ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/25 scale-[1.02]'
                       : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-emerald-500'
@@ -770,7 +770,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
+                    className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
                         ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/25 scale-[1.02]'
                         : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-emerald-500'
@@ -808,7 +808,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                         {/* Hover Gradient Top Line */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                        <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
                           <LazyImage 
                             src={item.image} 
                             alt={item.name} 
@@ -1096,7 +1096,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
                   rows={2}
-                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 text-[16px] sm:text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                 />
               </div>
 
