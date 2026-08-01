@@ -219,15 +219,6 @@ input[type=number] {
 }
 
 /* Prevent iOS Safari from auto-zooming / distorting viewport when tapping search & form inputs */
-@media screen and (-webkit-min-device-pixel-ratio: 0) {
-  select,
-  textarea,
-  input[type="text"],
-  input[type="password"],
-  input[type="number"],
-  input[type="email"],
-  input[type="search"],
-  input[type="tel"] {
-    font-size: 16px !important;
-  }
+input, select, textarea {
+  font-size: 16px !important;
 }
