@@ -363,24 +363,151 @@ export const ReportsManager: React.FC = () => {
   };
 
   // ==========================================
-  // CSV EXPORTER
+  // LAST 6 MONTHS TRANSACTIONS EXPORTERS
   // ==========================================
-  const handleExportCSV = () => {
-    if (payments.length === 0) {
-      showToast('No payment records to export.', 'info');
+  const getLast6MonthsData = () => {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const minTimestamp = sixMonthsAgo.getTime();
+
+    // Filter payments within last 6 months (180 days)
+    const sixMonthPayments = payments.filter(p => new Date(p.createdAt).getTime() >= minTimestamp);
+
+    const totalRevenue6M = sixMonthPayments.reduce((acc, p) => acc + p.grandTotal, 0);
+    const totalTax6M = sixMonthPayments.reduce((acc, p) => acc + p.tax, 0);
+    const totalDiscount6M = sixMonthPayments.reduce((acc, p) => acc + p.discount, 0);
+
+    return {
+      sixMonthPayments,
+      totalRevenue6M,
+      totalTax6M,
+      totalDiscount6M
+    };
+  };
+
+  const handleExport6MonthCSV = () => {
+    const { sixMonthPayments } = getLast6MonthsData();
+
+    if (sixMonthPayments.length === 0) {
+      showToast('No payment transactions found in the last 6 months.', 'info');
       return;
     }
 
-    const headers = ['Payment Date,Order Number,Table,Subtotal,Taxes,Discounts,Grand Total,Payment Method\n'];
-    const rows = payments.map(p => {
-      return `"${new Date(p.createdAt).toLocaleString()}","${p.orderNumber}","${p.tableName}",${p.subtotal.toFixed(2)},${p.tax.toFixed(2)},${p.discount.toFixed(2)},${p.grandTotal.toFixed(2)},"${p.paymentMethod.toUpperCase()}"`;
+    const headers = 'Transaction ID,Order Number,Table,Subtotal,Discount,Tax / GST,Grand Total,Payment Method,Date & Time\n';
+    const rows = sixMonthPayments.map(p => {
+      return `"${p.id}","${p.orderNumber}","${p.tableName}",${p.subtotal.toFixed(2)},${p.discount.toFixed(2)},${p.tax.toFixed(2)},${p.grandTotal.toFixed(2)},"${p.paymentMethod.toUpperCase()}","${new Date(p.createdAt).toLocaleString()}"`;
     });
 
     const csvBlob = new Blob([headers + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(csvBlob);
-    link.download = `Restaurant_Sales_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    const sanitizedRestName = (settings?.name || 'Restaurant').replace(/[^a-z0-9]/gi, '_');
+    link.download = `${sanitizedRestName}_Last_6_Months_Transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    
+    showToast('Last 6 months transactions CSV downloaded successfully!', 'success');
+  };
+
+  const handleExport6MonthPDF = () => {
+    const { sixMonthPayments, totalRevenue6M, totalTax6M, totalDiscount6M } = getLast6MonthsData();
+
+    if (sixMonthPayments.length === 0) {
+      showToast('No payment transactions found in the last 6 months.', 'info');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pdfCurrency = currency === '₹' ? 'Rs. ' : `${currency} `;
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const dateRangeStr = `${sixMonthsAgo.toLocaleDateString()} - ${new Date().toLocaleDateString()}`;
+
+    // Header Banner
+    doc.setFillColor(16, 185, 129); // Emerald
+    doc.rect(0, 0, 210, 35, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    const titleText = settings?.name ? `${settings.name} - 6 Month Statement` : "Restaurant 6-Month Statement";
+    doc.text(titleText, 14, 18);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(220, 252, 231);
+    doc.text(`Generated on: ${new Date().toLocaleString()} | Period: Last 6 Months (${dateRangeStr})`, 14, 25);
+
+    // Business Summary
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.text('6-MONTH TRANSACTION SUMMARY', 14, 48);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 52, 196, 52);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Total Settled Transactions: ${sixMonthPayments.length}`, 14, 60);
+    doc.text(`Total 6-Month Gross Revenue: ${pdfCurrency}${totalRevenue6M.toFixed(2)}`, 14, 67);
+    doc.text(`Total Discounts Allowed: ${pdfCurrency}${totalDiscount6M.toFixed(2)}`, 14, 74);
+    doc.text(`Total Tax/GST Collected: ${pdfCurrency}${totalTax6M.toFixed(2)}`, 14, 81);
+
+    // Transactions Table
+    doc.setFont('helvetica', 'bold');
+    doc.text('TRANSACTION AUDIT LOG', 14, 98);
+    doc.line(14, 101, 196, 101);
+
+    doc.setFillColor(16, 185, 129);
+    doc.rect(14, 105, 182, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text('Date & Time', 18, 110);
+    doc.text('Order #', 65, 110);
+    doc.text('Table', 105, 110);
+    doc.text('Payment Method', 135, 110);
+    doc.text('Grand Total', 170, 110);
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'normal');
+    let yPos = 120;
+    sixMonthPayments.forEach((p) => {
+      if (yPos > 275) {
+        doc.addPage();
+        yPos = 20;
+
+        // Subpage Header
+        doc.setFillColor(16, 185, 129);
+        doc.rect(14, 15, 182, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text('Date & Time', 18, 20);
+        doc.text('Order #', 65, 20);
+        doc.text('Table', 105, 20);
+        doc.text('Payment Method', 135, 20);
+        doc.text('Grand Total', 170, 20);
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'normal');
+        yPos = 30;
+      }
+
+      const dStr = new Date(p.createdAt).toLocaleString();
+      doc.text(dStr, 18, yPos);
+      doc.text(p.orderNumber, 65, yPos);
+      doc.text(p.tableName, 105, yPos);
+      doc.text(p.paymentMethod.toUpperCase(), 135, yPos);
+      doc.text(`${pdfCurrency}${p.grandTotal.toFixed(2)}`, 170, yPos);
+
+      doc.setDrawColor(241, 245, 249);
+      doc.line(14, yPos + 2, 196, yPos + 2);
+      yPos += 7;
+    });
+
+    const sanitizedRestName = (settings?.name || 'Restaurant').replace(/[^a-z0-9]/gi, '_');
+    doc.save(`${sanitizedRestName}_Last_6_Months_Transactions_${new Date().toISOString().split('T')[0]}.pdf`);
+    showToast('Last 6 months transaction PDF downloaded successfully!', 'success');
   };
 
   const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6'];
@@ -401,19 +528,29 @@ export const ReportsManager: React.FC = () => {
 
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={handleExportPDF}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-red-500/10 transition-colors cursor-pointer"
+            onClick={handleExport6MonthCSV}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+            title="Download last 6 months transaction history in CSV format"
           >
             <Download className="w-4 h-4" />
-            <span>Download 30-Day PDF</span>
+            <span>Last 6M Transactions (CSV)</span>
+          </button>
+
+          <button
+            onClick={handleExport6MonthPDF}
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            title="Download last 6 months transaction statement in PDF format"
+          >
+            <Download className="w-4 h-4 text-emerald-400" />
+            <span>6M Statement (PDF)</span>
           </button>
           
           <button
-            onClick={handleExportCSV}
-            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/10 transition-colors cursor-pointer"
+            onClick={handleExportPDF}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-red-500/10 transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>Export Sales CSV</span>
+            <span>30-Day PDF</span>
           </button>
         </div>
       </div>
