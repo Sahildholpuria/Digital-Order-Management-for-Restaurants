@@ -1,92 +1,86 @@
-# Digital Order Management for Restaurants
+# Digital Order Management for Restaurants (RestaurantsOS)
 
-A modern, production-ready, and highly aesthetic QR-based self-ordering and POS dashboard system designed for both single-location diners and multi-branch restaurant chains.
+A modern, production-ready, ultra-responsive, and highly aesthetic QR-based self-ordering POS and restaurant management system designed for single-location diners and multi-branch restaurant chains.
 
-Built using **React (latest)**, **Vite**, **TypeScript**, **Tailwind CSS v4**, **Supabase** (with real-time WebSocket subscriptions & fallback mock engine), and a high-contrast **Monochrome Black & White Design System**.
+Built with **React 19**, **Vite**, **TypeScript**, **Tailwind CSS v4**, **Supabase** (with PostgreSQL, Realtime WebSockets, RLS Policies & LocalStorage fallback engine), and a high-contrast **Monochrome & Emerald Design System**.
 
 ---
 
-## 🌟 Core Features
+## 🌟 Core Features & Modules
 
 ### 1. Customer Self-Ordering (QR Flow)
-- **Zero Friction**: Customers scan a table-specific QR Code (e.g. `/menu/table-3`) and browse live menus instantly without login.
-- **Instant Real-time Menu Sync**: Any menu addition, price edit, availability toggle, or item deletion made in POS reflects **instantly in 0 seconds** on customer screens without requiring a page refresh.
-- **Smart Table Display**: Automatically sanitizes raw database timestamps (e.g. `1785560211444`) into clean, human-readable table labels (`1`, `2`, `3`).
-- **Dietary Selectors**: Veg/Non-veg indicators, custom spicy level rankings, and special cooking instruction drawers.
-- **Portion Selection (Half/Full)**: Support for custom portion variants (e.g. `Half` or `Full` sizes with independent pricing) encoded directly into dish descriptions (format: `||variants:Half=150;Full=280`).
-- **Cart Manager**: Mobile cart drawer with real-time tax/discount parameters and quantity controls.
-- **Real-Time Tracker**: Progress timeline tracking preparation states (Pending &rarr; Accepted &rarr; Preparing &rarr; Ready &rarr; Served).
-- **Auto-Removal Timeout**: Settled completed orders automatically clear from active customer view 2 minutes after payment completion.
+- **Zero Friction**: Customers scan a table-specific QR code (e.g. `/menu/table-1`) and browse live menus instantly without registration or login.
+- **Instant Real-Time Sync**: Any menu addition, price edit, availability toggle, or item deletion made in POS reflects **instantly in 0 seconds** on customer screens via WebSockets without page refreshes.
+- **Mobile-First Responsive UI**: Touch-optimized layout with sticky navigation header, live table badge (`Table #1`), staff action buttons (`Call Waiter`, `Request Bill`, `Live Orders`), search bar, and horizontal swipeable category pills.
+- **iOS Safari Viewport Protection**: Inputs locked to `16px` font size with viewport constraint meta tags (`maximum-scale=1.0, shrink-to-fit=no`) to prevent input zoom distortion on iPhones.
+- **Portion Selection (Half/Full)**: Supports portion variants with independent pricing encoded cleanly in descriptions (format: `||variants:Half=150;Full=280`).
+- **Direct Touch Steppers**: Direct `+ ADD` and `-` `qty` `+` quantity steppers directly on food cards for 1-tap cart additions.
+- **Floating Cart Capsule & Live Order Tracker**: Real-time slide-up cart drawer, GST/tax calculations, and progress timeline tracking preparation states (*Pending → Accepted → Preparing → Ready → Served*).
 
-### 2. Live Order POS Console
-- **Loud & Smooth Audio Notifications**: High-volume, smooth oscillator 4-note bell chime sequence synthesized on-device (via Web Audio API) paired with browser **Speech Synthesis (Web Speech API)** to speak incoming tickets ("*New order received from Table 4*"). Sound triggers exclusively when customers place new orders.
-- **Kanban Board**: Drag/stage boards separating orders into New Pending, In-Kitchen cooking, and Ready/Serving.
-- **Order Editor**: Modifies quantities, items, and comments on orders before final settlements.
+### 2. Multi-Tenant Workspace Isolation
+- **100% Strict Workspace Data Isolation**: Every database query, mock storage operation, realtime subscription, and context listener filters strictly by `restaurant_id`.
+- **Private WebSocket Channels**: Supabase Realtime channels register listeners with Postgres filters (`filter: 'restaurant_id=eq.' + restaurantId`) so no restaurant can view or intercept another tenant's live orders.
+- **Role-Based Row Level Security (RLS)**: PostgreSQL policies on `restaurants`, `users`, `tables`, `categories`, `food_items`, `orders`, `payments`, and `notifications` enforce strict tenant boundaries.
 
-### 3. Super Admin SaaS Tenant Manager & Security
+### 3. Commercial Industrial KDS (Kitchen Display System)
+- **Urgency Color Tiers**: Color-coded ticket headers based on elapsed time:
+  - 🟢 **Emerald Tier** (0–7 mins): Fresh ticket.
+  - 🟡 **Amber Tier** (7–15 mins): Cooking in progress.
+  - 🔴 **Red Tier** (15+ mins): Delayed / Urgent priority.
+- **Stage Filter Tabs**: Quick filtering for *All Tickets*, *In Kitchen*, *Ready*, and *Recall*.
+- **Ticket Recall Drawer**: Reopen and reinstate recently bumped or completed kitchen tickets.
+- **Individual Plating Checkboxes**: Chefs cross off individual dish items as they are plated.
+- **Audio Chime Alerts**: Real-time audio alerts when new orders enter the kitchen.
+
+### 4. Automatic KOT Printing & Live POS Manager
+- **Auto-KOT Receipt Print**: Automatically triggers thermal KOT receipt printing (`printKOTReceipt()`) the instant an order is accepted by the manager.
+- **Live Sound & Speech Synthesis**: Synthesizes 4-note bell sequence paired with Web Speech API voice alerts ("*New order received from Table 4*").
+- **Live Table Filter Dropdown**: Order filters source exclusively from active, non-deleted tables to eliminate deleted ghost tables.
+- **Kanban Order Board**: Drag/stage boards separating orders into New Pending, In-Kitchen cooking, and Ready/Serving.
+
+### 5. Super Admin SaaS Dashboard & Tenant Manager
 - **SaaS Tenant Control**: Manage onboarded restaurants, subscription billing lifecycles (`starter`, `pro_6m`, `pro_1y`), free trial periods, and account statuses (`active`, `trial`, `expired`, `suspended`).
-- **1-Click POS Portal Switcher**: Super Admin can switch into any onboarded restaurant's POS dashboard with 1 click to inspect or assist with menu/table setup.
-- **Strict Access Security**: Strict client-side and server-side authorization guards (`!currentUser.isSuperAdmin`) block unauthorized users from accessing SaaS controls.
-- **Credential Share Modal**: Generates 1-click shareable login credentials for restaurant owners and staff.
+- **Revenue Analytics & Metrics**: Tracks MRR, total active restaurants, active orders, and plan distributions.
+- **1-Click Onboarding & Credentials**: Generates 1-click shareable login credentials for restaurant owners and staff users.
 
-### 4. Smart Tables & QR Flyers
+### 6. Table & QR Standee Generator
 - **Capacity Controls**: Edit seating capacity, table name tags, and occupancy status.
-- **Instant Export**: Generates table standees and download options for high-quality **PNG** and **PDF print-ready flyers** dynamically using `html2canvas-pro` and `jspdf`.
+- **Instant Export**: Generates table standees with high-quality **PNG** and **PDF print-ready flyers** dynamically using `html2canvas-pro` and `jspdf`.
 
-### 5. Menu & Category Organizer
-- **Interactive Sidebar**: Add, edit, delete, and re-order category lists (Shift Up/Down).
-- **Dish Configurator**: Toggle stock availability, duplicate items, set discount percentages, and flag bestseller/recommended dishes.
-- **Instant Real-Time DB Deletion**: Deleted items are removed from Supabase `food_items` database table and pushed to all open customer screens instantly via WebSockets.
-
-### 6. Settlement Terminal (Billing)
+### 7. Settlement Terminal & Analytics
 - **Taxes & Receipts**: Automatically calculates subtotals, custom discounts, and GST.
 - **Thermal Invoice Generator**: Renders 3-inch POS thermal receipts with browser print and PDF export options.
-- **Settle Methods**: Clear tickets using Cash, Card, UPI, or Mobile Wallets.
-
-### 7. Kitchen Display Screen (KDS)
-- **Chef Board**: High-contrast, large typography panel displaying items grouped by table.
-- **Individual Plating**: Chefs cross off individual items as they cook before marking the entire ticket ready.
-- **Timer Alerts**: Highlights delayed tables if cooking exceeds 15 minutes.
-
-### 8. Staff Roles & Reports
-- **Role Permissions**: Interface filtering for SaaS Owner, Admin, Store Manager, Cashier, Kitchen Staff, and Waiter.
-- **Analytics Dashboard**: Deep charts displaying peak dining hour heat maps, bestselling item distributions, category revenue shares, and weekly revenue trends.
-
----
-
-## 🎨 Design Language & Animations
-
-- **Monochrome Black & White Theme**: Sleek high-contrast black, white, and charcoal theme with native dark and light mode support across all screens.
-- **Gourmet Cloche Loader Animation**: Universal vector SVG animation (`PageLoader.tsx`) depicting a gourmet cloche dome lifting smoothly with rising steam, applied consistently across initial bootstrapping, page routing, and tab transitions.
-- **Bypass Browser Caches**: Edge CDN `Cache-Control: no-cache, no-store, must-revalidate` headers (`vercel.json`), HTML meta tags (`index.html`), and a **Network-First** Service Worker strategy (`public/sw.js`) ensure users always view the latest code and live database state.
+- **Payment Methods**: Settle tickets using Cash, Card, UPI, or Mobile Wallets.
+- **Analytics & Graphs**: Heatmaps for peak dining hours, bestselling item distributions, category revenue shares, and weekly revenue trends using `recharts`.
 
 ---
 
 ## 🛠️ Technology Stack
-- **Frontend**: React (v19), Vite, TypeScript, Tailwind CSS v4, Lucide Icons.
-- **Analytics & Graphs**: Recharts.
+
+- **Frontend**: React 19, Vite, TypeScript, Tailwind CSS v4, Lucide Icons.
+- **Database & Realtime**: Supabase (PostgreSQL, Realtime WebSockets, Row Level Security).
+- **Charts & Data Visualization**: Recharts.
 - **Document Exporter**: jsPDF & html2canvas-pro.
 - **QR Engine**: qrcode.react.
-- **Database / Backend**: Supabase (PostgreSQL, Realtime WebSockets, Auth).
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Installation
-Clone the project, navigate to the directory, and install dependencies:
+Clone the repository and install project dependencies:
 ```bash
 npm install
 ```
 
 ### 2. Running Locally
-Run the development server:
+Launch the development server:
 ```bash
 npm run dev
 ```
 
 ### 3. Production Build
-Verify compilation and create the production bundle:
+Verify TypeScript compilation and generate the production bundle:
 ```bash
 npm run build
 ```
@@ -96,5 +90,18 @@ npm run build
 ## ☁️ Supabase Backend Setup Guide
 
 1. Log in to your [Supabase Dashboard](https://supabase.com/).
-2. Run the SQL schema from [schema.sql](file:///Users/sahildholpuria/Documents/Digital%20Order%20Management%20for%2520Restaurants/schema.sql) in the Supabase SQL Editor.
-3. Configure `.env` with your `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+2. Execute the PostgreSQL schema script from `schema.sql` in the Supabase SQL Editor.
+3. Configure `.env` with your project credentials:
+   ```env
+   VITE_SUPABASE_URL=https://your-supabase-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
+
+---
+
+## 🌿 Branching & Release Strategy
+
+This repository strictly follows industrial deployment environments:
+- **`development`**: Daily features, fixes, and updates are committed here first.
+- **`qa`**: Changes are verified with `npm run build` (0 errors) and merged to `qa` for verification.
+- **`beta` / `main`**: Staging and production release branches.
