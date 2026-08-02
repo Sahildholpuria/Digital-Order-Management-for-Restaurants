@@ -834,24 +834,36 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
                         <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
                           <div>
+                            {/* Name + Veg/Non-Veg Badge */}
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate font-sans">
                                 {item.name}
                               </h3>
-                              <span className={`w-3.5 h-3.5 border rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                                item.isVeg ? 'border-green-600 bg-green-500/10' : 'border-red-600 bg-red-500/10'
-                              }`} title={item.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${
-                                  item.isVeg ? 'bg-green-600' : 'bg-red-600'
-                                }`}></span>
-                              </span>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${
+                                  item.isVeg 
+                                    ? 'border-green-600/40 bg-green-500/10 text-green-700 dark:text-green-400' 
+                                    : 'border-red-600/40 bg-red-500/10 text-red-700 dark:text-red-400'
+                                }`} title={item.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                                  <span>{item.isVeg ? 'Veg' : 'Non-Veg'}</span>
+                                </span>
+                              </div>
                             </div>
                             
+                            {/* Description */}
                             <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-2 mt-1 leading-normal font-medium truncate-2-lines">
-                              {item.description ? item.description.split('||variants:')[0] : ''}
+                              {item.description ? item.description.split('||variants:')[0] : 'Freshly prepared gourmet dish.'}
                             </p>
+
+                            {/* Preparation Time */}
+                            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                              <Clock className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                              <span>{item.preparationTime || 15} mins prep</span>
+                            </div>
                           </div>
 
+                          {/* Price & Add Stepper Row */}
                           <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
                             <div className="flex items-center gap-1.5">
                               {(() => {
