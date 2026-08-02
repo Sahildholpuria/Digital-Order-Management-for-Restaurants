@@ -24,6 +24,7 @@ export const BillingManager: React.FC = () => {
     settings, 
     addPaymentRecord, 
     updateOrderStatus,
+    saveOrder,
     showToast
   } = useRestaurant();
 
@@ -70,7 +71,16 @@ export const BillingManager: React.FC = () => {
         createdAt: new Date().toISOString()
       });
       
-      // 2. Mark order completed (releases table status automatically in Context)
+      // 2. Mark order completed with exact settled totals
+      const settledOrder = {
+        ...selectedOrder,
+        subtotal,
+        discount: discountAmount,
+        tax: taxAmount,
+        grandTotal,
+        status: 'completed' as const
+      };
+      await saveOrder(settledOrder);
       await updateOrderStatus(selectedOrder.id, 'completed');
       
       showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
