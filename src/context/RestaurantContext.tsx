@@ -19,6 +19,7 @@ import {
 } from '../types';
 
 import { translations, Language } from '../translations';
+import { printKOTReceipt } from '../utils/printUtils';
 
 interface RestaurantContextType {
   lang: Language;
@@ -907,6 +908,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     // Persist to Database
     await dbService.saveOrder(restaurantId, updatedOrder);
+
+    // Auto-print Kitchen Order Ticket (KOT) automatically whenever order is accepted or sent to kitchen
+    if (status === 'accepted' || status === 'preparing') {
+      try {
+        printKOTReceipt(updatedOrder, settings?.name || 'Kitchen');
+      } catch (err) {
+        console.warn('Auto KOT printing warning:', err);
+      }
+    }
 
     // If order completed or cancelled, release the table status if no other active order
     if (status === 'completed' || status === 'cancelled') {
