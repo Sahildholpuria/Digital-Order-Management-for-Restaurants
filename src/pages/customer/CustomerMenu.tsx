@@ -500,17 +500,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            {settings?.logoUrl ? (
-              <img 
-                src={settings.logoUrl} 
-                alt={settings.name} 
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl object-cover border border-slate-200 dark:border-slate-800 shadow-sm flex-shrink-0"
-              />
-            ) : (
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-sm flex-shrink-0">
-                <Utensils className="w-4 h-4" />
-              </div>
-            )}
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-sm flex-shrink-0">
+              <Utensils className="w-4 h-4" />
+            </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-base font-black tracking-tight text-slate-900 dark:text-slate-100 font-sans leading-tight truncate max-w-[120px] xs:max-w-[170px] sm:max-w-none">
                 {settings?.name || 'Gourmet Restaurant'}

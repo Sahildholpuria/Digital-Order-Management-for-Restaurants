@@ -4,7 +4,6 @@ export interface RestaurantSettings {
   address: string;
   phone: string;
   email: string;
-  logoUrl: string;
   gstNumber: string;
   websiteUrl?: string;
   taxPercentage: number;

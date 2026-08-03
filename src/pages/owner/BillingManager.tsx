@@ -361,15 +361,7 @@ export const BillingManager: React.FC = () => {
                 className="bg-white p-6 border border-slate-200 font-mono text-slate-900 text-xs space-y-4 leading-normal shadow-sm max-w-sm mx-auto"
               >
                 <div className="text-center space-y-1">
-                  {settings?.logoUrl ? (
-                    <img 
-                      src={settings.logoUrl} 
-                      alt="Logo" 
-                      className="w-10 h-10 rounded-full mx-auto object-cover border border-slate-200"
-                    />
-                  ) : (
-                    <Receipt className="w-8 h-8 mx-auto text-brand-500" />
-                  )}
+                  <Receipt className="w-8 h-8 mx-auto text-emerald-500" />
                   <h4 className="font-bold text-sm uppercase tracking-wide">{settings?.name || 'The Grand Bistro'}</h4>
                   <p className="text-[10px] text-slate-500 leading-tight">
                     {settings?.address || '102 Gourmet Blvd, Culinary District'}
