@@ -482,11 +482,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
           <>
             <button
               onClick={async () => {
-                // 1. Accept order
+                // 1. Accept order (triggers auto-print in Context once)
                 await onUpdateStatus(order.id, 'accepted');
-                // 2. Generate & Print KOT Receipt
-                printKOTReceipt(order, restaurantName || 'Kitchen');
-                // 3. Send to Kitchen (preparing stage)
+                // 2. Transition to preparing for kitchen cooking
                 await onUpdateStatus(order.id, 'preparing');
               }}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
@@ -507,7 +505,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
           <button
             onClick={async () => {
               await onUpdateStatus(order.id, 'preparing');
-              printKOTReceipt(order, restaurantName || 'Kitchen');
             }}
             className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow-sm transition-all cursor-pointer"
           >
@@ -552,9 +549,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
         {['pending', 'accepted', 'preparing', 'ready', 'served'].includes(order.status) && (
           <>
             <button
-              onClick={() => printKOTReceipt(order)}
-              className="p-2 border border-slate-205 dark:border-slate-800 text-amber-500 hover:text-amber-600 rounded-xl transition-all"
-              title="Print Kitchen Order Ticket (KOT)"
+              onClick={() => printKOTReceipt(order, restaurantName || 'Kitchen', '80mm', true)}
+              className="p-2 border border-slate-205 dark:border-slate-800 text-amber-500 hover:text-amber-600 rounded-xl transition-all font-bold cursor-pointer"
+              title="Re-print Kitchen Order Ticket (KOT)"
             >
               <Printer className="w-3.5 h-3.5" />
             </button>
