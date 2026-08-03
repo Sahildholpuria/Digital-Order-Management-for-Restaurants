@@ -33,12 +33,26 @@ export const printHTMLContent = (htmlContent: string, iframeId: string = 'pos-th
   }, 150);
 };
 
+const lastPrintedKotMap = new Map<string, number>();
+
 export const printKOTReceipt = (
   order: RestaurantOrder, 
   restaurantName: string = 'Main Kitchen', 
-  paperWidth: '80mm' | '58mm' = '80mm'
+  paperWidth: '80mm' | '58mm' = '80mm',
+  forcePrint: boolean = false
 ) => {
-  if (!order) return;
+  if (!order || !order.id) return;
+
+  const now = Date.now();
+  const lastPrintTime = lastPrintedKotMap.get(order.id) || 0;
+
+  // Prevent duplicate print triggers for the exact same order within 15 seconds unless user explicitly clicks manual Print button
+  if (!forcePrint && (now - lastPrintTime < 15000)) {
+    console.log(`[PrintKOT] Skipped duplicate print trigger for order ${order.orderNumber || order.id}`);
+    return;
+  }
+
+  lastPrintedKotMap.set(order.id, now);
 
   const bodyWidth = paperWidth === '58mm' ? '58mm' : '80mm';
 

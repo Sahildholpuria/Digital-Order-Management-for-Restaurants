@@ -52,30 +52,25 @@ export const KitchenDisplay: React.FC = () => {
 
     if (activeOrders.length > prevOrdersCountRef.current) {
       const latestOrder = activeOrders[activeOrders.length - 1];
-      if (latestOrder) {
-        if (autoPrintKOT) {
-          printKOTReceipt(latestOrder, settings?.name || 'Kitchen');
-        }
-        if (soundEnabled) {
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.4);
-          } catch (_) {}
-        }
+      if (latestOrder && soundEnabled) {
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+        } catch (_) {}
       }
     }
     prevOrdersCountRef.current = activeOrders.length;
-  }, [activeOrders.length, autoPrintKOT, soundEnabled, settings?.name]);
+  }, [activeOrders.length, soundEnabled]);
 
   const toggleItemCross = (orderId: string, itemIdx: number) => {
     const key = `${orderId}-${itemIdx}`;

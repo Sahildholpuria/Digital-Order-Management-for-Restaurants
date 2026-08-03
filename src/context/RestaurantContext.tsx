@@ -909,8 +909,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Persist to Database
     await dbService.saveOrder(restaurantId, updatedOrder);
 
-    // Auto-print Kitchen Order Ticket (KOT) automatically whenever order is accepted or sent to kitchen
-    if (status === 'accepted' || status === 'preparing') {
+    // Auto-print Kitchen Order Ticket (KOT) automatically ONCE when order is accepted
+    if (status === 'accepted' || (status === 'preparing' && order.status === 'pending')) {
       try {
         printKOTReceipt(updatedOrder, settings?.name || 'Kitchen');
       } catch (err) {
