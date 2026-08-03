@@ -31,7 +31,6 @@ export const SettingsManager: React.FC = () => {
   const [address, setAddress] = useState(settings?.address || '');
   const [phone, setPhone] = useState(settings?.phone || '');
   const [email, setEmail] = useState(settings?.email || '');
-  const [logoUrl, setLogoUrl] = useState(settings?.logoUrl || '');
   const [gstNumber, setGstNumber] = useState(settings?.gstNumber || '');
   const [websiteUrl, setWebsiteUrl] = useState(settings?.websiteUrl || '');
   const [taxPercentage, setTaxPercentage] = useState(settings?.taxPercentage ?? 0);
@@ -53,7 +52,6 @@ export const SettingsManager: React.FC = () => {
       setAddress(settings.address || '');
       setPhone(settings.phone || '');
       setEmail(settings.email || '');
-      setLogoUrl(settings.logoUrl || '');
       setGstNumber(settings.gstNumber || '');
       setWebsiteUrl(settings.websiteUrl || '');
       setTaxPercentage(settings.taxPercentage ?? 0);
@@ -100,7 +98,6 @@ export const SettingsManager: React.FC = () => {
         address,
         phone,
         email,
-        logoUrl,
         gstNumber,
         websiteUrl,
         taxPercentage: Number(taxPercentage),
@@ -185,21 +182,6 @@ export const SettingsManager: React.FC = () => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Brand Logo URL</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <ImageIcon className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
