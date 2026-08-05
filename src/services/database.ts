@@ -15,11 +15,11 @@ import {
 // ==========================================
 
 const mapSettingsToFrontend = (row: any): RestaurantSettings => {
-  const rawTheme = row.theme_color || row.themeColor || '#18251D';
+  const rawTheme = row.theme_color || row.themeColor || '#0B132B';
   const themeParts = rawTheme.split('|');
-  let themeColor = themeParts[0] || '#18251D';
-  if (['#10B981', '#059669', '#6366F1', '#4f46e5', '#0B132B'].includes(themeColor)) {
-    themeColor = '#18251D';
+  let themeColor = themeParts[0] || '#0B132B';
+  if (['#10B981', '#059669', '#6366F1', '#4f46e5', '#18251D'].includes(themeColor)) {
+    themeColor = '#0B132B';
   }
   const enableWaiterCall = themeParts[1] !== 'false';
   const enableBillRequest = themeParts[2] !== 'false';
@@ -260,7 +260,7 @@ const DEFAULT_SETTINGS = {
   currency: '₹',
   openingHours: '09:00',
   closingHours: '23:00',
-  themeColor: '#18251D',
+  themeColor: '#0B132B',
   createdAt: new Date().toISOString(),
 };
 
