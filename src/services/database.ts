@@ -15,9 +15,12 @@ import {
 // ==========================================
 
 const mapSettingsToFrontend = (row: any): RestaurantSettings => {
-  const rawTheme = row.theme_color || row.themeColor || '#10B981';
+  const rawTheme = row.theme_color || row.themeColor || '#18251D';
   const themeParts = rawTheme.split('|');
-  const themeColor = themeParts[0] || '#10B981';
+  let themeColor = themeParts[0] || '#18251D';
+  if (['#10B981', '#059669', '#6366F1', '#4f46e5', '#0B132B'].includes(themeColor)) {
+    themeColor = '#18251D';
+  }
   const enableWaiterCall = themeParts[1] !== 'false';
   const enableBillRequest = themeParts[2] !== 'false';
   const enableSoundNotification = themeParts[3] !== 'false';
