@@ -5,21 +5,27 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --brand-50: #ecfdf5;
-  --brand-100: #d1fae5;
-  --brand-400: #34d399;
-  --brand-500: #10b981;
-  --brand-600: #059669;
-  --brand-700: #047857;
+  --primary-navy: #0B132B;
+  --secondary-mint: #39FF88;
+
+  --brand-50: #e8fff1;
+  --brand-100: #beffd6;
+  --brand-400: #39ff88;
+  --brand-500: #39ff88;
+  --brand-600: #2ce073;
+  --brand-700: #1ec460;
 }
 
 .dark {
-  --brand-50: #064e3b;
-  --brand-100: #065f46;
-  --brand-400: #34d399;
-  --brand-500: #10b981;
-  --brand-600: #059669;
-  --brand-700: #047857;
+  --primary-navy: #0B132B;
+  --secondary-mint: #39FF88;
+
+  --brand-50: #053b1c;
+  --brand-100: #09592c;
+  --brand-400: #39ff88;
+  --brand-500: #39ff88;
+  --brand-600: #2ce073;
+  --brand-700: #1ec460;
 }
 
 @theme {

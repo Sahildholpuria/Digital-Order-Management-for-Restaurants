@@ -257,7 +257,7 @@ const DEFAULT_SETTINGS = {
   currency: '₹',
   openingHours: '09:00',
   closingHours: '23:00',
-  themeColor: '#10B981',
+  themeColor: '#0B132B',
   createdAt: new Date().toISOString(),
 };
 
