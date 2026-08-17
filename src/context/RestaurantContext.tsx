@@ -69,6 +69,7 @@ interface RestaurantContextType {
   addPaymentRecord: (payment: PaymentRecord) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   clearAllNotifications: () => Promise<void>;
+  testSoundAlert: () => void;
   
   // Auth Helpers
   loginMockUser: (email: string, role: UserRole) => Promise<UserProfile>;
@@ -193,7 +194,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
   
   const isFirstLoad = useRef(true);
-  const prevNotificationsCount = useRef(0);
+  const seenNotificationIds = useRef<Set<string>>(new Set());
   const sessionStartTime = useRef<number>(Date.now());
   const originalDocTitle = useRef<string>(document.title);
 
@@ -201,7 +202,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     sessionStartTime.current = Date.now();
     isFirstLoad.current = true;
-    prevNotificationsCount.current = 0;
+    seenNotificationIds.current.clear();
   }, [currentUser?.id, restaurantId]);
 
   // Handle Tab Focus to clear flashing title
@@ -551,17 +552,19 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         try {
           unsubNotifications = dbService.subscribeNotifications(restaurantId, (data) => {
             setNotifications(data);
-            if (!isFirstLoad.current && data.length > prevNotificationsCount.current) {
-              const newNotify = data[0];
-              const notifyTime = newNotify?.createdAt ? new Date(newNotify.createdAt).getTime() : 0;
-              // STRICT GUARD: Sound ONLY plays for fresh live customer orders created AFTER current session started
-              const isLiveCreatedDuringSession = notifyTime >= (sessionStartTime.current - 2000);
+            
+            data.forEach(n => {
+              if (n.type === 'new_order' && !n.isRead && !seenNotificationIds.current.has(n.id)) {
+                seenNotificationIds.current.add(n.id);
+                const notifyTime = n.createdAt ? new Date(n.createdAt).getTime() : 0;
+                const isLiveCreatedDuringSession = notifyTime >= (sessionStartTime.current - 5000);
 
-              if (newNotify && !newNotify.isRead && newNotify.type === 'new_order' && isLiveCreatedDuringSession) {
-                triggerNotificationSoundAndSpeech(newNotify);
+                if (!isFirstLoad.current || isLiveCreatedDuringSession) {
+                  triggerNotificationSoundAndSpeech(n);
+                }
               }
-            }
-            prevNotificationsCount.current = data.length;
+            });
+
             isFirstLoad.current = false;
           });
         } catch (e) { console.error('subscribeNotifications error:', e); }
@@ -1076,6 +1079,25 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  const testSoundAlert = () => {
+    try {
+      const mockNotif: RestaurantNotification = {
+        id: `test-${Date.now()}`,
+        type: 'new_order',
+        tableId: 'test-table',
+        tableName: 'Table 1',
+        orderId: 'test-order',
+        message: 'Sound Test Alert',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+      triggerNotificationSoundAndSpeech(mockNotif);
+      showToast('🔔 Sound Chime & Voice Alert Tested Successfully!', 'success');
+    } catch (err) {
+      console.error('Test sound error:', err);
+    }
+  };
+
   return (
     <RestaurantContext.Provider value={{
       lang,
@@ -1121,6 +1143,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       addPaymentRecord,
       markNotificationRead,
       clearAllNotifications,
+      testSoundAlert,
       loginMockUser,
       logoutUser,
       refreshData,

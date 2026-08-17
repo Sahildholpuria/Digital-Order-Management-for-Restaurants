@@ -21,7 +21,7 @@ import {
 import { printKOTReceipt } from '../../utils/printUtils';
 
 export const OrdersManager: React.FC = () => {
-  const { orders, settings, tables, updateOrderStatus, saveOrder, refreshData } = useRestaurant();
+  const { orders, settings, tables, updateOrderStatus, saveOrder, refreshData, testSoundAlert } = useRestaurant();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -177,17 +177,14 @@ export const OrdersManager: React.FC = () => {
             <span>{isRefreshing ? 'Refreshing...' : 'Refresh Orders'}</span>
           </button>
 
-          {/* Audio speech notification controls */}
+          {/* Audio speech notification controls & Test Chime */}
           <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border ${
-              soundEnabled 
-                ? 'bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30'
-                : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800'
-            }`}
+            onClick={() => testSoundAlert()}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/40 cursor-pointer active:scale-95 shadow-sm"
+            title="Click to Test Sound Chime & Voice Alert"
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            <span className="hidden sm:inline">{soundEnabled ? 'Speech Alerts ON' : 'Speech Alerts MUTED'}</span>
+            <Volume2 className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+            <span>Test Sound Alert</span>
           </button>
         </div>
       </div>
