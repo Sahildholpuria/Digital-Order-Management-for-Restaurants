@@ -500,16 +500,16 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#39FF88]/15 text-[#39FF88] dark:text-[#39FF88] rounded-xl sm:rounded-2xl flex items-center justify-center border border-[#39FF88]/30 shadow-sm flex-shrink-0">
-              <Utensils className="w-4 h-4 text-[#39FF88]" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#F59E0B]/15 text-[#F59E0B] dark:text-[#F59E0B] rounded-xl sm:rounded-2xl flex items-center justify-center border border-[#F59E0B]/30 shadow-sm flex-shrink-0">
+              <Utensils className="w-4 h-4 text-[#F59E0B]" />
             </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-base font-black tracking-tight text-slate-900 dark:text-slate-100 font-sans leading-tight truncate max-w-[120px] xs:max-w-[170px] sm:max-w-none">
                 {settings?.name || 'Gourmet Restaurant'}
               </h1>
               <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#39FF88] animate-pulse"></span>
-                <span className="text-[#39FF88] font-mono">Table #{getTableDisplayNumber()}</span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse"></span>
+                <span className="text-[#F59E0B] font-mono">Table #{getTableDisplayNumber()}</span>
               </div>
             </div>
           </div>
@@ -753,8 +753,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   onClick={() => setSelectedCategory('all')}
                   className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
-                      ? 'bg-[#39FF88] border-[#39FF88] text-[#0B132B] shadow-lg shadow-[#39FF88]/25 scale-[1.02]'
-                      : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-[#39FF88]'
+                      ? 'bg-[#F59E0B] border-[#F59E0B] text-[#0F172A] shadow-lg shadow-[#F59E0B]/25 scale-[1.02]'
+                      : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-[#F59E0B]'
                   }`}
                 >
                   {t.allItems}
@@ -765,8 +765,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                     onClick={() => setSelectedCategory(cat.id)}
                     className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
-                        ? 'bg-[#39FF88] border-[#39FF88] text-[#0B132B] shadow-lg shadow-[#39FF88]/25 scale-[1.02]'
-                        : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-[#39FF88]'
+                        ? 'bg-[#F59E0B] border-[#F59E0B] text-[#0F172A] shadow-lg shadow-[#F59E0B]/25 scale-[1.02]'
+                        : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-[#F59E0B]'
                     }`}
                   >
                     {cat.name}
@@ -907,7 +907,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                       e.stopPropagation();
                                       handleOpenItem(item);
                                     }}
-                                    className="bg-[#39FF88] hover:bg-[#2CE073] text-[#0B132B] text-[11px] font-black px-3.5 py-1.5 rounded-xl shadow-md shadow-[#39FF88]/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                    className="bg-[#F59E0B] hover:bg-[#D97706] text-[#0F172A] text-[11px] font-black px-3.5 py-1.5 rounded-xl shadow-md shadow-[#F59E0B]/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                                   >
                                     <span>+ ADD</span>
                                   </button>
@@ -916,7 +916,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                               return (
                                 <div 
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center bg-[#0B132B] text-white rounded-xl shadow-md px-2 py-1 gap-2 border border-[#39FF88]/40"
+                                  className="flex items-center bg-[#0F172A] text-white rounded-xl shadow-md px-2 py-1 gap-2 border border-[#F59E0B]/40"
                                 >
                                   <button
                                     onClick={() => {
@@ -926,7 +926,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                         updateCartQuantity(item.id, qty - 1);
                                       }
                                     }}
-                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-[#1C2541] rounded-md transition-colors cursor-pointer text-[#39FF88]"
+                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-[#1E293B] rounded-md transition-colors cursor-pointer text-[#F59E0B]"
                                   >
                                     -
                                   </button>
@@ -935,7 +935,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                     onClick={() => {
                                       updateCartQuantity(item.id, qty + 1);
                                     }}
-                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-[#1C2541] rounded-md transition-colors cursor-pointer text-[#39FF88]"
+                                    className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-[#1E293B] rounded-md transition-colors cursor-pointer text-[#F59E0B]"
                                   >
                                     +
                                   </button>
@@ -987,17 +987,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-4 inset-x-4 z-40 bg-[#0B132B]/95 dark:bg-[#0B132B]/95 backdrop-blur-xl border border-[#39FF88]/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-[#0B132B]/60 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
+        <div className="fixed bottom-4 inset-x-4 z-40 bg-[#0F172A]/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border border-[#F59E0B]/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-[#0F172A]/60 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative bg-[#39FF88]/20 p-2.5 rounded-2xl text-[#39FF88] border border-[#39FF88]/40">
-                <ShoppingBag className="w-5 h-5 animate-pulse text-[#39FF88]" />
-                <span className="absolute -top-1.5 -right-1.5 bg-[#39FF88] text-[#0B132B] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-[#0B132B]">
+              <div className="relative bg-[#F59E0B]/20 p-2.5 rounded-2xl text-[#F59E0B] border border-[#F59E0B]/40">
+                <ShoppingBag className="w-5 h-5 animate-pulse text-[#F59E0B]" />
+                <span className="absolute -top-1.5 -right-1.5 bg-[#F59E0B] text-[#0F172A] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-[#0F172A]">
                   {totalItemsCount}
                 </span>
               </div>
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-[#39FF88]">Total Basket</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#F59E0B]">Total Basket</p>
                 <p className="text-base font-black tracking-tight text-white">
                   {settings?.currency || '₹'}{getCartGrandTotal().toFixed(0)}
                 </p>
@@ -1006,10 +1006,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             
             <button
               onClick={() => setIsCartOpen(true)}
-              className="bg-[#39FF88] hover:bg-[#2CE073] text-[#0B132B] font-black px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-[#39FF88]/20 cursor-pointer"
+              className="bg-[#F59E0B] hover:bg-[#D97706] text-[#0F172A] font-black px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-[#F59E0B]/20 cursor-pointer"
             >
               <span>Review Cart</span>
-              <ArrowRight className="w-4 h-4 text-[#0B132B]" />
+              <ArrowRight className="w-4 h-4 text-[#0F172A]" />
             </button>
           </div>
         </div>
