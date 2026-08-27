@@ -457,10 +457,24 @@ export const App: React.FC = () => {
       let sidebarItems: Array<{ id: string; label: string; icon: any; roles: string[] }> = [];
 
       if (currentUser?.isSuperAdmin) {
-        // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
-        sidebarItems = [
-          { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
-        ];
+        if (restaurantId && restaurantId !== 'demo-restaurant') {
+          // Impersonating Tenant Mode: Show all tenant POS tabs plus Super Admin control
+          sidebarItems = [
+            { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] },
+            { id: 'dashboard', label: t.dashboard, icon: TrendingUp, roles: ['admin'] },
+            { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['admin'] },
+            { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['admin'] },
+            { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin'] },
+            { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin'] },
+            { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
+            { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
+          ];
+        } else {
+          // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
+          sidebarItems = [
+            { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
+          ];
+        }
       } else {
         // Regular restaurant staff account
         sidebarItems = [
@@ -476,10 +490,11 @@ export const App: React.FC = () => {
 
       // Render active tab body
       const renderActiveTabContent = () => {
-        if (currentUser?.isSuperAdmin) {
+        if (currentUser?.isSuperAdmin && (activeTab === 'superadmin' || !restaurantId || restaurantId === 'demo-restaurant')) {
           return <SuperAdminDashboard />;
         }
         switch (activeTab) {
+          case 'superadmin': return <SuperAdminDashboard />;
           case 'dashboard': return <AdminDashboard />;
           case 'orders': return <OrdersManager />;
           case 'tables': return <TablesManager />;
@@ -487,7 +502,7 @@ export const App: React.FC = () => {
           case 'billing': return <BillingManager />;
           case 'reports': return <ReportsManager />;
           case 'settings': return <SettingsManager />;
-          default: return <AdminDashboard />;
+          default: return currentUser?.isSuperAdmin ? <SuperAdminDashboard /> : <AdminDashboard />;
         }
       };
 

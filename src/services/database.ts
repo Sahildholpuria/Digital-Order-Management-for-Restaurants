@@ -44,9 +44,9 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     enableBillRequest,
     enableSoundNotification,
     enableBillPrinting,
-    subscriptionStatus: row.subscription_status || 'trial',
-    subscriptionExpiresAt: row.subscription_expires_at,
-    planType: row.plan_type || 'starter',
+    subscriptionStatus: row.subscription_status || row.subscriptionStatus || 'trial',
+    subscriptionExpiresAt: row.subscription_expires_at || row.subscriptionExpiresAt,
+    planType: row.plan_type || row.planType || 'starter',
     createdAt: row.created_at || row.createdAt,
   };
 };
@@ -261,6 +261,9 @@ const DEFAULT_SETTINGS = {
   openingHours: '09:00',
   closingHours: '23:00',
   themeColor: '#064E3B',
+  subscriptionStatus: 'trial' as const,
+  planType: 'starter' as const,
+  subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   createdAt: new Date().toISOString(),
 };
 
@@ -485,8 +488,14 @@ export const dbService = {
       }
       return mapSettingsToFrontend(data);
     } else {
-      const data = localStorage.getItem('restaurant_settings');
-      return data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
+      const data = localStorage.getItem('super_admin_restaurants');
+      if (data) {
+        const list = JSON.parse(data);
+        const match = list.find((r: any) => r.id === restaurantId);
+        if (match) return mapSettingsToFrontend(match);
+      }
+      const singleData = localStorage.getItem('restaurant_settings');
+      return singleData ? mapSettingsToFrontend(JSON.parse(singleData)) : mapSettingsToFrontend(DEFAULT_SETTINGS);
     }
   },
   subscribeSettings(restaurantId: string, callback: (settings: RestaurantSettings) => void) {
@@ -528,8 +537,17 @@ export const dbService = {
       };
     } else {
       const emitData = () => {
-        const data = localStorage.getItem('restaurant_settings');
-        callback(data ? mapSettingsToFrontend(JSON.parse(data)) : mapSettingsToFrontend(DEFAULT_SETTINGS));
+        const data = localStorage.getItem('super_admin_restaurants');
+        if (data) {
+          const list = JSON.parse(data);
+          const match = list.find((r: any) => r.id === restaurantId);
+          if (match) {
+            callback(mapSettingsToFrontend(match));
+            return;
+          }
+        }
+        const singleData = localStorage.getItem('restaurant_settings');
+        callback(singleData ? mapSettingsToFrontend(JSON.parse(singleData)) : mapSettingsToFrontend(DEFAULT_SETTINGS));
       };
 
       emitData();
@@ -778,7 +796,8 @@ export const dbService = {
       if (index > -1) {
         list[index] = { ...list[index], ...updates };
         localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
-        if (restaurantId === 'demo-restaurant') {
+        const activeStaffRest = localStorage.getItem('last_active_staff_restaurant_id') || 'demo-restaurant';
+        if (restaurantId === 'demo-restaurant' || restaurantId === activeStaffRest) {
           const currentSettings = localStorage.getItem('restaurant_settings');
           const current = currentSettings ? JSON.parse(currentSettings) : {};
           localStorage.setItem('restaurant_settings', JSON.stringify({ ...current, ...updates }));
