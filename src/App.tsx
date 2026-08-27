@@ -457,7 +457,7 @@ export const App: React.FC = () => {
       let sidebarItems: Array<{ id: string; label: string; icon: any; roles: string[] }> = [];
 
       if (currentUser?.isSuperAdmin) {
-        if (restaurantId && restaurantId !== 'demo-restaurant') {
+        if (restaurantId) {
           // Impersonating Tenant Mode: Show all tenant POS tabs plus Super Admin control
           sidebarItems = [
             { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] },
@@ -490,7 +490,7 @@ export const App: React.FC = () => {
 
       // Render active tab body
       const renderActiveTabContent = () => {
-        if (currentUser?.isSuperAdmin && (activeTab === 'superadmin' || !restaurantId || restaurantId === 'demo-restaurant')) {
+        if (currentUser?.isSuperAdmin && (activeTab === 'superadmin' || !restaurantId)) {
           return <SuperAdminDashboard />;
         }
         switch (activeTab) {
@@ -543,8 +543,8 @@ export const App: React.FC = () => {
                   <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">
                     {currentUser?.isSuperAdmin ? 'Super Admin SaaS' : 'Restaurant OS'}
                   </span>
-                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? 'Tenant Central' : settings?.name}>
-                    {currentUser?.isSuperAdmin ? 'Tenant Central' : (settings?.name || 'Bistro System')}
+                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? (restaurantId ? (settings?.name || restaurantId) : 'Tenant Central') : (settings?.name || 'Bistro System')}>
+                    {currentUser?.isSuperAdmin ? (restaurantId ? (settings?.name || restaurantId) : 'Tenant Central') : (settings?.name || 'Bistro System')}
                   </span>
                 </div>
               </div>
@@ -626,7 +626,7 @@ export const App: React.FC = () => {
 
           {/* Content Container */}
           <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
-            {currentUser?.isSuperAdmin && restaurantId !== 'demo-restaurant' && (
+            {currentUser?.isSuperAdmin && !!restaurantId && (
               <div className="bg-amber-550/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 px-6 py-3 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 animate-fade-in text-xs font-bold shadow-sm">
                 <span className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
@@ -634,11 +634,11 @@ export const App: React.FC = () => {
                 </span>
                 <button 
                   onClick={() => {
-                    setRestaurantId('demo-restaurant');
+                    setRestaurantId('');
                     localStorage.removeItem('last_active_staff_restaurant_id');
                     setActiveTab('superadmin');
                   }}
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-md"
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-md cursor-pointer"
                 >
                   Return to Super Admin Panel
                 </button>

@@ -83,6 +83,7 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
 
 const mapUserToFrontend = (row: any): UserProfile => ({
   id: row.id,
+  restaurantId: row.restaurant_id || row.restaurantId || undefined,
   name: row.name,
   email: row.email,
   role: row.role,
@@ -844,10 +845,11 @@ export const dbService = {
         .from('users')
         .insert({
           id: user.id,
-          restaurant_id: restaurantId,
+          restaurant_id: user.isSuperAdmin ? null : (restaurantId || null),
           name: user.name,
           email: user.email,
           role: user.role,
+          is_super_admin: !!user.isSuperAdmin,
           created_at: user.createdAt
         });
       if (error) throw error;

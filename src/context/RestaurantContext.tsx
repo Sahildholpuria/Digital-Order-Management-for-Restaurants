@@ -102,15 +102,17 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     
     const storedStaffRest = localStorage.getItem('last_active_staff_restaurant_id');
-    if (storedStaffRest) return storedStaffRest;
-    
     const savedUser = localStorage.getItem('restaurant_current_user');
     if (savedUser) {
       try {
         const u = JSON.parse(savedUser);
+        if (u.isSuperAdmin) {
+          return storedStaffRest && storedStaffRest !== 'demo-restaurant' ? storedStaffRest : '';
+        }
         if (u.restaurantId) return u.restaurantId;
       } catch (e) {}
     }
+    if (storedStaffRest) return storedStaffRest;
     
     return 'demo-restaurant';
   });
@@ -285,13 +287,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (data) {
         // Profile found — map to frontend shape
+        const isSuper = !!data.is_super_admin;
         const profile: UserProfile = {
           id: data.id,
-          restaurantId: data.restaurant_id,
+          restaurantId: isSuper ? undefined : (data.restaurant_id || undefined),
           name: data.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
           email: data.email || user.email || '',
           role: data.role || 'admin',
-          isSuperAdmin: data.is_super_admin || false,
+          isSuperAdmin: isSuper,
           createdAt: data.created_at || new Date().toISOString(),
         };
         setCurrentUserState(profile);
@@ -300,14 +303,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const isSuper = user.email === 'superadmin@restaurant.com' || user.email?.includes('super') || false;
         const profile: UserProfile = {
           id: user.id,
-          restaurantId: 'demo-restaurant',
+          restaurantId: isSuper ? undefined : 'demo-restaurant',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
           email: user.email || '',
           role: 'admin',
           isSuperAdmin: isSuper,
           createdAt: new Date().toISOString(),
         };
-        await dbService.addUser('demo-restaurant', profile);
+        await dbService.addUser(isSuper ? '' : 'demo-restaurant', profile);
         setCurrentUserState(profile);
       }
     } catch (err) {
@@ -367,7 +370,16 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Sync restaurantId with logged-in user's profile restaurantId
   useEffect(() => {
-    if (currentUser?.restaurantId) {
+    if (currentUser?.isSuperAdmin) {
+      // Super Admin is platform-level: starts with empty restaurant context unless actively impersonating
+      const storedImpersonating = localStorage.getItem('last_active_staff_restaurant_id');
+      if (storedImpersonating && storedImpersonating !== 'demo-restaurant') {
+        setRestaurantId(storedImpersonating);
+      } else {
+        setRestaurantId('');
+        localStorage.removeItem('last_active_staff_restaurant_id');
+      }
+    } else if (currentUser?.restaurantId) {
       setRestaurantId(currentUser.restaurantId);
       localStorage.setItem('last_active_staff_restaurant_id', currentUser.restaurantId);
     }
@@ -447,6 +459,19 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Load Settings and Real-time Listeners
   useEffect(() => {
     if (loading) return;
+
+    // If no active restaurant selected (e.g. Super Admin on SaaS dashboard), reset tenant state
+    if (!restaurantId) {
+      setTablesLoaded(true);
+      setSettings(null);
+      setCategories([]);
+      setFoodItems([]);
+      setTables([]);
+      setOrders([]);
+      setPayments([]);
+      setNotifications([]);
+      return;
+    }
 
     // Reset tablesLoaded for new restaurantId to prevent flash of wrong table cache
     setTablesLoaded(false);
@@ -1025,20 +1050,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // MOCK AUTH
   const loginMockUser = async (email: string, role: UserRole): Promise<UserProfile> => {
-    const users = await dbService.getUsers(restaurantId);
-    let found = users.find(u => u.email === email && u.role === role);
+    const isSuper = email === 'superadmin@restaurant.com' || email.includes('super');
+    const targetRest = isSuper ? '' : restaurantId;
+    const users = isSuper ? await dbService.getAllUsers() : await dbService.getUsers(restaurantId);
+    let found = users.find(u => u.email === email && (isSuper ? true : u.role === role));
     if (!found) {
       found = {
         id: `mock-user-${Date.now()}`,
+        restaurantId: isSuper ? undefined : restaurantId,
         name: email.split('@')[0].toUpperCase(),
         email,
-        role,
-        isSuperAdmin: email === 'superadmin@restaurant.com' || email.includes('super'),
+        role: isSuper ? 'admin' : role,
+        isSuperAdmin: isSuper,
         createdAt: new Date().toISOString()
       };
-      await dbService.addUser(restaurantId, found);
+      await dbService.addUser(targetRest, found);
     }
     setCurrentUser(found);
+    if (isSuper) {
+      setRestaurantId('');
+      localStorage.removeItem('last_active_staff_restaurant_id');
+    }
     return found;
   };
 

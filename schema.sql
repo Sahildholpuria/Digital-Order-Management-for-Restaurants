@@ -40,7 +40,7 @@ create table public.restaurants (
 -- Staff Profiles
 create table public.users (
   id uuid references auth.users on delete cascade primary key,
-  restaurant_id text references public.restaurants(id) on delete cascade not null,
+  restaurant_id text references public.restaurants(id) on delete cascade,
   name text not null,
   email text not null,
   role text check (role in ('admin', 'manager', 'cashier', 'kitchen', 'waiter')) not null,
@@ -152,22 +152,35 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   target_restaurant_id text;
+  is_super boolean;
 begin
-  target_restaurant_id := coalesce(new.raw_user_meta_data->>'restaurant_id', 'demo-restaurant');
-  
-  -- Ensure the restaurant exists to satisfy the foreign key constraint
-  insert into public.restaurants (id, name, theme_color)
-  values (target_restaurant_id, 'My Restaurant', '#6366F1')
-  on conflict (id) do nothing;
+  is_super := coalesce(
+    (new.raw_user_meta_data->>'is_super_admin')::boolean,
+    new.email = 'superadmin@restaurant.com',
+    new.email like '%superadmin%',
+    false
+  );
+
+  if is_super then
+    target_restaurant_id := null;
+  else
+    target_restaurant_id := coalesce(new.raw_user_meta_data->>'restaurant_id', 'demo-restaurant');
+    
+    -- Ensure the restaurant exists to satisfy the foreign key constraint
+    insert into public.restaurants (id, name, theme_color)
+    values (target_restaurant_id, 'My Restaurant', '#6366F1')
+    on conflict (id) do nothing;
+  end if;
 
   -- Now insert the user safely
-  insert into public.users (id, restaurant_id, name, email, role)
+  insert into public.users (id, restaurant_id, name, email, role, is_super_admin)
   values (
     new.id,
     target_restaurant_id,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
-    coalesce(new.raw_user_meta_data->>'role', 'admin')
+    coalesce(new.raw_user_meta_data->>'role', 'admin'),
+    is_super
   );
   return new;
 end;
