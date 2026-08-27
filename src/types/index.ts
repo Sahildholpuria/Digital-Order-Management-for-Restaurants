@@ -136,3 +136,15 @@ export interface ConfirmModalConfig {
   message: string;
   onConfirm: () => void;
 }
+
+export interface SaaSAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'urgent';
+  isActive: boolean;
+  isDismissible: boolean;
+  startsAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+}

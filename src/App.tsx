@@ -55,10 +55,15 @@ import {
   Shield,
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  Megaphone,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import { translations, Language } from './translations';
 import { PageLoader } from './components/PageLoader';
+import dbService from './services/database';
+import { SaaSAnnouncement } from './types';
 
 const LazyLoader = () => (
   <PageLoader message="LOADING DASHBOARD..." subtext="Fetching live restaurant menus and orders" />
@@ -171,6 +176,39 @@ export const App: React.FC = () => {
   });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+
+  // Platform-Wide Broadcast Announcements State
+  const [announcements, setAnnouncements] = useState<SaaSAnnouncement[]>([]);
+  const [dismissedAnnIds, setDismissedAnnIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('dismissed_announcements');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const unsub = dbService.subscribeAnnouncements((list) => {
+      setAnnouncements(list);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleDismissAnnouncement = (id: string) => {
+    const next = [...dismissedAnnIds, id];
+    setDismissedAnnIds(next);
+    localStorage.setItem('dismissed_announcements', JSON.stringify(next));
+  };
+
+  const activeAnnouncements = announcements.filter(ann => {
+    if (!ann.isActive) return false;
+    if (dismissedAnnIds.includes(ann.id)) return false;
+    const now = Date.now();
+    if (ann.startsAt && new Date(ann.startsAt).getTime() > now) return false;
+    if (ann.expiresAt && new Date(ann.expiresAt).getTime() < now) return false;
+    return true;
+  });
 
   // Trigger brief page transition loader on path or tab change
   useEffect(() => {
@@ -626,6 +664,72 @@ export const App: React.FC = () => {
 
           {/* Content Container */}
           <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
+            
+            {/* Platform-Wide Broadcast Announcement Banners */}
+            {activeAnnouncements.map(ann => {
+              const styleConfig = {
+                info: {
+                  bg: 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200',
+                  iconBg: 'bg-blue-600 text-white',
+                  icon: Info,
+                },
+                warning: {
+                  bg: 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200',
+                  iconBg: 'bg-amber-600 text-white',
+                  icon: AlertTriangle,
+                },
+                success: {
+                  bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200',
+                  iconBg: 'bg-emerald-600 text-white',
+                  icon: CheckCircle2,
+                },
+                urgent: {
+                  bg: 'bg-rose-500/15 border-rose-500/40 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/20',
+                  iconBg: 'bg-rose-600 text-white animate-pulse',
+                  icon: Megaphone,
+                },
+              }[ann.type] || {
+                bg: 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200',
+                iconBg: 'bg-blue-600 text-white',
+                icon: Info,
+              };
+
+              const Icon = styleConfig.icon;
+
+              return (
+                <div 
+                  key={ann.id} 
+                  className={`${styleConfig.bg} border px-5 py-3.5 rounded-2xl flex items-center justify-between gap-4 mb-6 shadow-sm animate-fade-in backdrop-blur-md`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${styleConfig.iconBg}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-xs uppercase tracking-wider">{ann.title}</span>
+                        {ann.type === 'urgent' && (
+                          <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest">
+                            Urgent
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium opacity-90 truncate mt-0.5">{ann.message}</p>
+                    </div>
+                  </div>
+                  {ann.isDismissible && (
+                    <button
+                      onClick={() => handleDismissAnnouncement(ann.id)}
+                      className="p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 opacity-70 hover:opacity-100 transition-all cursor-pointer shrink-0"
+                      title="Dismiss announcement"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
             {currentUser?.isSuperAdmin && !!restaurantId && (
               <div className="bg-amber-550/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 px-6 py-3 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 animate-fade-in text-xs font-bold shadow-sm">
                 <span className="flex items-center gap-2">

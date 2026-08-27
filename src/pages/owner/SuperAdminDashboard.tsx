@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../../services/database';
-import { RestaurantSettings, UserProfile } from '../../types';
+import { RestaurantSettings, UserProfile, SaaSAnnouncement } from '../../types';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { PageLoader } from '../../components/PageLoader';
 import { 
@@ -30,15 +30,29 @@ import {
   Sparkles,
   Filter,
   Key,
-  ShieldAlert
+  ShieldAlert,
+  Megaphone,
+  Bell,
+  Send,
+  MessageSquare,
+  Mail,
+  Share2,
+  AlertTriangle
 } from 'lucide-react';
+
+const planLabels: Record<string, string> = {
+  starter: '1 Month Plan',
+  pro_6m: '6 Months Plan',
+  pro_1y: '12 Months Plan'
+};
 
 export const SuperAdminDashboard: React.FC = () => {
   const { currentUser, setRestaurantId, showToast, askConfirmation } = useRestaurant();
 
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'users'>('restaurants');
+  const [announcements, setAnnouncements] = useState<SaaSAnnouncement[]>([]);
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'users' | 'announcements'>('restaurants');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,13 +108,26 @@ export const SuperAdminDashboard: React.FC = () => {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   // Status Filter & Sorting state
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expired' | 'suspended'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'renewals_due' | 'expired' | 'suspended'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'expiry' | 'date' | 'status'>('name');
   const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
 
   // Share Credentials Modal
-  const [credsModal, setCredsModal] = useState<{ restName: string; email: string; pass: string; role: string; slug: string } | null>(null);
+  const [credsModal, setCredsModal] = useState<{ restName: string; email: string; pass: string; role: string; slug: string; phone?: string } | null>(null);
   const [copiedText, setCopiedText] = useState(false);
+
+  // Renewal Alert Dispatcher Modal
+  const [renewModal, setRenewModal] = useState<{ restaurant: RestaurantSettings; daysLeft: number } | null>(null);
+  const [copiedRenewText, setCopiedRenewText] = useState(false);
+
+  // Broadcast Announcement Form States
+  const [isAnnModalOpen, setIsAnnModalOpen] = useState(false);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annMessage, setAnnMessage] = useState('');
+  const [annType, setAnnType] = useState<'info' | 'warning' | 'success' | 'urgent'>('info');
+  const [annDismissible, setAnnDismissible] = useState(true);
+  const [annExpiresAt, setAnnExpiresAt] = useState('');
+  const [annSaving, setAnnSaving] = useState(false);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -110,6 +137,9 @@ export const SuperAdminDashboard: React.FC = () => {
       
       const userData = await dbService.getAllUsers();
       setUsers(userData);
+
+      const annData = await dbService.getAnnouncements();
+      setAnnouncements(annData);
     } catch (err) {
       console.error('Failed fetching data:', err);
     } finally {
@@ -342,6 +372,87 @@ export const SuperAdminDashboard: React.FC = () => {
     window.location.hash = '#dashboard';
   };
 
+  const handleOpenWelcomePackage = (r: RestaurantSettings) => {
+    const adminUser = users.find(u => u.restaurantId === r.id && u.role === 'admin') || users.find(u => u.restaurantId === r.id);
+    setCredsModal({
+      restName: r.name,
+      email: adminUser?.email || r.email || `admin@${r.id}.com`,
+      pass: '[Configured Password]',
+      role: (adminUser?.role || 'admin').toUpperCase(),
+      slug: r.id,
+      phone: r.phone,
+    });
+  };
+
+  const handleOpenRenewalModal = (r: RestaurantSettings) => {
+    const days = getDaysLeft(r.subscriptionExpiresAt) ?? 0;
+    setRenewModal({
+      restaurant: r,
+      daysLeft: days,
+    });
+  };
+
+  const handleCreateAnnouncementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!annTitle.trim() || !annMessage.trim()) {
+      showToast('Please enter both title and message.', 'error');
+      return;
+    }
+    setAnnSaving(true);
+    try {
+      const newAnn: SaaSAnnouncement = {
+        id: `ann-${Date.now()}`,
+        title: annTitle.trim(),
+        message: annMessage.trim(),
+        type: annType,
+        isActive: true,
+        isDismissible: annDismissible,
+        startsAt: new Date().toISOString(),
+        expiresAt: annExpiresAt ? new Date(annExpiresAt).toISOString() : undefined,
+        createdAt: new Date().toISOString(),
+      };
+      await dbService.createAnnouncement(newAnn);
+      setIsAnnModalOpen(false);
+      setAnnTitle('');
+      setAnnMessage('');
+      setAnnType('info');
+      setAnnDismissible(true);
+      setAnnExpiresAt('');
+      await fetchAllData();
+      showToast('Broadcast announcement published live!', 'success');
+    } catch (err: any) {
+      showToast('Failed to create announcement: ' + (err.message || err), 'error');
+    } finally {
+      setAnnSaving(false);
+    }
+  };
+
+  const handleToggleAnnouncementActive = async (ann: SaaSAnnouncement) => {
+    try {
+      await dbService.updateAnnouncement(ann.id, { isActive: !ann.isActive });
+      await fetchAllData();
+      showToast(`Announcement ${!ann.isActive ? 'activated' : 'deactivated'}.`, 'success');
+    } catch (err: any) {
+      showToast('Failed to update announcement: ' + (err.message || err), 'error');
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string, title: string) => {
+    askConfirmation(
+      'Delete Announcement?',
+      `Are you sure you want to permanently delete "${title}"?`,
+      async () => {
+        try {
+          await dbService.deleteAnnouncement(id);
+          await fetchAllData();
+          showToast('Announcement deleted.', 'info');
+        } catch (err: any) {
+          showToast('Failed to delete announcement: ' + (err.message || err), 'error');
+        }
+      }
+    );
+  };
+
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userFullName || !userEmail || !userRestaurantId || !userPassword) {
@@ -389,6 +500,10 @@ export const SuperAdminDashboard: React.FC = () => {
       if (statusFilter === 'all') return true;
       if (statusFilter === 'active') return r.subscriptionStatus === 'active';
       if (statusFilter === 'trial') return r.subscriptionStatus === 'trial' || !r.subscriptionStatus;
+      if (statusFilter === 'renewals_due') {
+        const days = getDaysLeft(r.subscriptionExpiresAt);
+        return r.subscriptionStatus === 'expired' || r.subscriptionStatus === 'suspended' || (days !== null && days <= 7);
+      }
       if (statusFilter === 'expired') return r.subscriptionStatus === 'expired';
       if (statusFilter === 'suspended') return r.subscriptionStatus === 'suspended';
       return true;
@@ -416,6 +531,12 @@ export const SuperAdminDashboard: React.FC = () => {
     (u.restaurantId && u.restaurantId.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const filteredAnnouncements = announcements.filter(a =>
+    a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Strict Super Admin Access Guard
   if (!currentUser || !currentUser.isSuperAdmin) {
     return (
@@ -436,6 +557,11 @@ export const SuperAdminDashboard: React.FC = () => {
   const activeCount = restaurants.filter(r => r.subscriptionStatus === 'active').length;
   const trialCount = restaurants.filter(r => r.subscriptionStatus === 'trial').length;
   const expiredCount = restaurants.filter(r => r.subscriptionStatus === 'expired' || r.subscriptionStatus === 'suspended').length;
+  const renewalsDueCount = restaurants.filter(r => {
+    const days = getDaysLeft(r.subscriptionExpiresAt);
+    return r.subscriptionStatus === 'expired' || r.subscriptionStatus === 'suspended' || (days !== null && days <= 7);
+  }).length;
+  const activeAnnouncementsCount = announcements.filter(a => a.isActive).length;
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
@@ -550,6 +676,20 @@ export const SuperAdminDashboard: React.FC = () => {
           <Users className="w-4 h-4" />
           <span>Staff Accounts ({users.length})</span>
         </button>
+        <button
+          onClick={() => { setActiveTab('announcements'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
+            activeTab === 'announcements'
+              ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Megaphone className="w-4 h-4" />
+          <span>Broadcasts ({announcements.length})</span>
+          {activeAnnouncementsCount > 0 && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          )}
+        </button>
       </div>
 
       {/* Table Section */}
@@ -563,24 +703,47 @@ export const SuperAdminDashboard: React.FC = () => {
                   <Building className="w-5 h-5 text-brand-500" />
                   <span>Onboarded Restaurants directory</span>
                 </>
-              ) : (
+              ) : activeTab === 'users' ? (
                 <>
                   <Users className="w-5 h-5 text-indigo-500" />
                   <span>Registered Staff Accounts</span>
                 </>
+              ) : (
+                <>
+                  <Megaphone className="w-5 h-5 text-brand-500" />
+                  <span>Platform Broadcast Announcements</span>
+                </>
               )}
             </h2>
-            <div className="relative w-full sm:w-72 shadow-sm rounded-2xl">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <Search className="w-4 h-4 text-slate-400" />
-              </span>
-              <input
-                type="text"
-                placeholder={activeTab === 'restaurants' ? "Search by restaurant name or slug..." : "Search by staff name, email, or role..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-800 dark:text-slate-100"
-              />
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="relative w-full sm:w-72 shadow-sm rounded-2xl">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                  <Search className="w-4 h-4 text-slate-400" />
+                </span>
+                <input
+                  type="text"
+                  placeholder={
+                    activeTab === 'restaurants' 
+                      ? "Search by restaurant name or slug..." 
+                      : activeTab === 'users' 
+                        ? "Search by staff name, email, or role..." 
+                        : "Search announcements..."
+                  }
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 pl-11 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-800 dark:text-slate-100"
+                />
+              </div>
+              {activeTab === 'announcements' && (
+                <button
+                  type="button"
+                  onClick={() => setIsAnnModalOpen(true)}
+                  className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-black px-4 py-2.5 rounded-2xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Broadcast</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -595,6 +758,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   { id: 'all', label: `All (${restaurants.length})` },
                   { id: 'active', label: `Active (${activeCount})` },
                   { id: 'trial', label: `Free Trial (${trialCount})` },
+                  { id: 'renewals_due', label: `⚠️ Renewals Due (${renewalsDueCount})` },
                   { id: 'expired', label: `Expired (${restaurants.filter(r => r.subscriptionStatus === 'expired').length})` },
                   { id: 'suspended', label: `Suspended (${restaurants.filter(r => r.subscriptionStatus === 'suspended').length})` },
                 ].map(f => (
@@ -719,7 +883,23 @@ export const SuperAdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
                           {r.subscriptionExpiresAt ? (
-                            new Date(r.subscriptionExpiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })
+                            <div>
+                              <div>{new Date(r.subscriptionExpiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                              {(() => {
+                                const days = getDaysLeft(r.subscriptionExpiresAt);
+                                if (days === null) return null;
+                                if (days <= 0 || r.subscriptionStatus === 'expired') {
+                                  return <span className="inline-block mt-0.5 text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.2 rounded border border-rose-200 dark:border-rose-900/40">Expired</span>;
+                                }
+                                if (days <= 1) {
+                                  return <span className="inline-block mt-0.5 text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.2 rounded border border-rose-200 dark:border-rose-900/40 animate-pulse">Expires Today / 1d!</span>;
+                                }
+                                if (days <= 5) {
+                                  return <span className="inline-block mt-0.5 text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.2 rounded border border-amber-200 dark:border-amber-900/40">{days}d left</span>;
+                                }
+                                return <span className="text-[10px] text-slate-400 block">{days} days left</span>;
+                              })()}
+                            </div>
                           ) : (
                             'Lifetime / Lifetime'
                           )}
@@ -734,6 +914,24 @@ export const SuperAdminDashboard: React.FC = () => {
                             >
                               <ExternalLink className="w-3 h-3" />
                               <span>Portal</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRenewalModal(r)}
+                              className="bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              title="Send WhatsApp / Email Renewal Notice"
+                            >
+                              <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                              <span>Remind</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenWelcomePackage(r)}
+                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              title="Share Credentials & Welcome Package (WhatsApp / Email)"
+                            >
+                              <Share2 className="w-3 h-3 text-slate-500" />
+                              <span>Share</span>
                             </button>
                             <button
                               type="button"
@@ -778,7 +976,7 @@ export const SuperAdminDashboard: React.FC = () => {
               </table>
             </div>
           )
-        ) : (
+        ) : activeTab === 'users' ? (
           filteredUsers.length === 0 ? (
             <div className="py-20 text-center">
               <Users className="w-14 h-14 text-slate-200 dark:text-slate-800 mx-auto mb-4 stroke-[1.2]" />
@@ -867,6 +1065,96 @@ export const SuperAdminDashboard: React.FC = () => {
                               </button>
                             </div>
                           )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          filteredAnnouncements.length === 0 ? (
+            <div className="py-20 text-center">
+              <Megaphone className="w-14 h-14 text-slate-200 dark:text-slate-800 mx-auto mb-4 stroke-[1.2]" />
+              <h3 className="font-extrabold text-slate-850 dark:text-slate-100 text-sm">No Announcements Broadcasted</h3>
+              <p className="text-xs text-slate-400 mt-1">Create an announcement to broadcast alerts or updates to all restaurant staff.</p>
+              <button
+                type="button"
+                onClick={() => setIsAnnModalOpen(true)}
+                className="mt-4 inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black px-4 py-2.5 rounded-2xl transition-all shadow-md cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Create Broadcast</span>
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-6 py-4">Title & Content</th>
+                    <th className="px-6 py-4">Style</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Dismissible</th>
+                    <th className="px-6 py-4">Expiry Date</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+                  {filteredAnnouncements.map(ann => {
+                    const typeBadgeColors: Record<string, string> = {
+                      info: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300',
+                      warning: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300',
+                      success: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300',
+                      urgent: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-300',
+                    };
+
+                    return (
+                      <tr key={ann.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-850/10 transition-colors">
+                        <td className="px-6 py-4 max-w-sm">
+                          <div className="font-extrabold text-slate-850 dark:text-slate-100">{ann.title}</div>
+                          <div className="text-slate-500 dark:text-slate-400 text-[11px] truncate mt-0.5">{ann.message}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${typeBadgeColors[ann.type] || 'bg-slate-100 text-slate-700'}`}>
+                            {ann.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAnnouncementActive(ann)}
+                            className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-xl transition-all cursor-pointer border ${
+                              ann.isActive
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300'
+                                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                            }`}
+                            title="Click to toggle active status"
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${ann.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                            <span>{ann.isActive ? 'Active' : 'Inactive'}</span>
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                          {ann.isDismissible ? (
+                            <span className="text-slate-700 dark:text-slate-300 font-bold">Dismissible</span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400 font-bold">Persistent</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
+                          {ann.expiresAt ? new Date(ann.expiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never (Permanent)'}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAnnouncement(ann.id, ann.title)}
+                            className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 p-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center"
+                            title="Delete Announcement"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1495,64 +1783,305 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ===== CREATED CREDENTIALS SUMMARY MODAL ===== */}
-      {credsModal && (
+      {/* ===== CREATED CREDENTIALS / WELCOME PACKAGE SUMMARY MODAL ===== */}
+      {credsModal && (() => {
+        const portalUrl = `${window.location.origin}/admin`;
+        const customerMenuUrl = `${window.location.origin}/menu/${credsModal.slug}`;
+        const welcomeMessage = `👋 *Welcome to RestaurantsOS!*\n\nHere are your access details for *${credsModal.restName}*:\n\n🏢 *Restaurant:* ${credsModal.restName}\n👤 *Role:* ${credsModal.role}\n📧 *Login Email:* ${credsModal.email}\n🔑 *Password:* ${credsModal.pass}\n\n💻 *Staff POS Portal:* ${portalUrl}\n📱 *Customer QR Menu:* ${customerMenuUrl}\n\nPlease save these credentials securely. Reach out anytime if you need assistance!`;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center max-h-[90vh] overflow-y-auto">
+              <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+
+              <h3 className="text-xl font-black text-slate-850 dark:text-slate-100">Welcome & Access Package</h3>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Share account credentials with <strong className="text-slate-700 dark:text-slate-200">{credsModal.restName}</strong>
+              </p>
+
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 my-4 text-left space-y-2.5 font-mono text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Restaurant Slug</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.slug}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Role</span>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400">{credsModal.role}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/50 pt-2">
+                  <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Email</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.email}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Password</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 bg-amber-400/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">
+                    {credsModal.pass}
+                  </span>
+                </div>
+              </div>
+
+              {/* Instant WhatsApp & Email Dispatch Actions */}
+              <div className="space-y-2.5">
+                <div className="flex gap-2">
+                  <a
+                    href={`https://wa.me/${(credsModal.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(welcomeMessage)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Send WhatsApp</span>
+                  </a>
+
+                  <a
+                    href={`mailto:${credsModal.email}?subject=${encodeURIComponent(`Welcome to RestaurantsOS - Credentials for ${credsModal.restName}`)}&body=${encodeURIComponent(welcomeMessage)}`}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>Send Email</span>
+                  </a>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(welcomeMessage);
+                      setCopiedText(true);
+                      showToast('Complete welcome package copied to clipboard!', 'success');
+                      setTimeout(() => setCopiedText(false), 3000);
+                    }}
+                    className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {copiedText ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedText ? 'Copied Full Package!' : 'Copy Full Details'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCredsModal(null)}
+                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-5 rounded-2xl text-xs transition-all cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ===== RENEWAL ALERT DISPATCHER MODAL ===== */}
+      {renewModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center">
-            <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-              <CheckCircle className="w-8 h-8" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center max-h-[90vh] overflow-y-auto">
+            <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+              <Bell className="w-8 h-8" />
             </div>
 
-            <h3 className="text-xl font-black text-slate-850 dark:text-slate-100">Account Ready!</h3>
+            <h3 className="text-xl font-black text-slate-850 dark:text-slate-100">Send Renewal Reminder</h3>
             <p className="text-xs text-slate-400 font-medium mt-1">
-              Account created for <strong className="text-slate-700 dark:text-slate-200">{credsModal.restName}</strong>
+              Notify <strong className="text-slate-700 dark:text-slate-200">{renewModal.restaurant.name}</strong> regarding plan renewal
             </p>
 
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 my-5 text-left space-y-2.5 font-mono text-xs">
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 my-4 text-left space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Restaurant Slug</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.slug}</span>
+                <span className="text-amber-800 dark:text-amber-300 font-bold uppercase text-[10px]">Status:</span>
+                <span className="font-extrabold text-amber-900 dark:text-amber-200 uppercase">
+                  {renewModal.daysLeft <= 0 ? 'Expired' : `${renewModal.daysLeft} Day${renewModal.daysLeft === 1 ? '' : 's'} Remaining`}
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Role</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">{credsModal.role}</span>
-              </div>
-              <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/50 pt-2">
-                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Email</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.email}</span>
+                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Plan:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{planLabels[renewModal.restaurant.planType || 'starter']}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Password</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100 bg-amber-400/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">
-                  {credsModal.pass}
+                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Expiry Date:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">
+                  {renewModal.restaurant.subscriptionExpiresAt ? new Date(renewModal.restaurant.subscriptionExpiresAt).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const text = `Restaurant: ${credsModal.restName}\nTenant Slug: ${credsModal.slug}\nRole: ${credsModal.role}\nEmail: ${credsModal.email}\nPassword: ${credsModal.pass}`;
-                  navigator.clipboard.writeText(text);
-                  setCopiedText(true);
-                  showToast('Login credentials copied to clipboard!', 'success');
-                  setTimeout(() => setCopiedText(false), 3000);
-                }}
-                className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-4 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                {copiedText ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedText ? 'Copied!' : 'Copy Credentials'}</span>
-              </button>
+            {/* Personalized Message Preview */}
+            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-3.5 mb-4 text-left text-xs font-mono text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap max-h-36 overflow-y-auto">
+              {(() => {
+                const r = renewModal.restaurant;
+                const days = renewModal.daysLeft;
+                const urgency = days <= 0 
+                  ? 'has expired' 
+                  : days === 1 
+                    ? 'expires tomorrow' 
+                    : `expires in ${days} days`;
+                return `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${r.name}* Team,\nYour ${planLabels[r.planType || 'starter']} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
+              })()}
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setCredsModal(null)}
-                className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-5 rounded-2xl text-xs transition-all cursor-pointer"
-              >
-                Done
+            <div className="flex flex-col gap-2.5">
+              <div className="flex gap-2">
+                <a
+                  href={`https://wa.me/${(renewModal.restaurant.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                    `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${renewModal.restaurant.name}* Team,\nYour ${planLabels[renewModal.restaurant.planType || 'starter']} subscription ${renewModal.daysLeft <= 0 ? 'has expired' : renewModal.daysLeft === 1 ? 'expires tomorrow' : `expires in ${renewModal.daysLeft} days`}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </a>
+
+                <a
+                  href={`mailto:${renewModal.restaurant.email || ''}?subject=${encodeURIComponent(`Subscription Renewal Notice - ${renewModal.restaurant.name}`)}&body=${encodeURIComponent(
+                    `⚠️ RestaurantsOS Subscription Notice\n\nDear ${renewModal.restaurant.name} Team,\nYour ${planLabels[renewModal.restaurant.planType || 'starter']} subscription ${renewModal.daysLeft <= 0 ? 'has expired' : renewModal.daysLeft === 1 ? 'expires tomorrow' : `expires in ${renewModal.daysLeft} days`}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`
+                  )}`}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Email</span>
+                </a>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = `⚠️ RestaurantsOS Subscription Notice\n\nDear ${renewModal.restaurant.name} Team,\nYour ${planLabels[renewModal.restaurant.planType || 'starter']} subscription ${renewModal.daysLeft <= 0 ? 'has expired' : renewModal.daysLeft === 1 ? 'expires tomorrow' : `expires in ${renewModal.daysLeft} days`}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
+                    navigator.clipboard.writeText(text);
+                    setCopiedRenewText(true);
+                    showToast('Renewal message copied!', 'success');
+                    setTimeout(() => setCopiedRenewText(false), 3000);
+                  }}
+                  className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {copiedRenewText ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedRenewText ? 'Copied Message!' : 'Copy Message'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRenewModal(null)}
+                  className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-4 rounded-2xl text-xs transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== CREATE BROADCAST ANNOUNCEMENT MODAL ===== */}
+      {isAnnModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-lg p-6 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Broadcast Announcement</h3>
+                  <p className="text-[10px] text-slate-400 font-semibold">Publish real-time banner alert to all logged-in restaurant staff</p>
+                </div>
+              </div>
+              <button onClick={() => setIsAnnModalOpen(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-200 cursor-pointer">
+                <X className="w-5 h-5" />
               </button>
             </div>
+
+            <form onSubmit={handleCreateAnnouncementSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Announcement Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Scheduled Database Maintenance or New Feature Live!"
+                  value={annTitle}
+                  onChange={(e) => setAnnTitle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Message Content</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="e.g. We will be performing server maintenance tonight from 2:00 AM to 3:00 AM IST. All operations will resume normally."
+                  value={annMessage}
+                  onChange={(e) => setAnnMessage(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 font-medium resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Style / Urgency Level</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'info', label: 'Info', color: 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-950/30' },
+                    { id: 'warning', label: 'Warning', color: 'border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30' },
+                    { id: 'success', label: 'Success', color: 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30' },
+                    { id: 'urgent', label: 'Urgent', color: 'border-rose-500 text-rose-600 bg-rose-50 dark:bg-rose-950/30' },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setAnnType(t.id as any)}
+                      className={`p-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
+                        annType === t.id ? `${t.color} ring-2 ring-brand-500/20 font-black shadow-sm` : 'border-slate-200 dark:border-slate-800 text-slate-500'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Auto-Expire Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={annExpiresAt}
+                    onChange={(e) => setAnnExpiresAt(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <label className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={annDismissible}
+                      onChange={(e) => setAnnDismissible(e.target.checked)}
+                      className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Allow users to close</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAnnModalOpen(false)}
+                  className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-2xl text-xs transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={annSaving}
+                  className="flex-[2] bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-2xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {annSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Megaphone className="w-4 h-4" />}
+                  <span>{annSaving ? 'Publishing...' : 'Publish Broadcast'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

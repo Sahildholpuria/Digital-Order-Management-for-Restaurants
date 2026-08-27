@@ -323,3 +323,21 @@ create index if not exists idx_payments_restaurant_id on public.payments(restaur
 create index if not exists idx_payments_created_at on public.payments(created_at desc);
 create index if not exists idx_notifications_restaurant_id on public.notifications(restaurant_id);
 create index if not exists idx_notifications_is_read on public.notifications(is_read);
+
+-- 7. PLATFORM-WIDE SAAS ANNOUNCEMENTS (Super Admin Broadcast)
+create table if not exists public.announcements (
+  id text primary key,
+  title text not null,
+  message text not null,
+  type text check (type in ('info', 'warning', 'success', 'urgent')) default 'info' not null,
+  is_active boolean default true not null,
+  is_dismissible boolean default true not null,
+  starts_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  expires_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.announcements enable row level security;
+create policy "Allow public read active announcements" on public.announcements for select using (true);
+create policy "Allow super admin manage announcements" on public.announcements for all using (public.is_super_admin(auth.uid()));
+create index if not exists idx_announcements_is_active on public.announcements(is_active);

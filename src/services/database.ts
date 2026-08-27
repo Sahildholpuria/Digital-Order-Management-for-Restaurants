@@ -8,6 +8,7 @@ import {
   RestaurantOrder,
   PaymentRecord,
   RestaurantNotification,
+  SaaSAnnouncement,
 } from '../types';
 
 // ==========================================
@@ -243,6 +244,30 @@ const mapNotificationToDb = (model: RestaurantNotification, restaurantId: string
   message: model.message,
   is_read: model.isRead,
   created_at: model.createdAt,
+});
+
+const mapAnnouncementToFrontend = (row: any): SaaSAnnouncement => ({
+  id: row.id,
+  title: row.title,
+  message: row.message,
+  type: row.type || 'info',
+  isActive: row.is_active !== undefined ? !!row.is_active : (row.isActive !== undefined ? !!row.isActive : true),
+  isDismissible: row.is_dismissible !== undefined ? !!row.is_dismissible : (row.isDismissible !== undefined ? !!row.isDismissible : true),
+  startsAt: row.starts_at || row.startsAt,
+  expiresAt: row.expires_at || row.expiresAt,
+  createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+});
+
+const mapAnnouncementToDb = (model: Partial<SaaSAnnouncement>) => ({
+  ...(model.id && { id: model.id }),
+  ...(model.title && { title: model.title }),
+  ...(model.message && { message: model.message }),
+  ...(model.type && { type: model.type }),
+  ...(model.isActive !== undefined && { is_active: model.isActive }),
+  ...(model.isDismissible !== undefined && { is_dismissible: model.isDismissible }),
+  ...(model.startsAt !== undefined && { starts_at: model.startsAt }),
+  ...(model.expiresAt !== undefined && { expires_at: model.expiresAt }),
+  ...(model.createdAt && { created_at: model.createdAt }),
 });
 
 // ==========================================
@@ -1788,6 +1813,119 @@ export const dbService = {
       const updated = list.map(n => ({ ...n, isRead: true }));
       localStorage.setItem('restaurant_notifications', JSON.stringify(updated));
       notifyLocalSubscribers();
+    }
+  },
+
+  // 8. GLOBAL SAAS ANNOUNCEMENTS (Super Admin Broadcast)
+  async getAnnouncements(): Promise<SaaSAnnouncement[]> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.warn('getAnnouncements error:', error);
+        return [];
+      }
+      return (data || []).map(mapAnnouncementToFrontend);
+    } else {
+      const data = localStorage.getItem('saas_global_announcements');
+      return data ? JSON.parse(data).map(mapAnnouncementToFrontend) : [];
+    }
+  },
+
+  async createAnnouncement(ann: SaaSAnnouncement): Promise<void> {
+    if (isSupabaseConfigured) {
+      const dbRow = mapAnnouncementToDb(ann);
+      const { error } = await supabase
+        .from('announcements')
+        .insert(dbRow);
+      if (error) throw error;
+    } else {
+      const list = await this.getAnnouncements();
+      list.unshift(ann);
+      localStorage.setItem('saas_global_announcements', JSON.stringify(list));
+      notifyLocalSubscribers();
+    }
+  },
+
+  async updateAnnouncement(id: string, updates: Partial<SaaSAnnouncement>): Promise<void> {
+    if (isSupabaseConfigured) {
+      const dbRow = mapAnnouncementToDb(updates);
+      const { error } = await supabase
+        .from('announcements')
+        .update(dbRow)
+        .eq('id', id);
+      if (error) throw error;
+    } else {
+      const list = await this.getAnnouncements();
+      const idx = list.findIndex(a => a.id === id);
+      if (idx > -1) {
+        list[idx] = { ...list[idx], ...updates };
+        localStorage.setItem('saas_global_announcements', JSON.stringify(list));
+        notifyLocalSubscribers();
+      }
+    }
+  },
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } else {
+      const list = await this.getAnnouncements();
+      const filtered = list.filter(a => a.id !== id);
+      localStorage.setItem('saas_global_announcements', JSON.stringify(filtered));
+      notifyLocalSubscribers();
+    }
+  },
+
+  subscribeAnnouncements(callback: (announcements: SaaSAnnouncement[]) => void) {
+    if (isSupabaseConfigured) {
+      const fetchAnn = async () => {
+        const { data } = await supabase
+          .from('announcements')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data) callback(data.map(mapAnnouncementToFrontend));
+      };
+
+      fetchAnn();
+
+      const channel = supabase
+        .channel(`pub_announcements_${Math.random().toString(36).substring(2, 9)}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, () => {
+          fetchAnn();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      const emitData = () => {
+        const data = localStorage.getItem('saas_global_announcements');
+        const list: SaaSAnnouncement[] = data ? JSON.parse(data).map(mapAnnouncementToFrontend) : [];
+        callback(list);
+      };
+
+      emitData();
+
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'saas_global_announcements') emitData();
+      };
+      const handleCustomChange = () => emitData();
+
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('restaurant-db-update', handleCustomChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('restaurant-db-update', handleCustomChange);
+      };
     }
   }
 };
