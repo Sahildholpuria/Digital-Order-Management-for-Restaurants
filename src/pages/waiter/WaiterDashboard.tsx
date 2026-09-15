@@ -32,7 +32,13 @@ export const WaiterDashboard: React.FC = () => {
 
   // Find active orders for selected table
   const selectedTableOrders = selectedTable 
-    ? orders.filter(o => o.tableId === selectedTable.id && !['completed', 'cancelled'].includes(o.status))
+    ? orders.filter(o => 
+        (o.tableId === selectedTable.id || 
+         o.tableId === `table-${selectedTable.number}` || 
+         o.tableName === `Table ${selectedTable.number}` || 
+         o.tableName === selectedTable.number) && 
+        !['completed', 'cancelled'].includes(o.status)
+      )
     : [];
 
   const handleResolveAlert = async (id: string, e: React.MouseEvent) => {
@@ -102,7 +108,16 @@ export const WaiterDashboard: React.FC = () => {
         
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {tables.map(table => {
-            const activeOrderCount = orders.filter(o => o.tableId === table.id && !['completed', 'cancelled'].includes(o.status)).length;
+            const cleanNum = table.number || table.id.replace(/^table-/i, '');
+            const activeOrderCount = orders.filter(o => 
+              (o.tableId === table.id || 
+               o.tableId === `table-${cleanNum}` || 
+               o.tableId === cleanNum || 
+               o.tableName === `Table ${table.number}` || 
+               o.tableName === table.number || 
+               o.tableName === `Table ${cleanNum}`) && 
+              !['completed', 'cancelled'].includes(o.status)
+            ).length;
             
             return (
               <div

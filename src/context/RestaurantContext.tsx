@@ -736,14 +736,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const setCurrentTableById = (tableId: string) => {
-    const table = tables.find(t => t.id === tableId);
+    const cleanNum = tableId.replace(/^table-/i, '');
+    const table = tables.find(t => 
+      t.id === tableId || 
+      t.number === cleanNum || 
+      t.number === tableId ||
+      t.id.replace(/^table-/i, '') === cleanNum
+    );
     if (table) {
       setCurrentTable(table);
     } else {
       // Create temporary local table state if not loaded yet
       setCurrentTable({
         id: tableId,
-        number: tableId.replace('table-', ''),
+        number: cleanNum,
         capacity: 4,
         status: 'available',
         qrCodeUrl: '',
@@ -751,6 +757,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
     }
   };
+
+  // Re-sync currentTable when tables array updates from Supabase/realtime
+  useEffect(() => {
+    if (currentTable && tables.length > 0) {
+      const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, '');
+      const matched = tables.find(t => 
+        t.id === currentTable.id || 
+        t.number === cleanNum || 
+        t.number === currentTable.number ||
+        t.id.replace(/^table-/i, '') === cleanNum
+      );
+      if (matched && (matched.id !== currentTable.id || matched.status !== currentTable.status)) {
+        setCurrentTable(matched);
+      }
+    }
+  }, [tables]);
 
   const setCurrentUser = (user: UserProfile | null) => {
     setCurrentUserState(user);
@@ -866,14 +888,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Save order to database
     await dbService.saveOrder(restaurantId, newOrder);
     
-    // Update table status to occupied — only possible when a staff session is active.
-    // Customer sessions are anonymous (no auth.uid) so this call is skipped to
-    // avoid an RLS violation that would abort the entire order placement.
+    // Update table status to occupied automatically in DB and local state
     try {
       await dbService.updateTableStatus(restaurantId, currentTable.id, 'occupied');
-    } catch (_) {
-      // Silently ignore — staff can update table status manually from the dashboard
+    } catch (err) {
+      console.warn('Table status auto-update notice:', err);
     }
+
+    // Optimistically update currentTable and tables list to 'occupied' immediately
+    setCurrentTable(prev => prev ? { ...prev, status: 'occupied' } : null);
+    setTables(prev => prev.map(t => {
+      const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, '');
+      if (t.id === currentTable.id || t.number === cleanNum || t.number === currentTable.number || t.id.replace(/^table-/i, '') === cleanNum) {
+        return { ...t, status: 'occupied', updatedAt: new Date().toISOString() };
+      }
+      return t;
+    }));
 
     // Add alert notification for kitchen/staff
     try {
