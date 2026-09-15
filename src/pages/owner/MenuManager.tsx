@@ -60,9 +60,6 @@ export const MenuManager: React.FC = () => {
   const [itemCat, setItemCat] = useState('');
   const [itemVeg, setItemVeg] = useState(true);
   const [itemDietaryType, setItemDietaryType] = useState<DietaryType>('veg');
-  const [itemGlutenFree, setItemGlutenFree] = useState(false);
-  const [itemHalal, setItemHalal] = useState(false);
-  const [itemChefSpecial, setItemChefSpecial] = useState(false);
   const [itemServes, setItemServes] = useState('');
   const [itemAllergens, setItemAllergens] = useState<string[]>([]);
   const [itemCalories, setItemCalories] = useState<string>('');
@@ -156,9 +153,6 @@ export const MenuManager: React.FC = () => {
     setItemCat(categories[0]?.id || '');
     setItemVeg(true);
     setItemDietaryType('veg');
-    setItemGlutenFree(false);
-    setItemHalal(false);
-    setItemChefSpecial(false);
     setItemServes('');
     setItemAllergens([]);
     setItemCalories('');
@@ -195,9 +189,6 @@ export const MenuManager: React.FC = () => {
     const resolvedDietary: DietaryType = item.dietaryType || parsed.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
     setItemDietaryType(resolvedDietary);
     setItemVeg(resolvedDietary !== 'non_veg' && resolvedDietary !== 'egg');
-    setItemGlutenFree(item.isGlutenFree ?? parsed.isGlutenFree ?? false);
-    setItemHalal(item.isHalal ?? parsed.isHalal ?? false);
-    setItemChefSpecial(item.isChefSpecial ?? parsed.isChefSpecial ?? false);
     setItemServes(item.serves || parsed.serves || '');
     setItemAllergens(item.allergens || parsed.allergens || []);
     setItemCalories(item.calories !== undefined ? String(item.calories) : parsed.calories !== undefined ? String(parsed.calories) : '');
@@ -288,9 +279,6 @@ export const MenuManager: React.FC = () => {
     const finalDesc = serializeFoodItemDescription(itemDesc, {
       variants,
       dietaryType: itemDietaryType,
-      isGlutenFree: itemGlutenFree,
-      isHalal: itemHalal,
-      isChefSpecial: itemChefSpecial,
       serves: itemServes.trim() || undefined,
       allergens: itemAllergens.length > 0 ? itemAllergens : undefined,
       calories: itemCalories ? Number(itemCalories) : undefined,
@@ -307,9 +295,6 @@ export const MenuManager: React.FC = () => {
       categoryId: itemCat,
       isVeg: isVegCalculated,
       dietaryType: itemDietaryType,
-      isGlutenFree: itemGlutenFree,
-      isHalal: itemHalal,
-      isChefSpecial: itemChefSpecial,
       serves: itemServes.trim() || undefined,
       allergens: itemAllergens.length > 0 ? itemAllergens : undefined,
       calories: itemCalories ? Number(itemCalories) : undefined,
@@ -485,9 +470,6 @@ export const MenuManager: React.FC = () => {
                 const discPrice = item.price * (1 - (item.discountPercentage || 0) / 100);
                 const parsedAttrs = parseFoodItemDescription(item.description || '');
                 const itemDietary = item.dietaryType || parsedAttrs.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
-                const isGF = item.isGlutenFree ?? parsedAttrs.isGlutenFree;
-                const isHalal = item.isHalal ?? parsedAttrs.isHalal;
-                const isChef = item.isChefSpecial ?? parsedAttrs.isChefSpecial;
                 const servesInfo = item.serves || parsedAttrs.serves;
                 const calCount = item.calories ?? parsedAttrs.calories;
                 const allergenList = item.allergens || parsedAttrs.allergens || [];
@@ -506,19 +488,13 @@ export const MenuManager: React.FC = () => {
                         {/* Authentic Dietary Badge */}
                         <span 
                           className={`absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm border rounded-lg flex items-center gap-1 text-[9px] font-black shadow-sm ${
-                            itemDietary === 'jain'
-                              ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
-                              : itemDietary === 'vegan'
-                              ? 'border-green-600 text-green-700 dark:text-green-400'
-                              : itemDietary === 'egg'
+                            itemDietary === 'egg'
                               ? 'border-amber-500 text-amber-700 dark:text-amber-400'
                               : itemDietary === 'veg'
                               ? 'border-green-600 text-green-700 dark:text-green-400'
                               : 'border-red-600 text-red-700 dark:text-red-400'
                           }`}
                         >
-                          {itemDietary === 'jain' && <><span>🕉️</span><span>Jain</span></>}
-                          {itemDietary === 'vegan' && <><span>🌿</span><span>Vegan</span></>}
                           {itemDietary === 'egg' && <><span>🥚</span><span>Egg</span></>}
                           {itemDietary === 'veg' && (
                             <>
@@ -584,21 +560,6 @@ export const MenuManager: React.FC = () => {
 
                       {/* Tags & Badges */}
                       <div className="flex flex-wrap gap-1.5 mt-3">
-                        {isChef && (
-                          <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/25 dark:text-purple-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-purple-200/50 dark:border-purple-800/40">
-                            👨‍🍳 Chef's Pick
-                          </span>
-                        )}
-                        {isGF && (
-                          <span className="bg-teal-50 text-teal-700 dark:bg-teal-950/25 dark:text-teal-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-teal-200/50 dark:border-teal-800/40">
-                            🌾 GF
-                          </span>
-                        )}
-                        {isHalal && (
-                          <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-emerald-200/50 dark:border-emerald-800/40">
-                            ☪️ Halal
-                          </span>
-                        )}
                         {servesInfo && (
                           <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/25 dark:text-blue-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-blue-200/50 dark:border-blue-800/40">
                             👥 {servesInfo.toLowerCase().startsWith('serves') ? servesInfo : `Serves ${servesInfo}`}
@@ -905,11 +866,9 @@ export const MenuManager: React.FC = () => {
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-3.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
-                    <option value="veg">Veg 🌱 (Pure Vegetarian)</option>
-                    <option value="non_veg">Non-Veg 🍗 (Meat & Poultry)</option>
+                    <option value="veg">Veg 🌱 (Vegetarian)</option>
+                    <option value="non_veg">Non-Veg 🍗 (Non-Vegetarian)</option>
                     <option value="egg">Eggitarian 🥚 (Contains Egg)</option>
-                    <option value="vegan">Vegan 🌿 (100% Plant-Based)</option>
-                    <option value="jain">Jain 🕉️ (No Onion, No Garlic)</option>
                   </select>
                 </div>
                 <div>
@@ -973,37 +932,10 @@ export const MenuManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* International Certifications & Highlights */}
+              {/* Highlights & Promotional Tags */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Certifications & Highlights</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Highlights & Tags</label>
                 <div className="flex flex-wrap gap-4 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={itemGlutenFree}
-                      onChange={(e) => setItemGlutenFree(e.target.checked)}
-                      className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
-                    />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">🌾 Gluten-Free</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={itemHalal}
-                      onChange={(e) => setItemHalal(e.target.checked)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-                    />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">☪️ Halal Certified</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={itemChefSpecial}
-                      onChange={(e) => setItemChefSpecial(e.target.checked)}
-                      className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">👨‍🍳 Chef's Special</span>
-                  </label>
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
