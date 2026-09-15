@@ -58,6 +58,7 @@ import {
   Info
 } from 'lucide-react';
 import { translations, Language } from './translations';
+import { UserProfile } from './types';
 import { PageLoader } from './components/PageLoader';
 
 const LazyLoader = () => (
@@ -157,6 +158,7 @@ export const App: React.FC = () => {
   // Navigation Routing States
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+  const [currentSearch, setCurrentSearch] = useState(window.location.search);
   const [activeTab, setActiveTab] = useState<string>(() => {
     const hash = window.location.hash.replace('#', '');
     const validTabs = ['dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
@@ -179,13 +181,14 @@ export const App: React.FC = () => {
       setIsNavigating(false);
     }, 350);
     return () => clearTimeout(timer);
-  }, [activeTab, currentPath, currentHash]);
+  }, [activeTab, currentPath, currentHash, currentSearch]);
 
   // Sync route on browser navigation (back/forward)
   useEffect(() => {
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);
       setCurrentHash(window.location.hash);
+      setCurrentSearch(window.location.search);
       
       const hash = window.location.hash.replace('#', '');
       const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
@@ -202,6 +205,17 @@ export const App: React.FC = () => {
       window.removeEventListener('hashchange', handleLocationChange);
     };
   }, []);
+
+  // Direct Console Navigation Guard: preserves redirect URL if unauthenticated
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      if (currentPath === '/kitchen' || currentHash === '#kitchen') {
+        navigateTo('/login?redirect=/kitchen');
+      } else if (currentPath === '/waiter' || currentHash === '#waiter') {
+        navigateTo('/login?redirect=/waiter');
+      }
+    }
+  }, [loading, currentUser, currentPath, currentHash]);
 
   // Automatically switch to superadmin tab on login if Super Admin
   useEffect(() => {
@@ -222,10 +236,20 @@ export const App: React.FC = () => {
     }
   }, [activeTab, currentPath]);
 
-  const navigateTo = (path: string, hash: string = '') => {
-    window.history.pushState(null, '', path + hash);
-    setCurrentPath(path);
-    setCurrentHash(hash);
+  const navigateTo = (pathOrUrl: string, hash: string = '') => {
+    try {
+      const parsed = new URL(pathOrUrl, window.location.origin);
+      const targetHash = hash || parsed.hash;
+      window.history.pushState(null, '', parsed.pathname + parsed.search + targetHash);
+      setCurrentPath(parsed.pathname);
+      setCurrentHash(targetHash);
+      setCurrentSearch(parsed.search);
+    } catch {
+      window.history.pushState(null, '', pathOrUrl + hash);
+      setCurrentPath(pathOrUrl);
+      setCurrentHash(hash);
+      setCurrentSearch(window.location.search);
+    }
   };
 
   const renderAppContent = () => {
@@ -328,14 +352,26 @@ export const App: React.FC = () => {
       );
     }
 
-    // Staff Login Rerouting
+    // Staff Login Rerouting & Direct Console Navigation Return
     if (currentPath === '/login' || currentHash === '#login') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectParam = searchParams.get('redirect') || searchParams.get('returnUrl');
+
+      const resolvePostLoginUrl = (user?: any) => {
+        if (redirectParam && redirectParam.startsWith('/')) {
+          return redirectParam;
+        }
+        if (user?.role === 'kitchen') return '/kitchen';
+        if (user?.role === 'waiter') return '/waiter';
+        return '/admin';
+      };
+
       if (currentUser) {
-        navigateTo('/admin');
+        navigateTo(resolvePostLoginUrl(currentUser));
       } else {
         return (
           <Suspense fallback={<LazyLoader />}>
-            <Login onSuccess={() => navigateTo('/admin')} />
+            <Login onSuccess={(user?: UserProfile | null) => navigateTo(resolvePostLoginUrl(user || currentUser))} />
           </Suspense>
         );
       }
@@ -348,7 +384,11 @@ export const App: React.FC = () => {
       if (!currentUser) {
         return (
           <Suspense fallback={<LazyLoader />}>
-            <Login onSuccess={() => navigateTo('/admin')} />
+            <Login onSuccess={(user?: UserProfile | null) => {
+              if (user?.role === 'kitchen') navigateTo('/kitchen');
+              else if (user?.role === 'waiter') navigateTo('/waiter');
+              else navigateTo('/admin');
+            }} />
           </Suspense>
         );
       }
@@ -603,7 +643,7 @@ export const App: React.FC = () => {
               </button>
               <div className="text-center pt-2 mt-1 border-t border-slate-200 dark:border-slate-800">
                 <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold tracking-wider uppercase block">
-                  Build by RestaurantsOS Pvt. Ltd
+                  BUILT BY RESTAURANTSOS PVT. LTD
                 </span>
               </div>
             </div>

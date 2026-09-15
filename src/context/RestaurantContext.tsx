@@ -88,6 +88,78 @@ interface RestaurantContextType {
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
 
+/**
+ * Utility to strictly purge stale/cross-tenant cached keys from localStorage.
+ * Prevents flashing demo-restaurant or prior-tenant data when another user authenticates.
+ */
+export const clearTenantCache = (keepTenantId?: string) => {
+  try {
+    const isCustomerRoute = window.location.pathname.startsWith('/menu/');
+    const keysToRemove: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+
+      // Retain global user preferences and auth session
+      if (
+        key === 'app_language' ||
+        key === 'customer_lang' ||
+        key === 'admin_lang' ||
+        key === 'admin_theme' ||
+        key === 'login_remember_email' ||
+        key === 'login_remember_me' ||
+        key === 'pos_portal_active_tab' ||
+        key.startsWith('sb-')
+      ) {
+        continue;
+      }
+
+      // Preserve table resolution on guest menu routes
+      if (isCustomerRoute && key.startsWith('resolved_rest_')) {
+        continue;
+      }
+
+      // Preserve cache belonging strictly to the active tenant
+      if (keepTenantId) {
+        if (
+          key === `cached_tables_${keepTenantId}` ||
+          key === `cached_categories_${keepTenantId}` ||
+          key === `cached_food_${keepTenantId}` ||
+          key === `cached_settings_${keepTenantId}` ||
+          key === 'last_active_staff_restaurant_id'
+        ) {
+          continue;
+        }
+      }
+
+      // Purge cross-tenant and legacy mock caches
+      if (
+        key.startsWith('cached_tables_') ||
+        key.startsWith('cached_categories_') ||
+        key.startsWith('cached_food_') ||
+        key.startsWith('cached_settings_') ||
+        (!isCustomerRoute && key.startsWith('resolved_rest_')) ||
+        key.includes('demo-restaurant') ||
+        key === 'restaurant_settings' ||
+        key === 'restaurant_categories' ||
+        key === 'restaurant_foodItems' ||
+        key === 'restaurant_tables' ||
+        key === 'restaurant_orders' ||
+        key === 'restaurant_payments' ||
+        key === 'restaurant_notifications' ||
+        (!keepTenantId && key === 'last_active_staff_restaurant_id')
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch (e) {
+    console.warn('RestaurantsOS: Error clearing tenant cache:', e);
+  }
+};
+
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [restaurantId, setRestaurantId] = useState<string>(() => {
     const path = window.location.pathname;
@@ -112,7 +184,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } catch (e) {}
     }
     
-    return 'demo-restaurant';
+    // When Supabase is configured, do not preemptively load demo-restaurant cache before auth resolves
+    return isSupabaseConfigured ? '' : 'demo-restaurant';
   });
   const [isResolvingId, setIsResolvingId] = useState<boolean>(() => {
     const path = window.location.pathname;
@@ -285,9 +358,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (data) {
         // Profile found — map to frontend shape
+        const userRestaurantId = data.restaurant_id;
+        clearTenantCache(userRestaurantId);
+        setRestaurantId(userRestaurantId);
+        localStorage.setItem('last_active_staff_restaurant_id', userRestaurantId);
+
         const profile: UserProfile = {
           id: data.id,
-          restaurantId: data.restaurant_id,
+          restaurantId: userRestaurantId,
           name: data.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
           email: data.email || user.email || '',
           role: data.role || 'admin',
@@ -308,6 +386,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           createdAt: new Date().toISOString(),
         };
         await dbService.addUser('demo-restaurant', profile);
+        setRestaurantId('demo-restaurant');
         setCurrentUserState(profile);
       }
     } catch (err) {
@@ -330,6 +409,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setNotifications([]);
       setCurrentTable(null);
       localStorage.removeItem('last_active_staff_restaurant_id');
+      localStorage.removeItem('restaurant_current_user');
+      clearTenantCache();
     };
 
     if (isSupabaseConfigured) {
@@ -446,7 +527,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Load Settings and Real-time Listeners
   useEffect(() => {
-    if (loading) return;
+    if (loading || !restaurantId) return;
 
     // Reset tablesLoaded for new restaurantId to prevent flash of wrong table cache
     setTablesLoaded(false);
@@ -1055,7 +1136,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // MOCK AUTH
   const loginMockUser = async (email: string, role: UserRole): Promise<UserProfile> => {
-    const users = await dbService.getUsers(restaurantId);
+    const isSuperAdmin = email === 'superadmin@restaurant.com' || email.includes('super');
+    const mockRestaurantId = restaurantId || 'demo-restaurant';
+    clearTenantCache(mockRestaurantId);
+    setRestaurantId(mockRestaurantId);
+    localStorage.setItem('last_active_staff_restaurant_id', mockRestaurantId);
+
+    const users = await dbService.getUsers(mockRestaurantId);
     let found = users.find(u => u.email === email && u.role === role);
     if (!found) {
       found = {
@@ -1063,16 +1150,17 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         name: email.split('@')[0].toUpperCase(),
         email,
         role,
-        isSuperAdmin: email === 'superadmin@restaurant.com' || email.includes('super'),
+        isSuperAdmin,
         createdAt: new Date().toISOString()
       };
-      await dbService.addUser(restaurantId, found);
+      await dbService.addUser(mockRestaurantId, found);
     }
     setCurrentUser(found);
     return found;
   };
 
   const logoutUser = async () => {
+    clearTenantCache();
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     } else {
