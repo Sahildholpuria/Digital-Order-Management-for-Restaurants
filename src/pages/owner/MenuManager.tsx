@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { FoodItem, MenuCategory } from '../../types';
+import { FoodItem, MenuCategory, DietaryType } from '../../types';
 import { 
   Plus, 
   Trash2, 
@@ -19,9 +19,12 @@ import {
   Upload,
   Image as ImageIcon,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Wheat,
+  UtensilsCrossed
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../services/supabase';
+import { parseFoodItemDescription, serializeFoodItemDescription } from '../../services/database';
 
 export const MenuManager: React.FC = () => {
   const { 
@@ -56,6 +59,13 @@ export const MenuManager: React.FC = () => {
   const [itemDesc, setItemDesc] = useState('');
   const [itemCat, setItemCat] = useState('');
   const [itemVeg, setItemVeg] = useState(true);
+  const [itemDietaryType, setItemDietaryType] = useState<DietaryType>('veg');
+  const [itemGlutenFree, setItemGlutenFree] = useState(false);
+  const [itemHalal, setItemHalal] = useState(false);
+  const [itemChefSpecial, setItemChefSpecial] = useState(false);
+  const [itemServes, setItemServes] = useState('');
+  const [itemAllergens, setItemAllergens] = useState<string[]>([]);
+  const [itemCalories, setItemCalories] = useState<string>('');
   const [itemPrep, setItemPrep] = useState<number>(10);
   const [itemAvailable, setItemAvailable] = useState(true);
   const [itemPopular, setItemPopular] = useState(false);
@@ -145,6 +155,13 @@ export const MenuManager: React.FC = () => {
     setVariants([]);
     setItemCat(categories[0]?.id || '');
     setItemVeg(true);
+    setItemDietaryType('veg');
+    setItemGlutenFree(false);
+    setItemHalal(false);
+    setItemChefSpecial(false);
+    setItemServes('');
+    setItemAllergens([]);
+    setItemCalories('');
     setItemPrep(10);
     setItemAvailable(true);
     setItemPopular(false);
@@ -162,7 +179,6 @@ export const MenuManager: React.FC = () => {
     setItemPrice(item.price);
     setItemImage(item.image);
     setItemCat(item.categoryId);
-    setItemVeg(item.isVeg);
     setItemPrep(item.preparationTime);
     setItemAvailable(item.isAvailable);
     setItemPopular(item.isPopular);
@@ -172,19 +188,19 @@ export const MenuManager: React.FC = () => {
     setImageError(null);
     setIsUploadingImage(false);
 
-    // Extract variants if serialized in description
-    let cleanDesc = item.description || '';
-    let parsedVariants: { name: string; price: number }[] = [];
-    if (cleanDesc.includes('||variants:')) {
-      const [desc, variantsStr] = cleanDesc.split('||variants:');
-      cleanDesc = desc;
-      parsedVariants = variantsStr.split(';').map(v => {
-        const [name, price] = v.split('=');
-        return { name, price: Number(price) };
-      });
-    }
-    setItemDesc(cleanDesc);
-    setVariants(parsedVariants);
+    // Extract attributes and variants from description
+    const parsed = parseFoodItemDescription(item.description || '');
+    setItemDesc(parsed.cleanDescription);
+    setVariants(parsed.variants);
+    const resolvedDietary: DietaryType = item.dietaryType || parsed.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
+    setItemDietaryType(resolvedDietary);
+    setItemVeg(resolvedDietary !== 'non_veg' && resolvedDietary !== 'egg');
+    setItemGlutenFree(item.isGlutenFree ?? parsed.isGlutenFree ?? false);
+    setItemHalal(item.isHalal ?? parsed.isHalal ?? false);
+    setItemChefSpecial(item.isChefSpecial ?? parsed.isChefSpecial ?? false);
+    setItemServes(item.serves || parsed.serves || '');
+    setItemAllergens(item.allergens || parsed.allergens || []);
+    setItemCalories(item.calories !== undefined ? String(item.calories) : parsed.calories !== undefined ? String(parsed.calories) : '');
     setIsItemOpen(true);
   };
 
@@ -268,11 +284,19 @@ export const MenuManager: React.FC = () => {
       deleteSupabaseStorageImage(editingItem.image);
     }
 
-    // Serialize variants to description string
-    let finalDesc = itemDesc;
-    if (variants.length > 0) {
-      finalDesc = `${itemDesc}||variants:${variants.map(v => `${v.name}=${v.price}`).join(';')}`;
-    }
+    // Serialize variants and attributes to description string
+    const finalDesc = serializeFoodItemDescription(itemDesc, {
+      variants,
+      dietaryType: itemDietaryType,
+      isGlutenFree: itemGlutenFree,
+      isHalal: itemHalal,
+      isChefSpecial: itemChefSpecial,
+      serves: itemServes.trim() || undefined,
+      allergens: itemAllergens.length > 0 ? itemAllergens : undefined,
+      calories: itemCalories ? Number(itemCalories) : undefined,
+    });
+
+    const isVegCalculated = itemDietaryType !== 'non_veg' && itemDietaryType !== 'egg';
 
     const newItem: FoodItem = {
       id: editingItem ? editingItem.id : `item-${Date.now()}`,
@@ -281,7 +305,14 @@ export const MenuManager: React.FC = () => {
       image: itemImage,
       description: finalDesc,
       categoryId: itemCat,
-      isVeg: itemVeg,
+      isVeg: isVegCalculated,
+      dietaryType: itemDietaryType,
+      isGlutenFree: itemGlutenFree,
+      isHalal: itemHalal,
+      isChefSpecial: itemChefSpecial,
+      serves: itemServes.trim() || undefined,
+      allergens: itemAllergens.length > 0 ? itemAllergens : undefined,
+      calories: itemCalories ? Number(itemCalories) : undefined,
       preparationTime: Number(itemPrep),
       isAvailable: itemAvailable,
       isPopular: itemPopular,
@@ -452,6 +483,14 @@ export const MenuManager: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredItems.map(item => {
                 const discPrice = item.price * (1 - (item.discountPercentage || 0) / 100);
+                const parsedAttrs = parseFoodItemDescription(item.description || '');
+                const itemDietary = item.dietaryType || parsedAttrs.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
+                const isGF = item.isGlutenFree ?? parsedAttrs.isGlutenFree;
+                const isHalal = item.isHalal ?? parsedAttrs.isHalal;
+                const isChef = item.isChefSpecial ?? parsedAttrs.isChefSpecial;
+                const servesInfo = item.serves || parsedAttrs.serves;
+                const calCount = item.calories ?? parsedAttrs.calories;
+                const allergenList = item.allergens || parsedAttrs.allergens || [];
                 return (
                   <div 
                     key={item.id}
@@ -464,13 +503,35 @@ export const MenuManager: React.FC = () => {
                       <div className="relative w-full h-40 bg-slate-50 dark:bg-slate-800 rounded-2xl overflow-hidden mb-3.5">
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                         
-                        {/* Veg indicator badge */}
-                        <span className={`absolute top-2.5 left-2.5 w-5 h-5 bg-white/90 border rounded-md flex items-center justify-center ${
-                          item.isVeg ? 'border-green-600' : 'border-red-600'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${
-                            item.isVeg ? 'bg-green-600' : 'bg-red-600'
-                          }`}></span>
+                        {/* Authentic Dietary Badge */}
+                        <span 
+                          className={`absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm border rounded-lg flex items-center gap-1 text-[9px] font-black shadow-sm ${
+                            itemDietary === 'jain'
+                              ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                              : itemDietary === 'vegan'
+                              ? 'border-green-600 text-green-700 dark:text-green-400'
+                              : itemDietary === 'egg'
+                              ? 'border-amber-500 text-amber-700 dark:text-amber-400'
+                              : itemDietary === 'veg'
+                              ? 'border-green-600 text-green-700 dark:text-green-400'
+                              : 'border-red-600 text-red-700 dark:text-red-400'
+                          }`}
+                        >
+                          {itemDietary === 'jain' && <><span>🕉️</span><span>Jain</span></>}
+                          {itemDietary === 'vegan' && <><span>🌿</span><span>Vegan</span></>}
+                          {itemDietary === 'egg' && <><span>🥚</span><span>Egg</span></>}
+                          {itemDietary === 'veg' && (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                              <span>Veg</span>
+                            </>
+                          )}
+                          {itemDietary === 'non_veg' && (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                              <span>Non-Veg</span>
+                            </>
+                          )}
                         </span>
 
                         {/* Discount Tag */}
@@ -523,6 +584,36 @@ export const MenuManager: React.FC = () => {
 
                       {/* Tags & Badges */}
                       <div className="flex flex-wrap gap-1.5 mt-3">
+                        {isChef && (
+                          <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/25 dark:text-purple-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-purple-200/50 dark:border-purple-800/40">
+                            👨‍🍳 Chef's Pick
+                          </span>
+                        )}
+                        {isGF && (
+                          <span className="bg-teal-50 text-teal-700 dark:bg-teal-950/25 dark:text-teal-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-teal-200/50 dark:border-teal-800/40">
+                            🌾 GF
+                          </span>
+                        )}
+                        {isHalal && (
+                          <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-emerald-200/50 dark:border-emerald-800/40">
+                            ☪️ Halal
+                          </span>
+                        )}
+                        {servesInfo && (
+                          <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/25 dark:text-blue-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-blue-200/50 dark:border-blue-800/40">
+                            👥 {servesInfo.toLowerCase().startsWith('serves') ? servesInfo : `Serves ${servesInfo}`}
+                          </span>
+                        )}
+                        {calCount !== undefined && (
+                          <span className="bg-rose-50 text-rose-700 dark:bg-rose-950/25 dark:text-rose-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-rose-200/50 dark:border-rose-800/40">
+                            🔥 {calCount} kcal
+                          </span>
+                        )}
+                        {allergenList.length > 0 && (
+                          <span className="bg-amber-50 text-amber-800 dark:bg-amber-950/25 dark:text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-amber-200/50 dark:border-amber-800/40" title={allergenList.join(', ')}>
+                            ⚠️ {allergenList.slice(0, 2).join(', ')}{allergenList.length > 2 ? ` +${allergenList.length - 2}` : ''}
+                          </span>
+                        )}
                         {item.isPopular && (
                           <span className="bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5">
                             <Sparkles className="w-2.5 h-2.5" />
@@ -801,17 +892,24 @@ export const MenuManager: React.FC = () => {
                 />
               </div>
 
-              {/* Veg / Non-Veg & Spicy & Discount */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* Dietary Classification, Spicy & Discount */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dietary Type</label>
                   <select
-                    value={itemVeg ? 'veg' : 'non-veg'}
-                    onChange={(e) => setItemVeg(e.target.value === 'veg')}
-                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-3.5 text-xs font-semibold focus:outline-none"
+                    value={itemDietaryType}
+                    onChange={(e) => {
+                      const val = e.target.value as DietaryType;
+                      setItemDietaryType(val);
+                      setItemVeg(val !== 'non_veg' && val !== 'egg');
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-3.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
-                    <option value="veg">Veg 🌱</option>
-                    <option value="non-veg">Non-Veg 🍗</option>
+                    <option value="veg">Veg 🌱 (Pure Vegetarian)</option>
+                    <option value="non_veg">Non-Veg 🍗 (Meat & Poultry)</option>
+                    <option value="egg">Eggitarian 🥚 (Contains Egg)</option>
+                    <option value="vegan">Vegan 🌿 (100% Plant-Based)</option>
+                    <option value="jain">Jain 🕉️ (No Onion, No Garlic)</option>
                   </select>
                 </div>
                 <div>
@@ -819,7 +917,7 @@ export const MenuManager: React.FC = () => {
                   <select
                     value={itemSpicy}
                     onChange={(e) => setItemSpicy(Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-3.5 text-xs font-semibold focus:outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-3.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     <option value={0}>None 🌶️0</option>
                     <option value={1}>Mild 🌶️1</option>
@@ -840,26 +938,124 @@ export const MenuManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Toggles: Popular, Recommended */}
-              <div className="flex gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              {/* Portion, Calorie & Prep Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Serving Size</label>
                   <input
-                    type="checkbox"
-                    checked={itemPopular}
-                    onChange={(e) => setItemPopular(e.target.checked)}
-                    className="rounded text-brand-600 focus:ring-brand-500 w-4.5 h-4.5"
+                    type="text"
+                    placeholder="e.g. Serves 1-2, 250g"
+                    value={itemServes}
+                    onChange={(e) => setItemServes(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-3.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Popular Tag</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Calories (kcal)</label>
                   <input
-                    type="checkbox"
-                    checked={itemRecommended}
-                    onChange={(e) => setItemRecommended(e.target.checked)}
-                    className="rounded text-brand-600 focus:ring-brand-500 w-4.5 h-4.5"
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 340"
+                    value={itemCalories}
+                    onChange={(e) => setItemCalories(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-3.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Recommended Tag</span>
-                </label>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Prep Time (mins)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={itemPrep}
+                    onChange={(e) => setItemPrep(Number(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-3.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+
+              {/* International Certifications & Highlights */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Certifications & Highlights</label>
+                <div className="flex flex-wrap gap-4 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={itemGlutenFree}
+                      onChange={(e) => setItemGlutenFree(e.target.checked)}
+                      className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">🌾 Gluten-Free</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={itemHalal}
+                      onChange={(e) => setItemHalal(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">☪️ Halal Certified</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={itemChefSpecial}
+                      onChange={(e) => setItemChefSpecial(e.target.checked)}
+                      className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">👨‍🍳 Chef's Special</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={itemPopular}
+                      onChange={(e) => setItemPopular(e.target.checked)}
+                      className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">⭐ Popular Tag</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={itemRecommended}
+                      onChange={(e) => setItemRecommended(e.target.checked)}
+                      className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">🌟 Recommended</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Allergen Advisory Selector */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Allergen Advisory</label>
+                  <span className="text-[10px] text-slate-400">Select any that apply</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Dairy', 'Nuts', 'Gluten', 'Soy', 'Eggs', 'Mustard', 'Sesame', 'Shellfish', 'Fish'].map((allergen) => {
+                    const isSelected = itemAllergens.includes(allergen);
+                    return (
+                      <button
+                        key={allergen}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setItemAllergens(itemAllergens.filter(a => a !== allergen));
+                          } else {
+                            setItemAllergens([...itemAllergens, allergen]);
+                          }
+                        }}
+                        className={`text-xs px-3 py-1.5 rounded-xl font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500/15 border-amber-500 text-amber-800 dark:text-amber-300 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}{allergen}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Portion Variants Editor Block */}
