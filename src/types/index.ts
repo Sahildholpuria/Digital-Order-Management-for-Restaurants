@@ -51,6 +51,8 @@ export interface MenuCategory {
   createdAt: any;
 }
 
+export type DietaryType = 'veg' | 'non_veg' | 'egg' | 'vegan' | 'jain';
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -66,6 +68,15 @@ export interface FoodItem {
   spicyLevel: 0 | 1 | 2 | 3; // 0 = None, 1 = Mild, 2 = Medium, 3 = Hot
   discountPercentage: number; // 0 to 100
   updatedAt: any;
+
+  // Comprehensive Indian & International Dining Attributes
+  dietaryType?: DietaryType;
+  isGlutenFree?: boolean;
+  isHalal?: boolean;
+  isChefSpecial?: boolean;
+  serves?: string;
+  allergens?: string[];
+  calories?: number;
 }
 
 export interface OrderItem {

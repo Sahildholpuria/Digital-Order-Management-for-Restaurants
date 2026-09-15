@@ -124,40 +124,158 @@ const mapCategoryToDb = (model: MenuCategory, restaurantId: string) => ({
   created_at: model.createdAt,
 });
 
-const mapFoodItemToFrontend = (row: any): FoodItem => ({
-  id: row.id,
-  name: row.name,
-  image: row.image,
-  description: row.description,
-  price: Number(row.price),
-  categoryId: row.category_id,
-  isVeg: row.is_veg,
-  preparationTime: Number(row.preparation_time),
-  isAvailable: row.is_available,
-  isPopular: row.is_popular,
-  isRecommended: row.is_recommended,
-  spicyLevel: row.spicy_level as any,
-  discountPercentage: Number(row.discount_percentage),
-  updatedAt: row.updated_at,
-});
+export const parseFoodItemDescription = (desc: string) => {
+  let cleanDesc = desc || '';
+  let attrs: {
+    dietaryType?: 'veg' | 'non_veg' | 'egg' | 'vegan' | 'jain';
+    isGlutenFree?: boolean;
+    isHalal?: boolean;
+    isChefSpecial?: boolean;
+    serves?: string;
+    allergens?: string[];
+    calories?: number;
+  } = {};
+  let variants: { name: string; price: number }[] = [];
 
-const mapFoodItemToDb = (model: FoodItem, restaurantId: string) => ({
-  id: model.id,
-  restaurant_id: restaurantId,
-  category_id: model.categoryId,
-  name: model.name,
-  image: model.image,
-  description: model.description,
-  price: model.price,
-  is_veg: model.isVeg,
-  preparation_time: model.preparationTime,
-  is_available: model.isAvailable,
-  is_popular: model.isPopular,
-  is_recommended: model.isRecommended,
-  spicy_level: model.spicyLevel,
-  discount_percentage: model.discountPercentage,
-  updated_at: model.updatedAt,
-});
+  if (cleanDesc.includes('||attrs:')) {
+    const [beforeAttrs, rest] = cleanDesc.split('||attrs:');
+    cleanDesc = beforeAttrs;
+    const attrsStr = rest.includes('||variants:') ? rest.split('||variants:')[0] : rest;
+    
+    attrsStr.split(';').forEach(pair => {
+      const [key, val] = pair.split('=');
+      if (!key || val === undefined) return;
+      if (key === 'diet') attrs.dietaryType = val as any;
+      if (key === 'gf') attrs.isGlutenFree = val === '1' || val === 'true';
+      if (key === 'halal') attrs.isHalal = val === '1' || val === 'true';
+      if (key === 'chef') attrs.isChefSpecial = val === '1' || val === 'true';
+      if (key === 'serves') attrs.serves = decodeURIComponent(val);
+      if (key === 'allergens') attrs.allergens = val.split(',').filter(Boolean);
+      if (key === 'cals') attrs.calories = Number(val);
+    });
+  }
+
+  if (desc && desc.includes('||variants:')) {
+    const [, variantsStr] = desc.split('||variants:');
+    variants = variantsStr.split(';').map(v => {
+      const [name, price] = v.split('=');
+      return { name, price: Number(price) };
+    }).filter(v => v.name && !isNaN(v.price));
+  }
+
+  return {
+    cleanDesc,
+    cleanDescription: cleanDesc,
+    attrs,
+    variants,
+    dietaryType: attrs.dietaryType,
+    isGlutenFree: attrs.isGlutenFree,
+    isHalal: attrs.isHalal,
+    isChefSpecial: attrs.isChefSpecial,
+    serves: attrs.serves,
+    allergens: attrs.allergens,
+    calories: attrs.calories,
+  };
+};
+
+export const serializeFoodItemDescription = (
+  cleanDesc: string,
+  attrs?: {
+    dietaryType?: 'veg' | 'non_veg' | 'egg' | 'vegan' | 'jain';
+    isGlutenFree?: boolean;
+    isHalal?: boolean;
+    isChefSpecial?: boolean;
+    serves?: string;
+    allergens?: string[];
+    calories?: number;
+    variants?: { name: string; price: number }[];
+  },
+  variants?: { name: string; price: number }[]
+) => {
+  let result = (cleanDesc || '').split('||attrs:')[0].split('||variants:')[0].trim();
+  const effectiveVariants = variants || attrs?.variants;
+  
+  if (attrs) {
+    const pairs: string[] = [];
+    if (attrs.dietaryType) pairs.push(`diet=${attrs.dietaryType}`);
+    if (attrs.isGlutenFree) pairs.push(`gf=1`);
+    if (attrs.isHalal) pairs.push(`halal=1`);
+    if (attrs.isChefSpecial) pairs.push(`chef=1`);
+    if (attrs.serves) pairs.push(`serves=${encodeURIComponent(attrs.serves)}`);
+    if (attrs.allergens && attrs.allergens.length > 0) pairs.push(`allergens=${attrs.allergens.join(',')}`);
+    if (attrs.calories) pairs.push(`cals=${attrs.calories}`);
+    
+    if (pairs.length > 0) {
+      result += `||attrs:${pairs.join(';')}`;
+    }
+  }
+
+  if (effectiveVariants && effectiveVariants.length > 0) {
+    result += `||variants:${effectiveVariants.map(v => `${v.name}=${v.price}`).join(';')}`;
+  }
+
+  return result;
+};
+
+const mapFoodItemToFrontend = (row: any): FoodItem => {
+  const { attrs } = parseFoodItemDescription(row.description || '');
+  const isVeg = row.is_veg ?? (attrs.dietaryType !== 'non_veg' && attrs.dietaryType !== 'egg');
+
+  return {
+    id: row.id,
+    name: row.name,
+    image: row.image,
+    description: row.description,
+    price: Number(row.price),
+    categoryId: row.category_id,
+    isVeg,
+    preparationTime: Number(row.preparation_time),
+    isAvailable: row.is_available,
+    isPopular: row.is_popular,
+    isRecommended: row.is_recommended,
+    spicyLevel: row.spicy_level as any,
+    discountPercentage: Number(row.discount_percentage),
+    updatedAt: row.updated_at,
+    dietaryType: attrs.dietaryType || (isVeg ? 'veg' : 'non_veg'),
+    isGlutenFree: attrs.isGlutenFree || false,
+    isHalal: attrs.isHalal || false,
+    isChefSpecial: attrs.isChefSpecial || false,
+    serves: attrs.serves || '',
+    allergens: attrs.allergens || [],
+    calories: attrs.calories || undefined,
+  };
+};
+
+const mapFoodItemToDb = (model: FoodItem, restaurantId: string) => {
+  const { cleanDesc, variants } = parseFoodItemDescription(model.description || '');
+  const serializedDesc = serializeFoodItemDescription(cleanDesc, {
+    dietaryType: model.dietaryType,
+    isGlutenFree: model.isGlutenFree,
+    isHalal: model.isHalal,
+    isChefSpecial: model.isChefSpecial,
+    serves: model.serves,
+    allergens: model.allergens,
+    calories: model.calories
+  }, variants);
+
+  return {
+    id: model.id,
+    restaurant_id: restaurantId,
+    category_id: model.categoryId,
+    name: model.name,
+    image: model.image,
+    description: serializedDesc,
+    price: model.price,
+    is_veg: model.dietaryType ? (model.dietaryType !== 'non_veg' && model.dietaryType !== 'egg') : model.isVeg,
+    preparation_time: model.preparationTime,
+    is_available: model.isAvailable,
+    is_popular: model.isPopular,
+    is_recommended: model.isRecommended,
+    spicy_level: model.spicyLevel,
+    discount_percentage: model.discountPercentage,
+    updated_at: model.updatedAt,
+  };
+};
 
 const mapOrderToFrontend = (row: any): RestaurantOrder => ({
   id: row.id,
@@ -278,7 +396,7 @@ const DEFAULT_ITEMS = [
     name: 'Truffle Parmesan Fries',
     price: 180,
     image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=60',
-    description: 'Crispy golden french fries tossed in black truffle oil, fresh herbs, and freshly grated parmesan cheese.',
+    description: 'Crispy golden french fries tossed in black truffle oil, fresh herbs, and freshly grated parmesan cheese.||attrs:diet=veg;gf=1;serves=1-2;allergens=Dairy;cals=290',
     categoryId: 'cat-1',
     isVeg: true,
     preparationTime: 8,
@@ -294,7 +412,7 @@ const DEFAULT_ITEMS = [
     name: 'Paneer Tikka Shaslik',
     price: 260,
     image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=500&auto=format&fit=crop&q=60',
-    description: 'Skewered cottage cheese cubes marinated in spiced yogurt and grilled to perfection with bell peppers.',
+    description: 'Skewered cottage cheese cubes marinated in spiced yogurt and grilled to perfection with bell peppers.||attrs:diet=jain;gf=1;chef=1;serves=1-2;allergens=Dairy;cals=340||variants:Half=150;Full=260',
     categoryId: 'cat-1',
     isVeg: true,
     preparationTime: 15,
@@ -310,7 +428,7 @@ const DEFAULT_ITEMS = [
     name: 'Classic Butter Chicken',
     price: 380,
     image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=500&auto=format&fit=crop&q=60',
-    description: 'Tender chicken roasted in a clay oven and cooked in a rich butter, cream, and tomato gravy.',
+    description: 'Tender chicken roasted in a clay oven and cooked in a rich butter, cream, and tomato gravy.||attrs:diet=non_veg;halal=1;chef=1;serves=2;allergens=Dairy,Nuts;cals=480||variants:Half=220;Full=380',
     categoryId: 'cat-2',
     isVeg: false,
     preparationTime: 18,
@@ -326,7 +444,7 @@ const DEFAULT_ITEMS = [
     name: 'Dal Makhani',
     price: 240,
     image: 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=500&auto=format&fit=crop&q=60',
-    description: 'Black lentils slow-cooked overnight with cream, butter, and select Indian spices.',
+    description: 'Black lentils slow-cooked overnight with cream, butter, and select Indian spices.||attrs:diet=veg;gf=1;serves=2;allergens=Dairy;cals=310',
     categoryId: 'cat-2',
     isVeg: true,
     preparationTime: 12,
@@ -342,7 +460,7 @@ const DEFAULT_ITEMS = [
     name: 'Schezwan Chilli Paneer',
     price: 250,
     image: 'https://images.unsplash.com/photo-1603133872878-685f20d6da41?w=500&auto=format&fit=crop&q=60',
-    description: 'Crispy paneer cubes tossed in a fiery home-made Schezwan paste with onions and green peppers.',
+    description: 'Crispy paneer cubes tossed in a fiery home-made Schezwan paste with onions and green peppers.||attrs:diet=veg;chef=1;serves=1-2;allergens=Dairy,Soy;cals=360',
     categoryId: 'cat-3',
     isVeg: true,
     preparationTime: 10,
