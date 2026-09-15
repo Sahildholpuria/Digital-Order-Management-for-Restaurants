@@ -51,7 +51,7 @@ export interface MenuCategory {
   createdAt: any;
 }
 
-export type DietaryType = 'veg' | 'non_veg' | 'egg' | 'vegan' | 'jain';
+export type DietaryType = 'veg' | 'non_veg' | 'egg';
 
 export interface FoodItem {
   id: string;
@@ -69,11 +69,8 @@ export interface FoodItem {
   discountPercentage: number; // 0 to 100
   updatedAt: any;
 
-  // Comprehensive Indian & International Dining Attributes
+  // Dish Attributes
   dietaryType?: DietaryType;
-  isGlutenFree?: boolean;
-  isHalal?: boolean;
-  isChefSpecial?: boolean;
   serves?: string;
   allergens?: string[];
   calories?: number;

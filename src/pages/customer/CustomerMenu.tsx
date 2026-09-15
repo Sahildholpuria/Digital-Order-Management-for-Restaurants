@@ -156,7 +156,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [vegOnly, setVegOnly] = useState(false);
   const [popularOnly, setPopularOnly] = useState(false);
-  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'non_veg' | 'jain' | 'vegan' | 'gluten_free' | 'halal' | 'chef_special'>('all');
+  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'veg' | 'non_veg'>('all');
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
@@ -202,28 +202,15 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       // Extract attributes safely
       const parsed = parseFoodItemDescription(item.description || '');
       const dType: DietaryType = item.dietaryType || parsed.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
-      const isGF = item.isGlutenFree ?? parsed.isGlutenFree ?? false;
-      const isHalal = item.isHalal ?? parsed.isHalal ?? false;
-      const isChef = item.isChefSpecial ?? parsed.isChefSpecial ?? false;
 
       let matchesDietary = true;
       if (dietaryFilter === 'veg') {
-        matchesDietary = dType === 'veg' || dType === 'jain' || dType === 'vegan' || item.isVeg;
+        matchesDietary = dType === 'veg' || item.isVeg;
       } else if (dietaryFilter === 'non_veg') {
         matchesDietary = dType === 'non_veg' || (!item.isVeg && dType !== 'egg');
-      } else if (dietaryFilter === 'jain') {
-        matchesDietary = dType === 'jain';
-      } else if (dietaryFilter === 'vegan') {
-        matchesDietary = dType === 'vegan';
-      } else if (dietaryFilter === 'gluten_free') {
-        matchesDietary = isGF;
-      } else if (dietaryFilter === 'halal') {
-        matchesDietary = isHalal;
-      } else if (dietaryFilter === 'chef_special') {
-        matchesDietary = isChef || item.isRecommended;
       }
 
-      const matchesVegLegacy = !vegOnly || (dType === 'veg' || dType === 'jain' || dType === 'vegan' || item.isVeg);
+      const matchesVegLegacy = !vegOnly || (dType === 'veg' || item.isVeg);
       const matchesPopular = !popularOnly || item.isPopular || item.isRecommended;
 
       return matchesSearch && matchesCategory && matchesDietary && matchesVegLegacy && matchesPopular;
@@ -743,7 +730,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               )}
             </div>
 
-            {/* Quick Filter Tags & Dietary Preferences */}
+            {/* Quick Filter Tags */}
             <div className="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar touch-pan-x">
               <button
                 onClick={() => {
@@ -772,7 +759,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }`}
               >
                 <span className="w-2 h-2 rounded-full bg-green-500 border border-white" />
-                Veg 🌱
+                Veg Only 🌱
               </button>
 
               <button
@@ -788,81 +775,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               >
                 <span className="w-2 h-2 rounded-full bg-red-500 border border-white" />
                 Non-Veg 🍗
-              </button>
-
-              <button
-                onClick={() => {
-                  setDietaryFilter(dietaryFilter === 'jain' ? 'all' : 'jain');
-                  setVegOnly(false);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
-                  dietaryFilter === 'jain'
-                    ? 'bg-emerald-700 border-emerald-600 text-white shadow-emerald-600/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span>🕉️</span>
-                Jain (No Onion/Garlic)
-              </button>
-
-              <button
-                onClick={() => {
-                  setDietaryFilter(dietaryFilter === 'vegan' ? 'all' : 'vegan');
-                  setVegOnly(false);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
-                  dietaryFilter === 'vegan'
-                    ? 'bg-teal-600 border-teal-500 text-white shadow-teal-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span>🌿</span>
-                Vegan
-              </button>
-
-              <button
-                onClick={() => {
-                  setDietaryFilter(dietaryFilter === 'gluten_free' ? 'all' : 'gluten_free');
-                  setVegOnly(false);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
-                  dietaryFilter === 'gluten_free'
-                    ? 'bg-amber-600 border-amber-500 text-white shadow-amber-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span>🌾</span>
-                Gluten-Free
-              </button>
-
-              <button
-                onClick={() => {
-                  setDietaryFilter(dietaryFilter === 'halal' ? 'all' : 'halal');
-                  setVegOnly(false);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
-                  dietaryFilter === 'halal'
-                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span>☪️</span>
-                Halal
-              </button>
-
-              <button
-                onClick={() => {
-                  setDietaryFilter(dietaryFilter === 'chef_special' ? 'all' : 'chef_special');
-                  setVegOnly(false);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
-                  dietaryFilter === 'chef_special'
-                    ? 'bg-purple-600 border-purple-500 text-white shadow-purple-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <span>👨‍🍳</span>
-                Chef's Pick
               </button>
 
               <button
@@ -965,9 +877,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                           {(() => {
                             const parsedAttrs = parseFoodItemDescription(item.description || '');
                             const dType: DietaryType = item.dietaryType || parsedAttrs.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
-                            const isGF = item.isGlutenFree ?? parsedAttrs.isGlutenFree;
-                            const isHalal = item.isHalal ?? parsedAttrs.isHalal;
-                            const isChef = item.isChefSpecial ?? parsedAttrs.isChefSpecial;
                             const serves = item.serves || parsedAttrs.serves;
                             const cals = item.calories ?? parsedAttrs.calories;
 
@@ -980,18 +889,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                   </h3>
                                   <div className="flex items-center gap-1 flex-shrink-0">
                                     <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${
-                                      dType === 'jain'
-                                        ? 'border-emerald-600/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                                        : dType === 'vegan'
-                                        ? 'border-green-600/50 bg-green-500/10 text-green-700 dark:text-green-400'
-                                        : dType === 'egg'
+                                      dType === 'egg'
                                         ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
                                         : dType === 'veg'
                                         ? 'border-green-600/50 bg-green-500/10 text-green-700 dark:text-green-400'
                                         : 'border-red-600/50 bg-red-500/10 text-red-700 dark:text-red-400'
                                     }`}>
-                                      {dType === 'jain' && <><span>🕉️</span><span>Jain</span></>}
-                                      {dType === 'vegan' && <><span>🌿</span><span>Vegan</span></>}
                                       {dType === 'egg' && <><span>🥚</span><span>Egg</span></>}
                                       {dType === 'veg' && (
                                         <>
@@ -1014,23 +917,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                   {parsedAttrs.cleanDescription || 'Freshly prepared gourmet dish.'}
                                 </p>
 
-                                {/* Highlights: Badges, Serves, Calories, Prep Time */}
+                                {/* Highlights: Serves, Calories, Prep Time */}
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px] font-bold">
-                                  {isChef && (
-                                    <span className="bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-[9px] px-1.5 py-0.5 rounded-md border border-purple-200/50 dark:border-purple-800/40">
-                                      👨‍🍳 Chef's Pick
-                                    </span>
-                                  )}
-                                  {isGF && (
-                                    <span className="bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300 text-[9px] px-1.5 py-0.5 rounded-md border border-teal-200/50 dark:border-teal-800/40">
-                                      🌾 GF
-                                    </span>
-                                  )}
-                                  {isHalal && (
-                                    <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-[9px] px-1.5 py-0.5 rounded-md border border-emerald-200/50 dark:border-emerald-800/40">
-                                      ☪️ Halal
-                                    </span>
-                                  )}
                                   {serves && (
                                     <span className="text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
                                       👥 {serves.toLowerCase().startsWith('serves') ? serves : `Serves ${serves}`}
@@ -1228,9 +1116,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               {(() => {
                 const parsed = parseFoodItemDescription(selectedItem.description || '');
                 const dType: DietaryType = selectedItem.dietaryType || parsed.dietaryType || (selectedItem.isVeg ? 'veg' : 'non_veg');
-                const isGF = selectedItem.isGlutenFree ?? parsed.isGlutenFree;
-                const isHalal = selectedItem.isHalal ?? parsed.isHalal;
-                const isChef = selectedItem.isChefSpecial ?? parsed.isChefSpecial;
                 const serves = selectedItem.serves || parsed.serves;
                 const cals = selectedItem.calories ?? parsed.calories;
                 const allergens = selectedItem.allergens || parsed.allergens || [];
@@ -1253,18 +1138,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                       </div>
 
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider border shadow-sm flex-shrink-0 ${
-                        dType === 'jain'
-                          ? 'border-emerald-600/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                          : dType === 'vegan'
-                          ? 'border-green-600/50 bg-green-500/10 text-green-700 dark:text-green-300'
-                          : dType === 'egg'
+                        dType === 'egg'
                           ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300'
                           : dType === 'veg'
                           ? 'border-green-600/50 bg-green-500/10 text-green-700 dark:text-green-300'
                           : 'border-red-600/50 bg-red-500/10 text-red-700 dark:text-red-300'
                       }`}>
-                        {dType === 'jain' && <><span>🕉️</span><span>Jain</span></>}
-                        {dType === 'vegan' && <><span>🌿</span><span>Vegan</span></>}
                         {dType === 'egg' && <><span>🥚</span><span>Egg</span></>}
                         {dType === 'veg' && (
                           <>
@@ -1281,29 +1160,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                       </span>
                     </div>
 
-                    {/* Certifications and highlights chips */}
-                    {(isChef || isGF || isHalal || selectedItem.spicyLevel > 0) && (
+                    {/* Spicy indicator chip */}
+                    {selectedItem.spicyLevel > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {isChef && (
-                          <span className="bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300 text-[10px] font-black px-2.5 py-1 rounded-lg border border-purple-200/60 dark:border-purple-800/50 flex items-center gap-1">
-                            👨‍🍳 Chef's Special
-                          </span>
-                        )}
-                        {isGF && (
-                          <span className="bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-300 text-[10px] font-black px-2.5 py-1 rounded-lg border border-teal-200/60 dark:border-teal-800/50 flex items-center gap-1">
-                            🌾 Gluten-Free
-                          </span>
-                        )}
-                        {isHalal && (
-                          <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 text-[10px] font-black px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/50 flex items-center gap-1">
-                            ☪️ Halal Certified
-                          </span>
-                        )}
-                        {selectedItem.spicyLevel > 0 && (
-                          <span className="bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300 text-[10px] font-black px-2.5 py-1 rounded-lg border border-orange-200/60 dark:border-orange-800/50 flex items-center gap-1">
-                            🌶️ Spicy ({selectedItem.spicyLevel === 1 ? 'Mild' : selectedItem.spicyLevel === 2 ? 'Medium' : 'Hot'})
-                          </span>
-                        )}
+                        <span className="bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-300 text-[10px] font-black px-2.5 py-1 rounded-lg border border-orange-200/60 dark:border-orange-800/50 flex items-center gap-1">
+                          🌶️ Spicy ({selectedItem.spicyLevel === 1 ? 'Mild' : selectedItem.spicyLevel === 2 ? 'Medium' : 'Hot'})
+                        </span>
                       </div>
                     )}
 
