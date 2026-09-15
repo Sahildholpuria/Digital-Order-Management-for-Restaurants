@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { useRestaurant, clearTenantCache } from '../../context/RestaurantContext';
 import { isSupabaseConfigured, supabase } from '../../services/supabase';
 import { Lock, Mail, Users, ArrowRight, ShieldAlert, Sparkles, HelpCircle } from 'lucide-react';
+import { UserProfile } from '../../types';
 
 interface LoginProps {
-  onSuccess: () => void;
+  onSuccess: (user?: UserProfile | null) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
@@ -42,7 +43,9 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     setError('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      // Purge cross-tenant cached data before signing in
+      clearTenantCache();
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
       // Save credentials if Remember Me is checked
@@ -67,10 +70,11 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
   const handleMockRoleLogin = async (role: string) => {
     setLoading(true);
     try {
+      clearTenantCache();
       const mockEmail = role === 'superadmin' ? 'superadmin@restaurant.com' : `${role}@restaurant.com`;
       const actualRole = role === 'superadmin' ? 'admin' : role;
-      await loginMockUser(mockEmail, actualRole as any);
-      onSuccess();
+      const loggedUser = await loginMockUser(mockEmail, actualRole as any);
+      onSuccess(loggedUser);
     } catch (err) {
       setError('Mock login failed.');
     } finally {
@@ -198,7 +202,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
         )}
         <div className="text-center mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/50">
           <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase">
-            Build by RestaurantsOS Pvt. Ltd
+            BUILT BY RESTAURANTSOS PVT. LTD
           </span>
         </div>
       </div>
