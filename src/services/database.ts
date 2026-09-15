@@ -1089,20 +1089,64 @@ export const dbService = {
   },
 
   async updateTableStatus(restaurantId: string, tableId: string, status: string): Promise<void> {
+    const cleanNum = tableId.replace(/^table-/i, '');
     if (isSupabaseConfigured) {
-      const { error } = await supabase.rpc('update_table_status', {
-        p_table_id: tableId,
-        p_status: status
-      });
-      if (error) throw error;
+      try {
+        const { error } = await supabase.rpc('update_table_status', {
+          p_table_id: tableId,
+          p_status: status
+        });
+        if (error) throw error;
+      } catch (rpcErr) {
+        // Fallback: try with cleanNum or direct table update
+        try {
+          await supabase.rpc('update_table_status', {
+            p_table_id: cleanNum,
+            p_status: status
+          });
+        } catch (_) {}
+
+        try {
+          await supabase
+            .from('tables')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('restaurant_id', restaurantId)
+            .or(`id.eq.${tableId},number.eq.${cleanNum}`);
+        } catch (_) {}
+      }
     } else {
       const data = localStorage.getItem('restaurant_tables');
       const tables: RestaurantTable[] = data ? JSON.parse(data) : [];
-      const index = tables.findIndex(t => t.id === tableId);
+      const index = tables.findIndex(t => 
+        t.id === tableId || 
+        t.number === cleanNum || 
+        t.number === tableId || 
+        t.id.replace(/^table-/i, '') === cleanNum
+      );
       if (index > -1) {
         tables[index].status = status as any;
         tables[index].updatedAt = new Date().toISOString();
         localStorage.setItem('restaurant_tables', JSON.stringify(tables));
+        
+        // Also update cached tables for this restaurant
+        try {
+          const cached = localStorage.getItem(`cached_tables_${restaurantId}`);
+          if (cached) {
+            const cachedList: RestaurantTable[] = JSON.parse(cached);
+            const cIdx = cachedList.findIndex(t => 
+              t.id === tableId || 
+              t.number === cleanNum || 
+              t.number === tableId || 
+              t.id.replace(/^table-/i, '') === cleanNum
+            );
+            if (cIdx > -1) {
+              cachedList[cIdx].status = status as any;
+              cachedList[cIdx].updatedAt = new Date().toISOString();
+              localStorage.setItem(`cached_tables_${restaurantId}`, JSON.stringify(cachedList));
+            }
+          }
+        } catch (_) {}
+
         notifyLocalSubscribers();
       }
     }

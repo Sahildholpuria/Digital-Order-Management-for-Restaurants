@@ -292,9 +292,15 @@ begin
   
   update public.tables
   set status = p_status, updated_at = now()
-  where id = p_table_id;
+  where id = p_table_id 
+     or number = p_table_id 
+     or number = replace(p_table_id, 'table-', '')
+     or id = ('table-' || p_table_id);
 end;
 $$ language plpgsql security definer;
+
+-- Grant execution permissions
+grant execute on function public.update_table_status(text, text) to anon, authenticated;
 
 -- Indexes for performance and scalability (tenant isolation and queries speed)
 create index if not exists idx_users_restaurant_id on public.users(restaurant_id);

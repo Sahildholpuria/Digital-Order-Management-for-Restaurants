@@ -19,7 +19,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 
 export const TablesManager: React.FC = () => {
-  const { tables, addTable, deleteTable, updateTableStatus, restaurantId, settings, showToast, askConfirmation } = useRestaurant();
+  const { tables, orders, addTable, deleteTable, updateTableStatus, restaurantId, settings, showToast, askConfirmation } = useRestaurant();
   
   // Dialog States
   const [isOpen, setIsOpen] = useState(false);
@@ -152,34 +152,68 @@ export const TablesManager: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tables.map(table => {
           const menuUrl = `${window.location.origin}/menu/${table.id}`;
+          const cleanNum = table.number || table.id.replace(/^table-/i, '');
+          const activeOrders = orders.filter(o => 
+            (o.tableId === table.id || 
+             o.tableId === `table-${cleanNum}` || 
+             o.tableId === cleanNum ||
+             o.tableName === `Table ${table.number}` || 
+             o.tableName === table.number ||
+             o.tableName === `Table ${cleanNum}`) &&
+            ['pending', 'accepted', 'preparing', 'ready', 'served'].includes(o.status)
+          );
+          const isOccupied = table.status === 'occupied' || activeOrders.length > 0;
+          const activeTotal = activeOrders.reduce((sum, o) => sum + o.grandTotal, 0);
+
           return (
             <div 
               key={table.id}
-              className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 rounded-3xl p-5 shadow-sm space-y-4 hover:shadow-md transition-all flex flex-col justify-between"
+              className={`bg-white dark:bg-slate-900 border rounded-3xl p-5 shadow-sm space-y-4 hover:shadow-md transition-all flex flex-col justify-between ${
+                isOccupied 
+                  ? 'border-brand-500/40 dark:border-brand-500/40 ring-2 ring-brand-500/15 shadow-md' 
+                  : 'border-slate-150/60 dark:border-slate-850'
+              }`}
             >
               {/* Card Top */}
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">Table {table.number}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">Table {table.number}</h3>
+                    {isOccupied && (
+                      <span className="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40">
+                        OCCUPIED
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                     <Users className="w-3.5 h-3.5" />
                     <span>Capacity: {table.capacity} seats</span>
                   </p>
                 </div>
 
-                <select
-                  value={table.status}
-                  onChange={(e) => updateTableStatus(table.id, e.target.value as TableStatus)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-xl border focus:outline-none ${
-                    table.status === 'available' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' :
-                    table.status === 'occupied' ? 'bg-indigo-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400' :
-                    'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
-                  }`}
-                >
-                  <option value="available">Available</option>
-                  <option value="occupied">Occupied</option>
-                  <option value="reserved">Reserved</option>
-                </select>
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    {activeOrders.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-amber-500 text-white shadow-sm shadow-amber-500/25 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                        {activeOrders.length} {activeOrders.length === 1 ? 'Order' : 'Orders'}
+                      </span>
+                    )}
+                    <select
+                      value={table.status}
+                      onChange={(e) => updateTableStatus(table.id, e.target.value as TableStatus)}
+                      className={`text-xs font-bold px-2.5 py-1.5 rounded-xl border focus:outline-none cursor-pointer ${
+                        table.status === 'available' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' :
+                        table.status === 'occupied' ? 'bg-indigo-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400' :
+                        'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
+                      }`}
+                    >
+                      <option value="available">Available</option>
+                      <option value="occupied">Occupied</option>
+                      <option value="reserved">Reserved</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* QR Code — Large, clear, crisp preview */}
@@ -201,6 +235,28 @@ export const TablesManager: React.FC = () => {
                 </div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scan to Order</p>
               </div>
+
+              {/* Active Orders Summary Drawer */}
+              {activeOrders.length > 0 && (
+                <div className="bg-amber-50/90 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/50 rounded-2xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                      Active Orders: <span className="font-extrabold">{activeOrders.length}</span>
+                    </span>
+                    <span className="text-xs font-black text-amber-950 dark:text-amber-100">
+                      Running: {settings?.currency || '₹'}{activeTotal.toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {activeOrders.map(o => (
+                      <span key={o.id} className="text-[9px] font-extrabold bg-white/90 dark:bg-slate-900 border border-amber-300 dark:border-amber-700/60 text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded-md">
+                        {o.orderNumber} ({o.status})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* URL row */}
               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/30 rounded-xl px-3 py-2">

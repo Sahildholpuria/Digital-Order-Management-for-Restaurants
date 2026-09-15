@@ -24,6 +24,7 @@ export const BillingManager: React.FC = () => {
     settings, 
     addPaymentRecord, 
     updateOrderStatus,
+    updateTableStatus,
     saveOrder,
     showToast
   } = useRestaurant();
@@ -84,6 +85,18 @@ export const BillingManager: React.FC = () => {
       await updateOrderStatus(selectedOrder.id, 'completed');
       
       showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
+
+      // 3. If no other active orders remain for this table, mark table available
+      const otherActiveOrders = orders.filter(o => 
+        o.id !== selectedOrder.id &&
+        (o.tableId === selectedOrder.tableId || o.tableName === selectedOrder.tableName) &&
+        ['pending', 'accepted', 'preparing', 'ready', 'served'].includes(o.status)
+      );
+      if (otherActiveOrders.length === 0 && selectedOrder.tableId) {
+        try {
+          await updateTableStatus(selectedOrder.tableId, 'available');
+        } catch (_) {}
+      }
 
       // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
       if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {

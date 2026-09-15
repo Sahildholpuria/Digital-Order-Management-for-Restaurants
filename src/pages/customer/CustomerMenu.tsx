@@ -185,7 +185,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     if (tableId) {
       setCurrentTableById(tableId);
     }
-  }, [tableId, setCurrentTableById]);
+  }, [tableId, setCurrentTableById, tables]);
 
   // Filter items memoized for zero-lag UI response
   const filteredItems = useMemo(() => {
