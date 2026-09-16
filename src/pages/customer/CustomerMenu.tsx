@@ -240,6 +240,122 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [lastWaiterCallTime, setLastWaiterCallTime] = useState<number>(0);
   const [lastBillRequestTime, setLastBillRequestTime] = useState<number>(0);
 
+  // Smart Upselling state
+  const [upsellState, setUpsellState] = useState<{ item: FoodItem; pairedItems: FoodItem[] } | null>(null);
+
+  const getPairedItems = (mainItem: FoodItem): FoodItem[] => {
+    const candidates = foodItems.filter(f => f.id !== mainItem.id && f.isAvailable);
+    if (candidates.length === 0) return [];
+
+    const drinkKeywords = ['drink', 'beverage', 'shake', 'coffee', 'tea', 'soda', 'juice', 'cooler', 'lassi', 'mocktail', 'mojito', 'water', 'coke', 'pepsi', 'sharbat'];
+    const sideKeywords = ['side', 'fry', 'fries', 'bread', 'garlic', 'nacho', 'starter', 'appetizer', 'extra', 'raita', 'papad', 'salad', 'dip', 'roti', 'naan', 'kulcha', 'paratha'];
+    const dessertKeywords = ['dessert', 'sweet', 'ice cream', 'gulab jamun', 'brownie', 'halwa', 'cake', 'kulfi', 'rasgulla'];
+
+    const getCatName = (catId: string) => (categories.find(c => c.id === catId)?.name || '').toLowerCase();
+
+    const isDrink = (f: FoodItem) => {
+      const cat = getCatName(f.categoryId);
+      const name = f.name.toLowerCase();
+      return drinkKeywords.some(k => cat.includes(k) || name.includes(k));
+    };
+
+    const isSide = (f: FoodItem) => {
+      const cat = getCatName(f.categoryId);
+      const name = f.name.toLowerCase();
+      return sideKeywords.some(k => cat.includes(k) || name.includes(k));
+    };
+
+    const isDessert = (f: FoodItem) => {
+      const cat = getCatName(f.categoryId);
+      const name = f.name.toLowerCase();
+      return dessertKeywords.some(k => cat.includes(k) || name.includes(k));
+    };
+
+    const mainIsDrink = isDrink(mainItem);
+    const paired: FoodItem[] = [];
+
+    if (!mainIsDrink) {
+      // 1. Recommend a drink
+      const bestDrink = candidates.find(f => isDrink(f) && !cart.some(c => c.itemId === f.id))
+        || candidates.find(f => isDrink(f));
+      if (bestDrink) paired.push(bestDrink);
+
+      // 2. Recommend a side/starter
+      const bestSide = candidates.find(f => isSide(f) && f.id !== bestDrink?.id && !cart.some(c => c.itemId === f.id))
+        || candidates.find(f => isSide(f) && f.id !== bestDrink?.id);
+      if (bestSide) paired.push(bestSide);
+
+      // 3. Recommend a dessert or popular item
+      const bestDessertOrPop = candidates.find(f => 
+        (isDessert(f) || f.isPopular || f.isRecommended) && 
+        !paired.some(p => p.id === f.id)
+      );
+      if (bestDessertOrPop) paired.push(bestDessertOrPop);
+    } else {
+      // Main is a drink -> recommend food, side or dessert
+      const bestSide = candidates.find(f => isSide(f) && !cart.some(c => c.itemId === f.id));
+      if (bestSide) paired.push(bestSide);
+
+      const bestPop = candidates.find(f => (f.isPopular || f.isRecommended) && !paired.some(p => p.id === f.id));
+      if (bestPop) paired.push(bestPop);
+    }
+
+    // Fallback: If not enough matches, pick lowest-priced popular items
+    if (paired.length < 2) {
+      const fallbacks = candidates
+        .filter(f => !paired.some(p => p.id === f.id))
+        .sort((a, b) => {
+          if (a.isPopular && !b.isPopular) return -1;
+          if (!a.isPopular && b.isPopular) return 1;
+          return a.price - b.price;
+        })
+        .slice(0, 2 - paired.length);
+      paired.push(...fallbacks);
+    }
+
+    return paired.slice(0, 2);
+  };
+
+  const handleOneTapAdd = (item: FoodItem) => {
+    addToCart(item, 1);
+    showToast(`Added ${item.name} to basket!`, 'success');
+    confetti({
+      particleCount: 35,
+      spread: 40,
+      origin: { y: 0.9 }
+    });
+    if (upsellState) {
+      const remaining = upsellState.pairedItems.filter(p => p.id !== item.id);
+      if (remaining.length === 0) {
+        setUpsellState(null);
+      } else {
+        setUpsellState({ ...upsellState, pairedItems: remaining });
+      }
+    }
+  };
+
+  // Auto-dismiss upsell prompt after 10s
+  useEffect(() => {
+    if (upsellState) {
+      const timer = setTimeout(() => {
+        setUpsellState(null);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [upsellState]);
+
+  // Frequently paired recommendations in Cart Drawer
+  const cartPairedRecommendations = useMemo(() => {
+    if (cart.length === 0) return [];
+    const lastItemInCart = foodItems.find(f => f.id === cart[cart.length - 1]?.itemId);
+    if (!lastItemInCart) {
+      return foodItems
+        .filter(f => f.isAvailable && !cart.some(c => c.itemId === f.id) && (f.isPopular || f.isRecommended))
+        .slice(0, 3);
+    }
+    return getPairedItems(lastItemInCart);
+  }, [cart, foodItems, categories]);
+
   const sanitizeInput = (str: string, maxLen = 250): string => {
     if (!str) return '';
     return str
@@ -252,6 +368,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     if (selectedItem) {
       const cleanInstructions = sanitizeInput(specialInstructions, 200);
       addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined);
+      const added = selectedItem;
       setSelectedItem(null);
       setSpecialInstructions('');
       
@@ -261,6 +378,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         spread: 45,
         origin: { y: 0.9 }
       });
+
+      // Trigger Smart Upsell Recommendation Bar
+      const paired = getPairedItems(added);
+      if (paired.length > 0) {
+        setUpsellState({ item: added, pairedItems: paired });
+      }
     }
   };
 
@@ -558,6 +681,45 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           );
         })}
       </div>
+
+      {/* Frequently Paired Upsell Shelf in Basket */}
+      {cartPairedRecommendations.length > 0 && (
+        <div className="pt-3 pb-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0 animate-pulse" />
+            <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              {t.pairsWellWithOrder || 'Pairs Well With Your Order'}
+            </span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {cartPairedRecommendations.map(item => (
+              <div
+                key={item.id}
+                className="min-w-[150px] max-w-[170px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 rounded-2xl p-2.5 flex flex-col justify-between shadow-sm flex-shrink-0"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1 mb-1">
+                    <FSSAIIndicator type={item.dietaryType || (item.isVeg ? 'veg' : 'non_veg')} size={11} />
+                    <p className="text-[11px] font-extrabold text-slate-800 dark:text-slate-100 truncate">
+                      {item.name}
+                    </p>
+                  </div>
+                  <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                    +{settings?.currency || '₹'}{item.price.toFixed(0)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOneTapAdd(item)}
+                  className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black py-1.5 px-2 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <span>{t.oneTapAdd || '+ 1-Tap'}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Cart Summary & CTA */}
       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
@@ -1187,6 +1349,113 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <span>Review Cart</span>
               <ArrowRight className="w-4 h-4 text-white" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Quick-Actions: Call Waiter & Request Bill */}
+      <div className={`fixed z-30 flex items-center gap-2 pointer-events-auto transition-all duration-300 right-4 ${
+        cart.length > 0 ? 'bottom-20 sm:bottom-6 sm:right-6' : 'bottom-5 sm:bottom-6 sm:right-6'
+      }`}>
+        {(settings?.enableWaiterCall ?? true) && (
+          <button
+            type="button"
+            onClick={handleCallWaiter}
+            disabled={waiterCalled}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-full font-black text-xs shadow-2xl backdrop-blur-xl border transition-all duration-200 active:scale-95 cursor-pointer ${
+              waiterCalled
+                ? 'bg-amber-500 text-white border-amber-400 ring-4 ring-amber-500/25 shadow-amber-500/40 animate-pulse'
+                : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border-slate-200/90 dark:border-slate-800 hover:border-amber-500/60 shadow-slate-900/15 dark:shadow-black/50'
+            }`}
+            title="Call Waiter (Notifies staff instantly)"
+            aria-label="Call Waiter"
+          >
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+              waiterCalled ? 'bg-white/20 text-white' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+            }`}>
+              <Bell className={`w-3.5 h-3.5 ${waiterCalled ? 'animate-bounce' : ''}`} />
+            </div>
+            <span className="text-xs font-black">
+              {waiterCalled ? (t.waiterCalled || 'Waiter Called!') : (t.callWaiter || 'Call Waiter')}
+            </span>
+          </button>
+        )}
+
+        {(settings?.enableBillRequest ?? true) && (
+          <button
+            type="button"
+            onClick={handleRequestBill}
+            disabled={billRequested}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-full font-black text-xs shadow-2xl backdrop-blur-xl border transition-all duration-200 active:scale-95 cursor-pointer ${
+              billRequested
+                ? 'bg-emerald-600 text-white border-emerald-500 ring-4 ring-emerald-500/25 shadow-emerald-600/40 animate-pulse'
+                : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/60 shadow-slate-900/15 dark:shadow-black/50'
+            }`}
+            title="Request Bill (Signals cashier to print invoice)"
+            aria-label="Request Bill"
+          >
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+              billRequested ? 'bg-white/20 text-white' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+            }`}>
+              <Receipt className={`w-3.5 h-3.5 ${billRequested ? 'animate-bounce' : ''}`} />
+            </div>
+            <span className="text-xs font-black">
+              {billRequested ? (t.billRequested || 'Bill Requested!') : (t.requestBill || 'Request Bill')}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Smart Upsell Floating Recommendation Bar ("Frequently paired with this") */}
+      {upsellState && upsellState.pairedItems.length > 0 && (
+        <div className={`fixed z-40 transition-all duration-300 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-96 max-w-md mx-auto ${
+          cart.length > 0 ? 'bottom-32 sm:bottom-20' : 'bottom-20 sm:bottom-20'
+        }`}>
+          <div className="bg-slate-900/95 dark:bg-slate-900/98 backdrop-blur-xl text-white rounded-3xl p-3 sm:p-3.5 shadow-2xl border border-emerald-500/50 animate-slide-up">
+            <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-800/80">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0 animate-pulse" />
+                <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider truncate">
+                  {t.frequentlyPaired || 'Frequently ordered with this:'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUpsellState(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+              {upsellState.pairedItems.map(paired => (
+                <div
+                  key={paired.id}
+                  className="flex-1 min-w-[140px] bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 rounded-2xl p-2.5 flex items-center justify-between gap-2 transition-all group shadow-sm"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+                      <FSSAIIndicator type={paired.dietaryType || (paired.isVeg ? 'veg' : 'non_veg')} size={11} />
+                      <p className="text-xs font-bold text-slate-100 truncate group-hover:text-emerald-400 transition-colors">
+                        {paired.name}
+                      </p>
+                    </div>
+                    <p className="text-[11px] font-black text-emerald-400 mt-0.5">
+                      +{settings?.currency || '₹'}{paired.price.toFixed(0)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOneTapAdd(paired)}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl transition-all active:scale-90 flex-shrink-0 shadow-md cursor-pointer whitespace-nowrap"
+                  >
+                    {t.oneTapAdd || '+ 1-Tap'}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

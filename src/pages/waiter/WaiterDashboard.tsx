@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantTable, TableStatus, RestaurantOrder } from '../../types';
 import { 
@@ -7,10 +7,12 @@ import {
   Users, 
   Check, 
   Clock, 
-  MessageSquare,
-  HelpCircle,
-  Coffee,
-  X
+  MessageSquare, 
+  HelpCircle, 
+  Coffee, 
+  X,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 export const WaiterDashboard: React.FC = () => {
@@ -24,11 +26,43 @@ export const WaiterDashboard: React.FC = () => {
   } = useRestaurant();
 
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   const currency = settings?.currency || '₹';
 
   // Active notifications for waiters (call_waiter or request_bill that are unread)
   const activeAlerts = notifications.filter(n => !n.isRead && ['call_waiter', 'request_bill'].includes(n.type));
+
+  const prevAlertsCountRef = useRef<number>(activeAlerts.length);
+  const isInitialMount = useRef<boolean>(true);
+
+  // Play crisp service bell chime whenever a new call waiter / bill request alert arrives
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevAlertsCountRef.current = activeAlerts.length;
+      return;
+    }
+
+    if (activeAlerts.length > prevAlertsCountRef.current && soundEnabled) {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        // Classic pleasant two-tone service bell: E6 (1318.5Hz) -> C6 (1046.5Hz)
+        osc.frequency.setValueAtTime(1318.51, ctx.currentTime);
+        osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.65);
+      } catch (_) {}
+    }
+    prevAlertsCountRef.current = activeAlerts.length;
+  }, [activeAlerts.length, soundEnabled]);
 
   // Find active orders for selected table
   const selectedTableOrders = selectedTable 
@@ -50,13 +84,30 @@ export const WaiterDashboard: React.FC = () => {
     <div className="space-y-6 pb-20 animate-fade-in">
       
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight font-sans">
-          Waiter Console
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Respond to guest service chimes and update table occupancy loads.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight font-sans">
+            Waiter Console
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Respond to guest service chimes and update table occupancy loads.
+          </p>
+        </div>
+
+        {/* Sound Alert Toggle */}
+        <button
+          type="button"
+          onClick={() => setSoundEnabled(!soundEnabled)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shadow-sm ${
+            soundEnabled 
+              ? 'bg-slate-900 dark:bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-800' 
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 hover:bg-slate-50'
+          }`}
+          title="Toggle Waiter Service Chime"
+        >
+          {soundEnabled ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+          <span>{soundEnabled ? 'Chime ON' : 'Mute'}</span>
+        </button>
       </div>
 
       {/* Active Service Requests Section */}

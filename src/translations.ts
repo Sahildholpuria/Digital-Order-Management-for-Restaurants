@@ -60,6 +60,11 @@ export const translations = {
     waiterCalled: "Waiter Called!",
     billRequested: "Bill Requested!",
     
+    // Smart Upselling
+    frequentlyPaired: "Frequently ordered with this:",
+    oneTapAdd: "+ 1-Tap",
+    pairsWellWithOrder: "Pairs Well With Your Order",
+    
     // Common / Admin
     dashboard: "Dashboard",
     superadmin: "Super Admin",
@@ -151,6 +156,11 @@ export const translations = {
     requestBill: "बिल मांगें",
     waiterCalled: "वेटर को बुलाया गया!",
     billRequested: "बिल का अनुरोध किया गया!",
+    
+    // Smart Upselling
+    frequentlyPaired: "इसके साथ अक्सर ऑर्डर किया जाता है:",
+    oneTapAdd: "+ 1-टैप",
+    pairsWellWithOrder: "आपके ऑर्डर के साथ बेहतरीन",
     
     // Common / Admin
     dashboard: "डैशबोर्ड",
