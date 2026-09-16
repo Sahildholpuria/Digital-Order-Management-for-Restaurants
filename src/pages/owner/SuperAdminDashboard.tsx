@@ -33,7 +33,11 @@ import {
   ShieldAlert
 } from 'lucide-react';
 
-export const SuperAdminDashboard: React.FC = () => {
+interface SuperAdminDashboardProps {
+  onImpersonate?: (restaurantId: string) => void;
+}
+
+export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpersonate }) => {
   const { currentUser, setRestaurantId, showToast, askConfirmation } = useRestaurant();
 
   // Strict Super Admin Access Guard
@@ -349,9 +353,14 @@ export const SuperAdminDashboard: React.FC = () => {
   };
 
   const handleAccessPortal = (restaurantId: string) => {
-    setRestaurantId(restaurantId);
-    localStorage.setItem('last_active_staff_restaurant_id', restaurantId);
-    window.location.hash = '#dashboard';
+    if (onImpersonate) {
+      onImpersonate(restaurantId);
+    } else {
+      setRestaurantId(restaurantId);
+      localStorage.setItem('superadmin_impersonated_tenant_id', restaurantId);
+      localStorage.setItem('last_active_staff_restaurant_id', restaurantId);
+      window.location.hash = '#dashboard';
+    }
   };
 
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
@@ -723,6 +732,15 @@ export const SuperAdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleAccessPortal(r.id)}
+                              className="bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-600 dark:hover:text-white dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              title="Access Live POS Portal"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Portal</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenSubModal(r)}

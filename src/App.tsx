@@ -51,6 +51,7 @@ import {
   X,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Globe,
   Shield,
   CheckCircle,
@@ -159,9 +160,14 @@ export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
   const [currentSearch, setCurrentSearch] = useState(window.location.search);
+  const [impersonatedTenantId, setImpersonatedTenantId] = useState<string | null>(() => {
+    return localStorage.getItem('superadmin_impersonated_tenant_id');
+  });
+  const isImpersonating = !!(currentUser?.isSuperAdmin && impersonatedTenantId);
+
   const [activeTab, setActiveTab] = useState<string>(() => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
+    const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
     if (validTabs.includes(hash)) {
       return hash;
     }
@@ -171,6 +177,24 @@ export const App: React.FC = () => {
     }
     return 'dashboard';
   });
+
+  const handleImpersonate = (targetRestaurantId: string) => {
+    setImpersonatedTenantId(targetRestaurantId);
+    localStorage.setItem('superadmin_impersonated_tenant_id', targetRestaurantId);
+    localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+    setRestaurantId(targetRestaurantId);
+    setActiveTab('dashboard');
+    window.location.hash = '#dashboard';
+  };
+
+  const handleExitImpersonation = () => {
+    setImpersonatedTenantId(null);
+    localStorage.removeItem('superadmin_impersonated_tenant_id');
+    localStorage.removeItem('last_active_staff_restaurant_id');
+    setRestaurantId('');
+    setActiveTab('superadmin');
+    window.location.hash = '#superadmin';
+  };
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -217,16 +241,16 @@ export const App: React.FC = () => {
     }
   }, [loading, currentUser, currentPath, currentHash]);
 
-  // Automatically switch to superadmin tab on login if Super Admin
+  // Automatically switch to superadmin tab on login if Super Admin and not impersonating
   useEffect(() => {
-    if (currentUser?.isSuperAdmin) {
+    if (currentUser?.isSuperAdmin && !impersonatedTenantId) {
       const hash = window.location.hash.replace('#', '');
       const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
       if (!validTabs.includes(hash)) {
         setActiveTab('superadmin');
       }
     }
-  }, [currentUser]);
+  }, [currentUser, impersonatedTenantId]);
 
   // Persist tab change to URL hash and localStorage
   useEffect(() => {
@@ -497,10 +521,23 @@ export const App: React.FC = () => {
       let sidebarItems: Array<{ id: string; label: string; icon: any; roles: string[] }> = [];
 
       if (currentUser?.isSuperAdmin) {
-        // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
-        sidebarItems = [
-          { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
-        ];
+        if (isImpersonating) {
+          sidebarItems = [
+            { id: 'superadmin', label: '← Super Admin', icon: ArrowLeft, roles: ['admin'] },
+            { id: 'dashboard', label: t.dashboard, icon: TrendingUp, roles: ['admin'] },
+            { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['admin'] },
+            { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['admin'] },
+            { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin'] },
+            { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin'] },
+            { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
+            { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
+          ];
+        } else {
+          // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
+          sidebarItems = [
+            { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
+          ];
+        }
       } else {
         // Regular restaurant staff account
         sidebarItems = [
@@ -516,8 +553,8 @@ export const App: React.FC = () => {
 
       // Render active tab body
       const renderActiveTabContent = () => {
-        if (currentUser?.isSuperAdmin) {
-          return <SuperAdminDashboard />;
+        if (currentUser?.isSuperAdmin && (!isImpersonating || activeTab === 'superadmin')) {
+          return <SuperAdminDashboard onImpersonate={handleImpersonate} />;
         }
         switch (activeTab) {
           case 'dashboard': return <AdminDashboard />;
@@ -527,7 +564,7 @@ export const App: React.FC = () => {
           case 'billing': return <BillingManager />;
           case 'reports': return <ReportsManager />;
           case 'settings': return <SettingsManager />;
-          default: return <AdminDashboard />;
+          default: return isImpersonating ? <AdminDashboard /> : (currentUser?.isSuperAdmin ? <SuperAdminDashboard onImpersonate={handleImpersonate} /> : <AdminDashboard />);
         }
       };
 
@@ -541,7 +578,7 @@ export const App: React.FC = () => {
                 <ChefHat className="w-4 h-4" />
               </div>
               <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                {currentUser?.isSuperAdmin ? 'Super Admin' : 'POS Portal'}
+                {currentUser?.isSuperAdmin ? (isImpersonating ? `Portal: ${settings?.name || impersonatedTenantId}` : 'Super Admin') : 'POS Portal'}
               </span>
             </div>
             <div className="flex gap-2">
@@ -566,10 +603,10 @@ export const App: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">
-                    {currentUser?.isSuperAdmin ? 'Super Admin SaaS' : 'Restaurant OS'}
+                    {currentUser?.isSuperAdmin ? (isImpersonating ? 'Impersonating Tenant' : 'Super Admin SaaS') : 'Restaurant OS'}
                   </span>
-                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? 'Tenant Central' : settings?.name}>
-                    {currentUser?.isSuperAdmin ? 'Tenant Central' : (settings?.name || 'Bistro System')}
+                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? (isImpersonating ? (settings?.name || impersonatedTenantId || 'Tenant') : 'Tenant Central') : (settings?.name || 'Bistro System')}>
+                    {currentUser?.isSuperAdmin ? (isImpersonating ? (settings?.name || impersonatedTenantId || 'Tenant') : 'Tenant Central') : (settings?.name || 'Bistro System')}
                   </span>
                 </div>
               </div>
@@ -583,7 +620,11 @@ export const App: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => {
-                        setActiveTab(item.id);
+                        if (item.id === 'superadmin' && isImpersonating) {
+                          handleExitImpersonation();
+                        } else {
+                          setActiveTab(item.id);
+                        }
                         setMobileSidebarOpen(false);
                       }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer ${
@@ -651,19 +692,15 @@ export const App: React.FC = () => {
 
           {/* Content Container */}
           <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
-            {currentUser?.isSuperAdmin && restaurantId !== 'demo-restaurant' && (
-              <div className="bg-amber-550/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 px-6 py-3 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 animate-fade-in text-xs font-bold shadow-sm">
+            {isImpersonating && (
+              <div className="bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 px-6 py-3 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3 mb-6 animate-fade-in text-xs font-bold shadow-sm">
                 <span className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                  <span>Active Portal View: Impersonating restaurant "{settings?.name || restaurantId}"</span>
+                  <span>Active Portal View: Impersonating restaurant "{settings?.name || impersonatedTenantId}"</span>
                 </span>
                 <button 
-                  onClick={() => {
-                    setRestaurantId('demo-restaurant');
-                    localStorage.removeItem('last_active_staff_restaurant_id');
-                    setActiveTab('superadmin');
-                  }}
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-md"
+                  onClick={handleExitImpersonation}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-md cursor-pointer"
                 >
                   Return to Super Admin Panel
                 </button>
