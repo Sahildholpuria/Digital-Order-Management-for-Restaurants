@@ -157,6 +157,34 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
     }
   }, [currentUser?.isSuperAdmin]);
 
+  // Close any active modal overlay on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isEditModalOpen) setIsEditModalOpen(false);
+        else if (isModalOpen) setIsModalOpen(false);
+        else if (isSubModalOpen) setIsSubModalOpen(false);
+        else if (isEditUserModalOpen) setIsEditUserModalOpen(false);
+        else if (isUserModalOpen) setIsUserModalOpen(false);
+        else if (isAnnModalOpen) setIsAnnModalOpen(false);
+        else if (credsModal) setCredsModal(null);
+        else if (renewModal) setRenewModal(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    isEditModalOpen,
+    isModalOpen,
+    isSubModalOpen,
+    isEditUserModalOpen,
+    isUserModalOpen,
+    isAnnModalOpen,
+    credsModal,
+    renewModal
+  ]);
+
   const formatLocalDate = (date: Date): string => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -1177,7 +1205,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
       {/* Onboard Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsModalOpen(false);
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-lg p-6 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-5">
               <div>
@@ -1288,13 +1321,22 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-2 mt-4"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Onboard Tenant & Create Accounts</span>
-              </button>
+              <div className="flex gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-5 rounded-2xl transition-all text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Onboard Tenant</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -1348,7 +1390,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
         };
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsSubModalOpen(false);
+            }}
+          >
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-scale-in overflow-hidden">
 
               {/* Modal Header */}
@@ -1528,7 +1575,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
       {/* Edit Modal */}
       {isEditModalOpen && selectedRest && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsEditModalOpen(false);
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -1673,12 +1725,21 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-6 text-xs cursor-pointer"
-              >
-                Apply Changes
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-5 rounded-2xl transition-all text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer"
+                >
+                  Apply Changes
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -1686,7 +1747,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
       {/* Create User Modal */}
       {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsUserModalOpen(false);
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-855 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Create Staff User</h3>
@@ -1780,13 +1846,22 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer flex items-center justify-center gap-2"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Create Staff Account</span>
-              </button>
+              <div className="flex gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-5 rounded-2xl transition-all text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Create Staff Account</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -1799,7 +1874,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
         const welcomeMessage = `👋 *Welcome to RestaurantsOS!*\n\nHere are your access details for *${credsModal.restName}*:\n\n🏢 *Restaurant:* ${credsModal.restName}\n👤 *Role:* ${credsModal.role}\n📧 *Login Email:* ${credsModal.email}\n🔑 *Password:* ${credsModal.pass}\n\n💻 *Staff POS Portal:* ${portalUrl}\n📱 *Customer QR Menu:* ${customerMenuUrl}\n\nPlease save these credentials securely. Reach out anytime if you need assistance!`;
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setCredsModal(null);
+            }}
+          >
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center max-h-[90vh] overflow-y-auto">
               <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
                 <CheckCircle className="w-8 h-8" />
@@ -1884,7 +1964,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
       {/* ===== RENEWAL ALERT DISPATCHER MODAL ===== */}
       {renewModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRenewModal(null);
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center max-h-[90vh] overflow-y-auto">
             <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
               <Bell className="w-8 h-8" />
@@ -1984,7 +2069,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
       {/* ===== CREATE BROADCAST ANNOUNCEMENT MODAL ===== */}
       {isAnnModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsAnnModalOpen(false);
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-3xl w-full max-w-lg p-6 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2.5">
@@ -2097,7 +2187,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
       {/* Edit User Modal */}
       {isEditUserModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsEditUserModalOpen(false);
+          }}
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-855 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-base font-black text-slate-850 dark:text-slate-100">Edit Staff Account</h3>
@@ -2158,12 +2253,21 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md mt-4 text-xs cursor-pointer"
-              >
-                Apply Changes
-              </button>
+              <div className="flex gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditUserModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 px-5 rounded-2xl transition-all text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer"
+                >
+                  Apply Changes
+                </button>
+              </div>
             </form>
           </div>
         </div>
