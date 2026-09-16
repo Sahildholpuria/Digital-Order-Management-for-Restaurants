@@ -175,44 +175,41 @@ export const TablesManager: React.FC = () => {
               }`}
             >
               {/* Card Top */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">Table {table.number}</h3>
-                    {isOccupied && (
-                      <span className="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40">
-                        OCCUPIED
+              <div className="flex justify-between items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 whitespace-nowrap tracking-tight">
+                    Table {table.number}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="flex items-center gap-1 font-medium whitespace-nowrap">
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Capacity: {table.capacity} seats</span>
+                    </span>
+                    {activeOrders.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 whitespace-nowrap">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>{activeOrders.length} {activeOrders.length === 1 ? 'Active Order' : 'Active Orders'}</span>
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <Users className="w-3.5 h-3.5" />
-                    <span>Capacity: {table.capacity} seats</span>
-                  </p>
                 </div>
 
-                <div className="flex flex-col items-end gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    {activeOrders.length > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-amber-500 text-white shadow-sm shadow-amber-500/25 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                        {activeOrders.length} {activeOrders.length === 1 ? 'Order' : 'Orders'}
-                      </span>
-                    )}
-                    <select
-                      value={table.status}
-                      onChange={(e) => updateTableStatus(table.id, e.target.value as TableStatus)}
-                      className={`text-xs font-bold px-2.5 py-1.5 rounded-xl border focus:outline-none cursor-pointer ${
-                        table.status === 'available' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400' :
-                        table.status === 'occupied' ? 'bg-indigo-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400' :
-                        'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400'
-                      }`}
-                    >
-                      <option value="available">Available</option>
-                      <option value="occupied">Occupied</option>
-                      <option value="reserved">Reserved</option>
-                    </select>
-                  </div>
+                <div className="flex-shrink-0">
+                  <select
+                    value={table.status}
+                    onChange={(e) => updateTableStatus(table.id, e.target.value as TableStatus)}
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl border focus:outline-none cursor-pointer transition-all shadow-sm ${
+                      table.status === 'available'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
+                        : table.status === 'occupied'
+                        ? 'bg-brand-500/10 border-brand-500/30 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20'
+                        : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20'
+                    }`}
+                  >
+                    <option value="available" className="bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 font-bold">Available</option>
+                    <option value="occupied" className="bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 font-bold">Occupied</option>
+                    <option value="reserved" className="bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 font-bold">Reserved</option>
+                  </select>
                 </div>
               </div>
 
