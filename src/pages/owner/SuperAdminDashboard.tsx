@@ -117,7 +117,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
 
   // Share Credentials Modal
-  const [credsModal, setCredsModal] = useState<{ restName: string; email: string; pass: string; role: string; slug: string; phone?: string } | null>(null);
+  const [credsModal, setCredsModal] = useState<{ restName: string; email: string; pass: string; role: string; slug: string; phone?: string; restaurantId?: string } | null>(null);
   const [copiedText, setCopiedText] = useState(false);
 
   // Renewal Alert Dispatcher Modal
@@ -264,7 +264,21 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!restId || !name) return;
+    if (!restId.trim() || !name.trim()) {
+      showToast('Restaurant Name and Unique Slug are required.', 'error');
+      return;
+    }
+
+    if (!email.trim() || !email.includes('@')) {
+      showToast('A valid Owner Email is required for credentials dispatch and billing notices.', 'error');
+      return;
+    }
+
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
+    if (!phone.trim() || cleanPhone.length < 7) {
+      showToast('A valid Owner Phone Number (at least 7 digits) is required for WhatsApp alerts.', 'error');
+      return;
+    }
 
     const cleanSlug = restId.trim().toLowerCase().replace(/\s+/g, '-');
 
@@ -317,6 +331,22 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRest) return;
+
+    if (!editName.trim()) {
+      showToast('Restaurant Name cannot be empty.', 'error');
+      return;
+    }
+
+    if (!editEmail.trim() || !editEmail.includes('@')) {
+      showToast('A valid Owner Email is required for credentials and dispatch notices.', 'error');
+      return;
+    }
+
+    const cleanPhone = editPhone.trim().replace(/[^0-9]/g, '');
+    if (!editPhone.trim() || cleanPhone.length < 7) {
+      showToast('A valid Owner Phone Number (at least 7 digits) is required for WhatsApp notices.', 'error');
+      return;
+    }
 
     try {
       const updates: Partial<RestaurantSettings> = {
@@ -411,20 +441,29 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
   const handleOpenWelcomePackage = (r: RestaurantSettings) => {
     const adminUser = users.find(u => u.restaurantId === r.id && u.role === 'admin') || users.find(u => u.restaurantId === r.id);
+    const resolvedEmail = (r.email || adminUser?.email || '').trim();
+    const resolvedPhone = (r.phone || '').trim();
     setCredsModal({
       restName: r.name,
-      email: adminUser?.email || r.email || `admin@${r.id}.com`,
+      email: resolvedEmail,
       pass: '[Configured Password]',
       role: (adminUser?.role || 'admin').toUpperCase(),
       slug: r.id,
-      phone: r.phone,
+      phone: resolvedPhone,
+      restaurantId: r.id,
     });
   };
 
   const handleOpenRenewalModal = (r: RestaurantSettings) => {
+    const adminUser = users.find(u => u.restaurantId === r.id && u.role === 'admin') || users.find(u => u.restaurantId === r.id);
     const days = getDaysLeft(r.subscriptionExpiresAt) ?? 0;
+    const effectiveRest: RestaurantSettings = {
+      ...r,
+      email: (r.email || adminUser?.email || '').trim(),
+      phone: (r.phone || '').trim(),
+    };
     setRenewModal({
-      restaurant: r,
+      restaurant: effectiveRest,
       daysLeft: days,
     });
   };
@@ -515,6 +554,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
         pass: userPassword.trim(),
         role: userRole.toUpperCase(),
         slug: userRestaurantId,
+        phone: (targetRest?.phone || '').trim(),
+        restaurantId: userRestaurantId,
       });
 
       setUserFullName('');
@@ -875,6 +916,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                     };
 
                     const staffUsersCount = users.filter(u => u.restaurantId === r.id).length;
+                    const adminUser = users.find(u => u.restaurantId === r.id && u.role === 'admin') || users.find(u => u.restaurantId === r.id);
+                    const resolvedEmail = (r.email || adminUser?.email || '').trim();
+                    const cleanPhone = (r.phone || '').trim().replace(/[^0-9]/g, '');
+                    const hasEmail = resolvedEmail.includes('@');
+                    const hasPhone = cleanPhone.length >= 7;
+                    const hasAnyContact = hasEmail || hasPhone;
 
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
@@ -954,20 +1001,30 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                             </button>
                             <button
                               type="button"
+                              disabled={!hasAnyContact}
                               onClick={() => handleOpenRenewalModal(r)}
-                              className="bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                              title="Send WhatsApp / Email Renewal Notice"
+                              className={`border text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 inline-flex items-center gap-1 shadow-sm ${
+                                hasAnyContact
+                                  ? 'bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:-translate-y-0.5 active:scale-95 cursor-pointer'
+                                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
+                              }`}
+                              title={hasAnyContact ? "Send WhatsApp / Email Renewal Notice" : "No phone or email registered. Click Edit to add contact details."}
                             >
-                              <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                              <Bell className={`w-3 h-3 ${hasAnyContact ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-600'}`} />
                               <span>Remind</span>
                             </button>
                             <button
                               type="button"
+                              disabled={!hasAnyContact}
                               onClick={() => handleOpenWelcomePackage(r)}
-                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                              title="Share Credentials & Welcome Package (WhatsApp / Email)"
+                              className={`border text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 inline-flex items-center gap-1 shadow-sm ${
+                                hasAnyContact
+                                  ? 'bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border-slate-300 dark:border-slate-700 hover:-translate-y-0.5 active:scale-95 cursor-pointer'
+                                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
+                              }`}
+                              title={hasAnyContact ? "Share Credentials & Welcome Package (WhatsApp / Email)" : "No phone or email registered. Click Edit to add contact details."}
                             >
-                              <Share2 className="w-3 h-3 text-slate-500" />
+                              <Share2 className={`w-3 h-3 ${hasAnyContact ? 'text-slate-500' : 'text-slate-400 dark:text-slate-600'}`} />
                               <span>Share</span>
                             </button>
                             <button
@@ -1230,7 +1287,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </p>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Restaurant Name</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Restaurant Name *</label>
                   <input
                     type="text"
                     required
@@ -1248,7 +1305,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Unique Slug / Tenant ID</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Unique Slug / Tenant ID *</label>
                   <input
                     type="text"
                     required
@@ -1261,9 +1318,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Owner Email</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Owner Email *</label>
                     <input
                       type="email"
+                      required
                       placeholder="owner@bistro.com"
                       value={email}
                       onChange={(e) => {
@@ -1274,9 +1332,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Owner Phone</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Owner Phone *</label>
                     <input
-                      type="text"
+                      type="tel"
+                      required
                       placeholder="+91 XXXXX XXXXX"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -1594,7 +1653,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Restaurant Name</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Restaurant Name *</label>
                 <input
                   type="text"
                   required
@@ -1607,9 +1666,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Email</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Email *</label>
                   <input
                     type="email"
+                    required
                     placeholder="name@restaurant.com"
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
@@ -1617,9 +1677,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Phone</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Owner Phone *</label>
                   <input
-                    type="text"
+                    type="tel"
+                    required
                     placeholder="+91 XXXXX XXXXX"
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
@@ -1871,7 +1932,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
       {credsModal && (() => {
         const portalUrl = `${window.location.origin}/admin`;
         const customerMenuUrl = `${window.location.origin}/menu/${credsModal.slug}`;
-        const welcomeMessage = `👋 *Welcome to RestaurantsOS!*\n\nHere are your access details for *${credsModal.restName}*:\n\n🏢 *Restaurant:* ${credsModal.restName}\n👤 *Role:* ${credsModal.role}\n📧 *Login Email:* ${credsModal.email}\n🔑 *Password:* ${credsModal.pass}\n\n💻 *Staff POS Portal:* ${portalUrl}\n📱 *Customer QR Menu:* ${customerMenuUrl}\n\nPlease save these credentials securely. Reach out anytime if you need assistance!`;
+        const welcomeMessage = `👋 *Welcome to RestaurantsOS!*\n\nHere are your access details for *${credsModal.restName}*:\n\n🏢 *Restaurant:* ${credsModal.restName}\n👤 *Role:* ${credsModal.role}\n📧 *Login Email:* ${credsModal.email || 'Not configured'}\n🔑 *Password:* ${credsModal.pass}\n\n💻 *Staff POS Portal:* ${portalUrl}\n📱 *Customer QR Menu:* ${customerMenuUrl}\n\nPlease save these credentials securely. Reach out anytime if you need assistance!`;
+
+        const cleanPhone = (credsModal.phone || '').trim().replace(/[^0-9]/g, '');
+        const hasPhone = cleanPhone.length >= 7;
+        const hasEmail = Boolean(credsModal.email && credsModal.email.includes('@'));
+        const targetRest = restaurants.find(item => item.id === (credsModal.restaurantId || credsModal.slug));
 
         return (
           <div 
@@ -1890,6 +1956,29 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 Share account credentials with <strong className="text-slate-700 dark:text-slate-200">{credsModal.restName}</strong>
               </p>
 
+              {(!hasPhone || !hasEmail) && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-3 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2 text-left mt-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-[11px] font-medium leading-tight">
+                      Missing {!hasPhone && !hasEmail ? 'phone & email' : !hasPhone ? 'phone number' : 'email'}. Direct dispatch disabled.
+                    </span>
+                  </div>
+                  {targetRest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCredsModal(null);
+                        handleEditClick(targetRest);
+                      }}
+                      className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex-shrink-0 cursor-pointer"
+                    >
+                      Edit &rarr;
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 my-4 text-left space-y-2.5 font-mono text-xs">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Restaurant Slug</span>
@@ -1901,9 +1990,17 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
                 <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/50 pt-2">
                   <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Email</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{credsModal.email}</span>
+                  <span className={`font-bold ${hasEmail ? 'text-slate-800 dark:text-slate-200' : 'text-rose-500 italic'}`}>
+                    {credsModal.email || 'Not configured'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Phone</span>
+                  <span className={`font-bold ${hasPhone ? 'text-slate-800 dark:text-slate-200' : 'text-rose-500 italic'}`}>
+                    {credsModal.phone || 'Not configured'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-slate-700/50 pt-2">
                   <span className="text-slate-400 font-sans text-[10px] font-extrabold uppercase">Password</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100 bg-amber-400/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">
                     {credsModal.pass}
@@ -1914,23 +2011,47 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
               {/* Instant WhatsApp & Email Dispatch Actions */}
               <div className="space-y-2.5">
                 <div className="flex gap-2">
-                  <a
-                    href={`https://wa.me/${(credsModal.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(welcomeMessage)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Send WhatsApp</span>
-                  </a>
+                  {hasPhone ? (
+                    <a
+                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(welcomeMessage)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Send WhatsApp</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-3 px-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200 dark:border-slate-800"
+                      title="No phone number configured for WhatsApp dispatch"
+                    >
+                      <MessageSquare className="w-4 h-4 opacity-40" />
+                      <span>No Phone</span>
+                    </button>
+                  )}
 
-                  <a
-                    href={`mailto:${credsModal.email}?subject=${encodeURIComponent(`Welcome to RestaurantsOS - Credentials for ${credsModal.restName}`)}&body=${encodeURIComponent(welcomeMessage)}`}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>Send Email</span>
-                  </a>
+                  {hasEmail ? (
+                    <a
+                      href={`mailto:${credsModal.email}?subject=${encodeURIComponent(`Welcome to RestaurantsOS - Credentials for ${credsModal.restName}`)}&body=${encodeURIComponent(welcomeMessage)}`}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Send Email</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-3 px-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200 dark:border-slate-800"
+                      title="No email configured for Email dispatch"
+                    >
+                      <Mail className="w-4 h-4 opacity-40" />
+                      <span>No Email</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -1963,109 +2084,171 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
       })()}
 
       {/* ===== RENEWAL ALERT DISPATCHER MODAL ===== */}
-      {renewModal && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setRenewModal(null);
-          }}
-        >
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center max-h-[90vh] overflow-y-auto">
-            <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
-              <Bell className="w-8 h-8" />
-            </div>
+      {renewModal && (() => {
+        const r = renewModal.restaurant;
+        const days = renewModal.daysLeft;
+        const urgency = days <= 0 
+          ? 'has expired' 
+          : days === 1 
+            ? 'expires tomorrow' 
+            : `expires in ${days} days`;
+        const renewNoticeText = `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${r.name}* Team,\nYour ${planLabels[r.planType || 'starter']} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
+        const plainRenewNoticeText = `⚠️ RestaurantsOS Subscription Notice\n\nDear ${r.name} Team,\nYour ${planLabels[r.planType || 'starter']} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
 
-            <h3 className="text-xl font-black text-slate-850 dark:text-slate-100">Send Renewal Reminder</h3>
-            <p className="text-xs text-slate-400 font-medium mt-1">
-              Notify <strong className="text-slate-700 dark:text-slate-200">{renewModal.restaurant.name}</strong> regarding plan renewal
-            </p>
+        const cleanPhone = (r.phone || '').trim().replace(/[^0-9]/g, '');
+        const hasPhone = cleanPhone.length >= 7;
+        const hasEmail = Boolean(r.email && r.email.includes('@'));
+        const targetRest = restaurants.find(item => item.id === r.id);
 
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 my-4 text-left space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-amber-800 dark:text-amber-300 font-bold uppercase text-[10px]">Status:</span>
-                <span className="font-extrabold text-amber-900 dark:text-amber-200 uppercase">
-                  {renewModal.daysLeft <= 0 ? 'Expired' : `${renewModal.daysLeft} Day${renewModal.daysLeft === 1 ? '' : 's'} Remaining`}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Plan:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{planLabels[renewModal.restaurant.planType || 'starter']}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Expiry Date:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">
-                  {renewModal.restaurant.subscriptionExpiresAt ? new Date(renewModal.restaurant.subscriptionExpiresAt).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
-            </div>
-
-            {/* Personalized Message Preview */}
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-3.5 mb-4 text-left text-xs font-mono text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap max-h-36 overflow-y-auto">
-              {(() => {
-                const r = renewModal.restaurant;
-                const days = renewModal.daysLeft;
-                const urgency = days <= 0 
-                  ? 'has expired' 
-                  : days === 1 
-                    ? 'expires tomorrow' 
-                    : `expires in ${days} days`;
-                return `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${r.name}* Team,\nYour ${planLabels[r.planType || 'starter']} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
-              })()}
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <div className="flex gap-2">
-                <a
-                  href={`https://wa.me/${(renewModal.restaurant.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                    `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${renewModal.restaurant.name}* Team,\nYour ${planLabels[renewModal.restaurant.planType || 'starter']} subscription ${renewModal.daysLeft <= 0 ? 'has expired' : renewModal.daysLeft === 1 ? 'expires tomorrow' : `expires in ${renewModal.daysLeft} days`}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>WhatsApp</span>
-                </a>
-
-                <a
-                  href={`mailto:${renewModal.restaurant.email || ''}?subject=${encodeURIComponent(`Subscription Renewal Notice - ${renewModal.restaurant.name}`)}&body=${encodeURIComponent(
-                    `⚠️ RestaurantsOS Subscription Notice\n\nDear ${renewModal.restaurant.name} Team,\nYour ${planLabels[renewModal.restaurant.planType || 'starter']} subscription ${renewModal.daysLeft <= 0 ? 'has expired' : renewModal.daysLeft === 1 ? 'expires tomorrow' : `expires in ${renewModal.daysLeft} days`}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`
-                  )}`}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Email</span>
-                </a>
+        return (
+          <div 
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setRenewModal(null);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-in text-center max-h-[90vh] overflow-y-auto">
+              <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+                <Bell className="w-8 h-8" />
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = `⚠️ RestaurantsOS Subscription Notice\n\nDear ${renewModal.restaurant.name} Team,\nYour ${planLabels[renewModal.restaurant.planType || 'starter']} subscription ${renewModal.daysLeft <= 0 ? 'has expired' : renewModal.daysLeft === 1 ? 'expires tomorrow' : `expires in ${renewModal.daysLeft} days`}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
-                    navigator.clipboard.writeText(text);
-                    setCopiedRenewText(true);
-                    showToast('Renewal message copied!', 'success');
-                    setTimeout(() => setCopiedRenewText(false), 3000);
-                  }}
-                  className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {copiedRenewText ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedRenewText ? 'Copied Message!' : 'Copy Message'}</span>
-                </button>
+              <h3 className="text-xl font-black text-slate-850 dark:text-slate-100">Send Renewal Reminder</h3>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Notify <strong className="text-slate-700 dark:text-slate-200">{r.name}</strong> regarding plan renewal
+              </p>
 
-                <button
-                  type="button"
-                  onClick={() => setRenewModal(null)}
-                  className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-4 rounded-2xl text-xs transition-all cursor-pointer"
-                >
-                  Close
-                </button>
+              {(!hasPhone || !hasEmail) && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-3 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2 text-left mt-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-[11px] font-medium leading-tight">
+                      Missing {!hasPhone && !hasEmail ? 'phone & email' : !hasPhone ? 'phone number' : 'email'}. Direct dispatch disabled.
+                    </span>
+                  </div>
+                  {targetRest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRenewModal(null);
+                        handleEditClick(targetRest);
+                      }}
+                      className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex-shrink-0 cursor-pointer"
+                    >
+                      Edit &rarr;
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 my-4 text-left space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-800 dark:text-amber-300 font-bold uppercase text-[10px]">Status:</span>
+                  <span className="font-extrabold text-amber-900 dark:text-amber-200 uppercase">
+                    {days <= 0 ? 'Expired' : `${days} Day${days === 1 ? '' : 's'} Remaining`}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Plan:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{planLabels[r.planType || 'starter']}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Expiry Date:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {r.subscriptionExpiresAt ? new Date(r.subscriptionExpiresAt).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-amber-200/60 dark:border-amber-900/40 pt-1.5">
+                  <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Recipient Email:</span>
+                  <span className={`font-mono text-[11px] ${hasEmail ? 'font-bold text-slate-800 dark:text-slate-200' : 'text-rose-500 italic'}`}>
+                    {r.email || 'Not configured'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Recipient Phone:</span>
+                  <span className={`font-mono text-[11px] ${hasPhone ? 'font-bold text-slate-800 dark:text-slate-200' : 'text-rose-500 italic'}`}>
+                    {r.phone || 'Not configured'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Personalized Message Preview */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-150 dark:border-slate-800 rounded-2xl p-3.5 mb-4 text-left text-xs font-mono text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap max-h-36 overflow-y-auto">
+                {renewNoticeText}
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <div className="flex gap-2">
+                  {hasPhone ? (
+                    <a
+                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(renewNoticeText)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>WhatsApp</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-3 px-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200 dark:border-slate-800"
+                      title="No phone number configured for WhatsApp dispatch"
+                    >
+                      <MessageSquare className="w-4 h-4 opacity-40" />
+                      <span>No Phone</span>
+                    </button>
+                  )}
+
+                  {hasEmail ? (
+                    <a
+                      href={`mailto:${r.email}?subject=${encodeURIComponent(`Subscription Renewal Notice - ${r.name}`)}&body=${encodeURIComponent(plainRenewNoticeText)}`}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Email</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-3 px-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200 dark:border-slate-800"
+                      title="No email configured for Email dispatch"
+                    >
+                      <Mail className="w-4 h-4 opacity-40" />
+                      <span>No Email</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(plainRenewNoticeText);
+                      setCopiedRenewText(true);
+                      showToast('Renewal message copied!', 'success');
+                      setTimeout(() => setCopiedRenewText(false), 3000);
+                    }}
+                    className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-3 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {copiedRenewText ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedRenewText ? 'Copied Message!' : 'Copy Message'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRenewModal(null)}
+                    className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-4 rounded-2xl text-xs transition-all cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ===== CREATE BROADCAST ANNOUNCEMENT MODAL ===== */}
       {isAnnModalOpen && (
