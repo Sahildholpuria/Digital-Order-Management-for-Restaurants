@@ -110,6 +110,7 @@ export const clearTenantCache = (keepTenantId?: string) => {
         key === 'login_remember_email' ||
         key === 'login_remember_me' ||
         key === 'pos_portal_active_tab' ||
+        key === 'superadmin_impersonated_tenant_id' ||
         key.startsWith('sb-')
       ) {
         continue;
@@ -173,6 +174,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return ''; // On QR menu routes, do NOT load staff/demo restaurant while resolving table URL
     }
     
+    // Check if Super Admin is currently impersonating a tenant
+    const impersonated = localStorage.getItem('superadmin_impersonated_tenant_id');
+    if (impersonated) return impersonated;
+
     const storedStaffRest = localStorage.getItem('last_active_staff_restaurant_id');
     const savedUser = localStorage.getItem('restaurant_current_user');
     if (savedUser) {
@@ -361,19 +366,34 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (data) {
         // Profile found — map to frontend shape
         const isSuper = !!data.is_super_admin;
-        const userRestaurantId = isSuper ? undefined : (data.restaurant_id || undefined);
-        clearTenantCache(userRestaurantId);
-        if (userRestaurantId) {
-          setRestaurantId(userRestaurantId);
-          localStorage.setItem('last_active_staff_restaurant_id', userRestaurantId);
+        const impersonatedTenant = localStorage.getItem('superadmin_impersonated_tenant_id');
+
+        let targetRestaurantId: string;
+        if (isSuper && impersonatedTenant) {
+          // Super Admin is impersonating a tenant: retain tenant context
+          targetRestaurantId = impersonatedTenant;
+          clearTenantCache(targetRestaurantId);
+          setRestaurantId(targetRestaurantId);
+          localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
         } else if (isSuper) {
+          // Super Admin in Central SaaS Mode
+          targetRestaurantId = '';
+          clearTenantCache();
           setRestaurantId('');
           localStorage.removeItem('last_active_staff_restaurant_id');
+        } else {
+          // Normal staff account
+          targetRestaurantId = data.restaurant_id || '';
+          clearTenantCache(targetRestaurantId);
+          setRestaurantId(targetRestaurantId);
+          if (targetRestaurantId) {
+            localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+          }
         }
 
         const profile: UserProfile = {
           id: data.id,
-          restaurantId: userRestaurantId,
+          restaurantId: isSuper ? (impersonatedTenant || undefined) : (data.restaurant_id || undefined),
           name: data.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
           email: data.email || user.email || '',
           role: data.role || 'admin',
@@ -1199,6 +1219,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const logoutUser = async () => {
+    localStorage.removeItem('superadmin_impersonated_tenant_id');
     clearTenantCache();
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();

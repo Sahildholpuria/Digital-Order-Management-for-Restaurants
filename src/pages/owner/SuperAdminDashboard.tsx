@@ -46,7 +46,11 @@ const planLabels: Record<string, string> = {
   pro_1y: '12 Months Plan'
 };
 
-export const SuperAdminDashboard: React.FC = () => {
+interface SuperAdminDashboardProps {
+  onImpersonate?: (restaurantId: string) => void;
+}
+
+export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpersonate }) => {
   const { currentUser, setRestaurantId, showToast, askConfirmation } = useRestaurant();
 
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
@@ -367,9 +371,14 @@ export const SuperAdminDashboard: React.FC = () => {
   };
 
   const handleAccessPortal = (restaurantId: string) => {
-    setRestaurantId(restaurantId);
-    localStorage.setItem('last_active_staff_restaurant_id', restaurantId);
-    window.location.hash = '#dashboard';
+    if (onImpersonate) {
+      onImpersonate(restaurantId);
+    } else {
+      setRestaurantId(restaurantId);
+      localStorage.setItem('superadmin_impersonated_tenant_id', restaurantId);
+      localStorage.setItem('last_active_staff_restaurant_id', restaurantId);
+      window.location.hash = '#dashboard';
+    }
   };
 
   const handleOpenWelcomePackage = (r: RestaurantSettings) => {
@@ -909,7 +918,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleAccessPortal(r.id)}
-                              className="bg-brand-50 hover:bg-brand-600 hover:text-white text-brand-700 dark:bg-brand-950/30 dark:hover:bg-brand-500 dark:hover:text-white dark:text-brand-300 border border-brand-200 dark:border-brand-800 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              className="bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-600 dark:hover:text-white dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
                               title="Access Live POS Portal"
                             >
                               <ExternalLink className="w-3 h-3" />
