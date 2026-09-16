@@ -13,7 +13,8 @@ import {
   ExternalLink,
   Maximize2,
   Copy,
-  Check
+  Check,
+  Printer
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas-pro';
@@ -118,6 +119,42 @@ export const TablesManager: React.FC = () => {
       link.click();
     } catch (err) {
       console.error('Error generating PNG:', err);
+    } finally {
+      setIsDownloading(null);
+    }
+  };
+
+  // Direct Print Standee from hidden element
+  const printStandee = async (table: RestaurantTable) => {
+    setIsDownloading(table.id);
+    const element = flyerRefs.current[table.id];
+    if (!element) { setIsDownloading(null); return; }
+
+    try {
+      const canvas = await html2canvas(element, { scale: 3, useCORS: true, backgroundColor: null });
+      const imgData = canvas.toDataURL('image/png');
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Print QR Standee - Table ${table.number}</title>
+              <style>
+                @page { size: 4in 6in; margin: 0; }
+                body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; background: #0f172a; min-height: 100vh; }
+                img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+              </style>
+            </head>
+            <body>
+              <img src="${imgData}" onload="setTimeout(() => { window.print(); }, 250);" />
+            </body>
+          </html>
+        `);
+        win.document.close();
+      }
+    } catch (err) {
+      console.error('Error printing QR standee:', err);
     } finally {
       setIsDownloading(null);
     }
@@ -230,7 +267,12 @@ export const TablesManager: React.FC = () => {
                     }}
                   />
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scan to Order</p>
+                <div className="flex items-center justify-between w-full px-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scan to Order</p>
+                  <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                    Powered by Restaurants OS
+                  </span>
+                </div>
               </div>
 
               {/* Active Orders Summary Drawer */}
@@ -300,9 +342,18 @@ export const TablesManager: React.FC = () => {
                   onClick={() => downloadPDF(table)}
                   disabled={isDownloading === table.id}
                   className="flex-1 py-2 bg-slate-105 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+                  title="Download 4x6 Standee PDF"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>PDF</span>
+                </button>
+                <button
+                  onClick={() => printStandee(table)}
+                  disabled={isDownloading === table.id}
+                  className="p-2 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors disabled:opacity-50"
+                  title="Print QR Standee"
+                >
+                  <Printer className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => handleOpenEdit(table)}
@@ -326,7 +377,7 @@ export const TablesManager: React.FC = () => {
                     width: '400px', 
                     height: '600px', 
                     background: 'linear-gradient(145deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)',
-                    padding: '40px 36px',
+                    padding: '34px 30px 24px 30px',
                     textAlign: 'center',
                     display: 'flex',
                     flexDirection: 'column',
@@ -337,40 +388,59 @@ export const TablesManager: React.FC = () => {
                     boxSizing: 'border-box'
                   }}
                 >
-                  <div style={{ marginTop: '8px', width: '100%' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: '8px' }}>
+                  <div style={{ marginTop: '2px', width: '100%' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: '6px' }}>
                       ✦ WELCOME TO ✦
                     </div>
-                    <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#fbbf24', margin: '0 0 4px 0', letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: '1.1' }}>
+                    <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#fbbf24', margin: '0 0 4px 0', letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: '1.1' }}>
                       {restaurantName}
                     </h2>
-                    <div style={{ width: '48px', height: '3px', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '99px', margin: '10px auto 0' }} />
+                    <div style={{ width: '48px', height: '3px', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '99px', margin: '8px auto 0' }} />
                   </div>
  
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
-                    <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '20px', boxShadow: '0 25px 50px -10px rgba(0, 0, 0, 0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '20px', boxShadow: '0 25px 50px -10px rgba(0, 0, 0, 0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <QRCodeCanvas 
                         value={menuUrl} 
-                        size={220} 
+                        size={210} 
                         level="H" 
                         includeMargin={false}
                       />
                     </div>
-                    <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.25)', padding: '10px 32px', borderRadius: '9999px', border: '1.5px solid rgba(99, 102, 241, 0.5)' }}>
-                      <p style={{ fontSize: '20px', fontWeight: '900', color: '#fbbf24', margin: 0, letterSpacing: '0.08em' }}>
+                    <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.25)', padding: '8px 28px', borderRadius: '9999px', border: '1.5px solid rgba(99, 102, 241, 0.5)' }}>
+                      <p style={{ fontSize: '18px', fontWeight: '900', color: '#fbbf24', margin: 0, letterSpacing: '0.08em' }}>
                         TABLE {table.number.replace(/table\s*-?\s*/gi, '').toUpperCase()}
                       </p>
                     </div>
                   </div>
  
-                  <div style={{ marginBottom: '8px', width: '100%' }}>
-                    <div style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '14px', padding: '14px 20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <p style={{ fontSize: '13px', fontWeight: '700', color: '#c7d2fe', margin: '0 0 5px 0' }}>
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '14px', padding: '12px 18px', border: '1px solid rgba(255,255,255,0.1)', width: '100%', boxSizing: 'border-box' }}>
+                      <p style={{ fontSize: '12px', fontWeight: '700', color: '#c7d2fe', margin: '0 0 3px 0' }}>
                         📱 Scan QR Code to Browse & Order
                       </p>
-                      <p style={{ fontSize: '10px', color: 'rgba(165, 180, 252, 0.65)', margin: 0, lineHeight: '1.5' }}>
-                        No app required · Instant access · Secure checkout
+                      <p style={{ fontSize: '9.5px', color: 'rgba(165, 180, 252, 0.65)', margin: 0, lineHeight: '1.4' }}>
+                        No app required · Instant access · Contactless dining
                       </p>
+                    </div>
+
+                    {/* Official Powered by Restaurants OS Badge */}
+                    <div style={{ 
+                      marginTop: '10px', 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '5px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      borderRadius: '9999px',
+                      padding: '4px 12px'
+                    }}>
+                      <span style={{ fontSize: '8.5px', fontWeight: '700', color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                        Powered by
+                      </span>
+                      <span style={{ fontSize: '9.5px', fontWeight: '900', color: '#34d399', letterSpacing: '0.04em' }}>
+                        Restaurants OS
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -433,6 +503,12 @@ export const TablesManager: React.FC = () => {
                     TABLE {previewTable.number.replace(/table\s*-?\s*/gi, '').toUpperCase()}
                   </div>
                   <p className="text-xs text-slate-400 font-semibold">{restaurantName}</p>
+                  
+                  {/* Powered by Restaurants OS Badge */}
+                  <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/40 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                    <span className="text-slate-400 dark:text-slate-500">Powered by</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Restaurants OS</span>
+                  </div>
                 </div>
               </div>
 
@@ -452,14 +528,14 @@ export const TablesManager: React.FC = () => {
                     )}
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => { downloadPNG(previewTable); setPreviewTable(null); }}
                     disabled={isDownloading === previewTable.id}
                     className="py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Download PNG
+                    PNG
                   </button>
                   <button
                     onClick={() => { downloadPDF(previewTable); setPreviewTable(null); }}
@@ -467,7 +543,15 @@ export const TablesManager: React.FC = () => {
                     className="py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    Download PDF
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => { printStandee(previewTable); setPreviewTable(null); }}
+                    disabled={isDownloading === previewTable.id}
+                    className="py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                    Print
                   </button>
                 </div>
               </div>

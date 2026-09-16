@@ -1319,7 +1319,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       <footer className="py-6 text-center border-t border-slate-100 dark:border-slate-800/50 mt-12 bg-white/30 dark:bg-slate-900/10 backdrop-blur-sm">
         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase">
-          Built by <span className="text-brand-655 dark:text-brand-400 font-extrabold">RestaurantsOS Pvt. Ltd</span>
+          Powered by <span className="text-brand-655 dark:text-brand-400 font-extrabold">Restaurants OS</span>
         </p>
       </footer>
 
