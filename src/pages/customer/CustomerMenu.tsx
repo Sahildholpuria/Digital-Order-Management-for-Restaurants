@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
 import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
 import { PageLoader } from '../../components/PageLoader';
+import { FSSAIIndicator } from '../../components/FSSAIIndicator';
 import { parseFoodItemDescription } from '../../services/database';
 
 interface CustomerMenuProps {
@@ -516,7 +517,14 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate leading-snug">{c.name}</h4>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {(() => {
+                    const foodItemObj = foodItems.find(f => f.id === c.itemId);
+                    const cartDType = foodItemObj?.dietaryType || (foodItemObj?.isVeg ? 'veg' : 'non_veg');
+                    return <FSSAIIndicator type={cartDType} size={12} />;
+                  })()}
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate leading-snug">{c.name}</h4>
+                </div>
                 <p className="text-[10px] text-brand-600 dark:text-brand-400 font-bold mt-0.5">
                   {settings?.currency || '₹'}{c.price.toFixed(0)} each
                 </p>
@@ -863,8 +871,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                     : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-green-500 border border-white" />
-                Veg Only 🌱
+                <FSSAIIndicator type="veg" size={13} bg={dietaryFilter === 'veg' ? 'white' : 'auto'} />
+                <span>Veg Only</span>
               </button>
 
               <button
@@ -878,8 +886,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                     : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-red-500 border border-white" />
-                Non-Veg 🍗
+                <FSSAIIndicator type="non_veg" size={13} bg={dietaryFilter === 'non_veg' ? 'white' : 'auto'} />
+                <span>Non-Veg</span>
               </button>
 
               <button
@@ -992,28 +1000,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                   <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate font-sans">
                                     {item.name}
                                   </h3>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${
-                                      dType === 'egg'
-                                        ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                                        : dType === 'veg'
-                                        ? 'border-green-600/50 bg-green-500/10 text-green-700 dark:text-green-400'
-                                        : 'border-red-600/50 bg-red-500/10 text-red-700 dark:text-red-400'
-                                    }`}>
-                                      {dType === 'egg' && <><span>🥚</span><span>Egg</span></>}
-                                      {dType === 'veg' && (
-                                        <>
-                                          <span className="w-1.5 h-1.5 rounded-full bg-green-600" />
-                                          <span>Veg</span>
-                                        </>
-                                      )}
-                                      {dType === 'non_veg' && (
-                                        <>
-                                          <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-                                          <span>Non-Veg</span>
-                                        </>
-                                      )}
-                                    </span>
+                                  <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                                    <FSSAIIndicator type={dType} size="sm" />
                                   </div>
                                 </div>
                                 
@@ -1242,27 +1230,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                         </div>
                       </div>
 
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider border shadow-sm flex-shrink-0 ${
-                        dType === 'egg'
-                          ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                          : dType === 'veg'
-                          ? 'border-green-600/50 bg-green-500/10 text-green-700 dark:text-green-300'
-                          : 'border-red-600/50 bg-red-500/10 text-red-700 dark:text-red-300'
-                      }`}>
-                        {dType === 'egg' && <><span>🥚</span><span>Egg</span></>}
-                        {dType === 'veg' && (
-                          <>
-                            <span className="w-2 h-2 rounded-full bg-green-600" />
-                            <span>Veg</span>
-                          </>
-                        )}
-                        {dType === 'non_veg' && (
-                          <>
-                            <span className="w-2 h-2 rounded-full bg-red-600" />
-                            <span>Non-Veg</span>
-                          </>
-                        )}
-                      </span>
+                      <div className="flex-shrink-0">
+                        <FSSAIIndicator type={dType} size="md" showLabel={true} badgeClassName="px-2.5 py-1 text-xs rounded-xl" />
+                      </div>
                     </div>
 
                     {/* Spicy indicator chip */}

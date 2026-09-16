@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../services/supabase';
 import { parseFoodItemDescription, serializeFoodItemDescription } from '../../services/database';
+import { FSSAIIndicator } from '../../components/FSSAIIndicator';
 
 export const MenuManager: React.FC = () => {
   const { 
@@ -486,29 +487,9 @@ export const MenuManager: React.FC = () => {
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                         
                         {/* Authentic Dietary Badge */}
-                        <span 
-                          className={`absolute top-2.5 left-2.5 px-2 py-0.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm border rounded-lg flex items-center gap-1 text-[9px] font-black shadow-sm ${
-                            itemDietary === 'egg'
-                              ? 'border-amber-500 text-amber-700 dark:text-amber-400'
-                              : itemDietary === 'veg'
-                              ? 'border-green-600 text-green-700 dark:text-green-400'
-                              : 'border-red-600 text-red-700 dark:text-red-400'
-                          }`}
-                        >
-                          {itemDietary === 'egg' && <><span>🥚</span><span>Egg</span></>}
-                          {itemDietary === 'veg' && (
-                            <>
-                              <span className="w-2 h-2 rounded-full bg-green-600"></span>
-                              <span>Veg</span>
-                            </>
-                          )}
-                          {itemDietary === 'non_veg' && (
-                            <>
-                              <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                              <span>Non-Veg</span>
-                            </>
-                          )}
-                        </span>
+                        <div className="absolute top-2.5 left-2.5 shadow-sm">
+                          <FSSAIIndicator type={itemDietary} size="sm" showLabel={true} bg="white" />
+                        </div>
 
                         {/* Discount Tag */}
                         {item.discountPercentage > 0 && (
@@ -866,9 +847,9 @@ export const MenuManager: React.FC = () => {
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-3.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
-                    <option value="veg">Veg 🌱 (Vegetarian)</option>
-                    <option value="non_veg">Non-Veg 🍗 (Non-Vegetarian)</option>
-                    <option value="egg">Eggitarian 🥚 (Contains Egg)</option>
+                    <option value="veg">🟢 Veg (FSSAI Green Dot)</option>
+                    <option value="non_veg">🔺 Non-Veg (FSSAI Red Triangle)</option>
+                    <option value="egg">🟡 Eggitarian (Contains Egg)</option>
                   </select>
                 </div>
                 <div>
