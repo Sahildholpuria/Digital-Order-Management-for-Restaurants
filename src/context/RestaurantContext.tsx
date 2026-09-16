@@ -37,6 +37,7 @@ interface RestaurantContextType {
   currentUser: UserProfile | null;
   loading: boolean;
   tablesLoaded: boolean;
+  tableNotFound: boolean;
   restaurantId: string;
   isFirebase: boolean;
   setRestaurantId: (id: string) => void;
@@ -215,6 +216,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentUser, setCurrentUserState] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
+  const [tableNotFound, setTableNotFound] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
 
   // Global Language & Translation state
@@ -540,24 +542,31 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (cached) {
           setRestaurantId(cached);
           setIsResolvingId(false);
+          setTableNotFound(false);
           return;
         }
         
         setIsResolvingId(true);
+        setTableNotFound(false);
         try {
           const resolvedId = await dbService.getRestaurantIdByTableId(tableId);
           if (resolvedId) {
             localStorage.setItem(`resolved_rest_${tableId}`, resolvedId);
             sessionStorage.setItem(`resolved_rest_${tableId}`, resolvedId);
             setRestaurantId(resolvedId);
+            setTableNotFound(false);
+          } else {
+            setTableNotFound(true);
           }
         } catch (err) {
           console.error('Failed to resolve restaurant from table URL:', err);
+          setTableNotFound(true);
         } finally {
           setIsResolvingId(false);
         }
       } else {
         setIsResolvingId(false);
+        setTableNotFound(false);
       }
     };
     
@@ -1293,6 +1302,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       currentUser,
       loading: loading || isResolvingId,
       tablesLoaded,
+      tableNotFound,
       restaurantId,
       isFirebase: isSupabaseConfigured,
       setRestaurantId,

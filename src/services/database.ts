@@ -697,38 +697,66 @@ export const dbService = {
     }
   },
   async getRestaurantIdByTableId(tableId: string): Promise<string | null> {
+    if (!tableId || typeof tableId !== 'string') return null;
+
     if (isSupabaseConfigured) {
-      // 1. Direct match on table ID
-      const { data, error } = await supabase
-        .from('tables')
-        .select('restaurant_id')
-        .eq('id', tableId)
-        .maybeSingle();
+      try {
+        // 1. Direct match on table ID
+        const { data, error } = await supabase
+          .from('tables')
+          .select('restaurant_id')
+          .eq('id', tableId)
+          .maybeSingle();
 
-      if (!error && data?.restaurant_id) {
-        return data.restaurant_id;
+        if (!error && data?.restaurant_id) {
+          return data.restaurant_id;
+        }
+
+        // 2. Fallback match on clean table number (e.g. table-1 => 1)
+        const cleanNumber = tableId.replace(/^table[\s\-_]*/i, '');
+        if (cleanNumber) {
+          const { data: dataNum } = await supabase
+            .from('tables')
+            .select('restaurant_id')
+            .eq('number', cleanNumber)
+            .maybeSingle();
+
+          if (dataNum?.restaurant_id) {
+            return dataNum.restaurant_id;
+          }
+        }
+
+        // 3. Fallback match if tableId is actually a restaurant_id or slug (e.g. /menu/demo-restaurant)
+        const { data: dataRest } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('id', tableId)
+          .maybeSingle();
+
+        if (dataRest?.id) {
+          return dataRest.id;
+        }
+
+        return null;
+      } catch (err) {
+        console.warn('getRestaurantIdByTableId lookup failed:', err);
+        return null;
       }
-
-      // 2. Fallback match on clean table number (e.g. table-1 => 1)
-      const cleanNumber = tableId.replace(/^table-/i, '');
-      const { data: dataNum } = await supabase
-        .from('tables')
-        .select('restaurant_id')
-        .eq('number', cleanNumber)
-        .maybeSingle();
-
-      if (dataNum?.restaurant_id) {
-        return dataNum.restaurant_id;
-      }
-
-      return null;
     } else {
       const data = localStorage.getItem('restaurant_tables');
       if (data) {
         const list = JSON.parse(data);
-        const cleanNumber = tableId.replace(/^table-/i, '');
+        const cleanNumber = tableId.replace(/^table[\s\-_]*/i, '');
         const table = list.find((t: any) => t.id === tableId || t.number === cleanNumber || t.number === tableId);
-        return table?.restaurant_id || null;
+        if (table?.restaurant_id) return table.restaurant_id;
+      }
+      // Check local settings
+      const settingsData = localStorage.getItem('restaurant_settings');
+      if (settingsData) {
+        try {
+          const s = JSON.parse(settingsData);
+          if (s.id === tableId) return s.id;
+        } catch (_) {}
       }
       return null;
     }
@@ -1967,15 +1995,23 @@ export const dbService = {
   // 8. GLOBAL SAAS ANNOUNCEMENTS (Super Admin Broadcast)
   async getAnnouncements(): Promise<SaaSAnnouncement[]> {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.warn('getAnnouncements error:', error);
+      try {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) {
+          // If table does not exist or network 404, gracefully return empty list
+          if (error.code === '42P01' || error.message?.includes('does not exist') || error.code === 'PGRST116') {
+            return [];
+          }
+          console.warn('getAnnouncements notice:', error.message || error);
+          return [];
+        }
+        return (data || []).map(mapAnnouncementToFrontend);
+      } catch (_) {
         return [];
       }
-      return (data || []).map(mapAnnouncementToFrontend);
     } else {
       const data = localStorage.getItem('saas_global_announcements');
       return data ? JSON.parse(data).map(mapAnnouncementToFrontend) : [];
@@ -2034,11 +2070,13 @@ export const dbService = {
   subscribeAnnouncements(callback: (announcements: SaaSAnnouncement[]) => void) {
     if (isSupabaseConfigured) {
       const fetchAnn = async () => {
-        const { data } = await supabase
-          .from('announcements')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (data) callback(data.map(mapAnnouncementToFrontend));
+        try {
+          const { data, error } = await supabase
+            .from('announcements')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (!error && data) callback(data.map(mapAnnouncementToFrontend));
+        } catch (_) {}
       };
 
       fetchAnn();

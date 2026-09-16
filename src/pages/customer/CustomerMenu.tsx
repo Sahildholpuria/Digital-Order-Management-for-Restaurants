@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory, DietaryType } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, AlertCircle } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, AlertCircle, Globe, RefreshCw } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
 import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
@@ -119,6 +119,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     tables,
     loading,
     tablesLoaded,
+    tableNotFound,
     showToast,
     lang,
     setLang,
@@ -334,6 +335,95 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
   };
 
+  // 3-second timeout state for table/restaurant resolution failure
+  const [resolutionTimedOut, setResolutionTimedOut] = useState(false);
+
+  useEffect(() => {
+    // If settings and tables have successfully loaded, reset timeout
+    if (settings && tablesLoaded) {
+      setResolutionTimedOut(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (!settings || !tablesLoaded || tableNotFound) {
+        setResolutionTimedOut(true);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [settings, tablesLoaded, tableNotFound]);
+
+  // Check if a table was explicitly deleted or renumbered from an active restaurant
+  const isTableMissingInRestaurant = useMemo(() => {
+    if (!tablesLoaded || !settings || tables.length === 0) return false;
+    // Direct restaurant menu QR links (using restaurant id/slug) are always valid
+    if (tableId === settings.id) return false;
+    const cleanId = tableId.replace(/^table[\s\-_]*/i, '').trim();
+    return !tables.some(t => 
+      t.id === tableId || 
+      t.number === tableId || 
+      t.number.replace(/^table[\s\-_]*/i, '').trim() === cleanId
+    );
+  }, [tablesLoaded, settings, tables, tableId]);
+
+  const isTableResolutionFailed = tableNotFound || (resolutionTimedOut && (!settings || !tablesLoaded)) || isTableMissingInRestaurant;
+
+  // Friendly error screen for invalid or expired table links
+  if (isTableResolutionFailed) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-slate-100 dark:border-slate-800/80 animate-scale-in">
+          <div className="w-20 h-20 bg-rose-500/10 dark:bg-rose-950/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/20 text-rose-600 dark:text-rose-400">
+            <AlertCircle className="w-10 h-10" />
+          </div>
+
+          <h2 className="text-2xl font-black mb-2 text-slate-900 dark:text-slate-100 font-sans tracking-tight">
+            Table Not Found
+          </h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm font-medium leading-relaxed">
+            Please scan the QR code on your table again or ask your server for assistance.
+          </p>
+
+          <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 mb-6 text-xs text-slate-500 dark:text-slate-400 space-y-1.5 border border-slate-100 dark:border-slate-800 text-left">
+            <div className="flex justify-between items-center font-mono">
+              <span className="font-sans font-bold uppercase text-[10px] text-slate-400">Table ID Scanned</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">{tableId || 'Unknown'}</span>
+            </div>
+            <div className="flex justify-between items-center font-mono">
+              <span className="font-sans font-bold uppercase text-[10px] text-slate-400">Status</span>
+              <span className="font-bold text-rose-600 dark:text-rose-400 uppercase text-[10px]">Unassigned / Expired</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Retry Connecting</span>
+            </button>
+
+            {settings?.id && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/menu/${settings.id}`;
+                }}
+                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-6 rounded-2xl transition-all text-xs cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Utensils className="w-4 h-4" />
+                <span>Browse General Menu</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading state while the initial context or settings list hasn't arrived yet.
   if (loading || !tablesLoaded || !settings) {
     return (
@@ -529,8 +619,23 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             </div>
           </div>
 
-          {/* Quick Staff Interactions */}
+          {/* Quick Staff Interactions & Language Switcher */}
           <div className="flex gap-1.5 sm:gap-2 items-center">
+
+            {/* Language Switcher (EN ⇄ हिन्दी) */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextLang: Language = lang === 'en' ? 'hi' : 'en';
+                setLang(nextLang);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer active:scale-95 shadow-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750"
+              title={lang === 'en' ? 'Switch menu to हिन्दी (Hindi)' : 'Switch menu to English'}
+              aria-label="Toggle language between English and Hindi"
+            >
+              <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>{lang === 'en' ? 'हिन्दी' : 'ENG'}</span>
+            </button>
 
             {(settings?.enableWaiterCall ?? true) && (
               <button
