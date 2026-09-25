@@ -40,7 +40,7 @@ create table public.restaurants (
 -- Staff Profiles
 create table public.users (
   id uuid references auth.users on delete cascade primary key,
-  restaurant_id text references public.restaurants(id) on delete cascade,
+  restaurant_id text references public.restaurants(id) on delete set null,
   name text not null,
   email text not null,
   role text check (role in ('admin', 'manager', 'cashier', 'kitchen', 'waiter')) not null,
@@ -347,3 +347,61 @@ alter table public.announcements enable row level security;
 create policy "Allow public read active announcements" on public.announcements for select using (true);
 create policy "Allow super admin manage announcements" on public.announcements for all using (public.is_super_admin(auth.uid()));
 create index if not exists idx_announcements_is_active on public.announcements(is_active);
+
+
+-- ====================================================
+-- 8. SECURITY HARDENING & PRIVILEGE ESCALATION SHIELDS
+-- ====================================================
+
+-- Prevent privilege escalation (e.g. non-superadmin setting is_super_admin = true or changing roles)
+create or replace function public.protect_user_roles()
+returns trigger 
+language plpgsql 
+security definer 
+set search_path = public
+as $$
+begin
+  if (new.is_super_admin is distinct from old.is_super_admin) then
+    if not exists (
+      select 1 from public.users 
+      where id = auth.uid() and is_super_admin = true
+    ) then
+      raise exception 'Unauthorized: Only Super Admins can modify super admin privileges.';
+    end if;
+  end if;
+
+  if (new.role is distinct from old.role) then
+    if not exists (
+      select 1 from public.users 
+      where id = auth.uid() and (
+        is_super_admin = true or 
+        (role = 'admin' and restaurant_id = old.restaurant_id)
+      )
+    ) then
+      raise exception 'Unauthorized: Only Restaurant Admins or Super Admins can modify roles.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_protect_user_roles on public.users;
+create trigger trg_protect_user_roles
+before update on public.users
+for each row
+execute function public.protect_user_roles();
+
+-- Revoke dangerous execution permissions from anon and public
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.protect_user_roles() from public, anon, authenticated;
+revoke execute on function public.is_admin(uuid) from public, anon;
+revoke execute on function public.is_super_admin(uuid) from public, anon;
+revoke execute on function public.belongs_to_restaurant(uuid, text) from public, anon;
+revoke execute on function public.get_user_restaurant(uuid) from public, anon;
+
+grant execute on function public.is_admin(uuid) to authenticated, service_role;
+grant execute on function public.is_super_admin(uuid) to authenticated, service_role;
+grant execute on function public.belongs_to_restaurant(uuid, text) to authenticated, service_role;
+grant execute on function public.get_user_restaurant(uuid) to authenticated, service_role;
+grant execute on function public.update_table_status(text, text) to anon, authenticated, service_role;

@@ -1342,7 +1342,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       askConfirmation,
       closeConfirmation,
     }}>
-      {settings?.themeColor && !['#10B981', '#059669', '#6366F1', '#4f46e5', '#0B132B', '#18251D', '#39FF88', '#0F172A', '#F59E0B', '#064E3B'].includes(settings.themeColor) && (
+      {settings?.themeColor && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(settings.themeColor) && !['#10B981', '#059669', '#6366F1', '#4f46e5', '#0B132B', '#18251D', '#39FF88', '#0F172A', '#F59E0B', '#064E3B'].includes(settings.themeColor) && (
         <style dangerouslySetInnerHTML={{ __html: `
           :root {
             --brand-50: ${settings.themeColor}0a;
