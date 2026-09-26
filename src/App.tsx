@@ -634,6 +634,14 @@ export const App: React.FC = () => {
             </div>
           </header>
 
+          {/* Mobile Sidebar Backdrop */}
+          {mobileSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 xl:hidden animate-fade-in"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+
           {/* Sidebar Frame */}
           <aside className={`fixed xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 xl:translate-x-0 backdrop-blur-xl ${
             mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -734,7 +742,7 @@ export const App: React.FC = () => {
           </aside>
 
           {/* Content Container */}
-          <main className="flex-1 overflow-y-auto h-full p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in">
+          <main className="flex-1 overflow-y-auto h-full p-4 sm:p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in pb-safe">
             
             {/* Platform-Wide Broadcast Announcement Banners */}
             {activeAnnouncements.map(ann => {

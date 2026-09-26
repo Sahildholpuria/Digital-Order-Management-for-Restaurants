@@ -106,7 +106,7 @@ export const KitchenDisplay: React.FC = () => {
     <div className="min-h-screen bg-slate-955 text-slate-100 p-4 sm:p-6 flex flex-col gap-6 font-sans select-none">
       
       {/* KDS Industrial Top Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-slate-800 pb-4 pl-32 lg:pl-36 gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-slate-800 pb-4 pt-10 sm:pt-0 sm:pl-32 lg:pl-36 gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-2xl shadow-sm">
             <ChefHat className="w-8 h-8" />

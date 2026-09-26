@@ -771,7 +771,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-28">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-36">
       {/* Sticky Top Header */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
@@ -870,7 +870,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
           {/* Panel */}
           <div
-            className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl border-t border-slate-200 dark:border-slate-800 animate-slide-up"
+            className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl border-t border-slate-200 dark:border-slate-800 animate-slide-up pb-safe"
             onClick={e => e.stopPropagation()}
           >
             {/* Handle */}
@@ -1335,7 +1335,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-4 inset-x-4 z-40 bg-[#064E3B]/95 dark:bg-[#064E3B]/95 backdrop-blur-xl border border-[#10B981]/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-[#064E3B]/60 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
+        <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] inset-x-4 z-40 bg-[#064E3B]/95 dark:bg-[#064E3B]/95 backdrop-blur-xl border border-[#10B981]/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-[#064E3B]/60 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative bg-[#10B981]/20 p-2.5 rounded-2xl text-[#10B981] border border-[#10B981]/40">
@@ -1365,7 +1365,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Floating Quick-Actions: Call Waiter & Request Bill */}
       <div className={`fixed z-30 flex items-center gap-2 pointer-events-auto transition-all duration-300 right-4 ${
-        cart.length > 0 ? 'bottom-20 sm:bottom-6 sm:right-6' : 'bottom-5 sm:bottom-6 sm:right-6'
+        cart.length > 0 ? 'bottom-[max(5.75rem,calc(5rem+env(safe-area-inset-bottom)))] sm:bottom-6 sm:right-6' : 'bottom-[max(1.25rem,calc(0.75rem+env(safe-area-inset-bottom)))] sm:bottom-6 sm:right-6'
       }`}>
         {(settings?.enableWaiterCall ?? true) && (
           <button
@@ -1419,7 +1419,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       {/* Smart Upsell Floating Recommendation Bar ("Frequently paired with this") */}
       {upsellState && upsellState.pairedItems.length > 0 && (
         <div className={`fixed z-40 transition-all duration-300 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-96 max-w-md mx-auto ${
-          cart.length > 0 ? 'bottom-32 sm:bottom-20' : 'bottom-20 sm:bottom-20'
+          cart.length > 0 ? 'bottom-[max(9.5rem,calc(8.75rem+env(safe-area-inset-bottom)))] sm:bottom-20' : 'bottom-[max(5rem,calc(4.25rem+env(safe-area-inset-bottom)))] sm:bottom-20'
         }`}>
           <div className="bg-slate-900/95 dark:bg-slate-900/98 backdrop-blur-xl text-white rounded-3xl p-3 sm:p-3.5 shadow-2xl border border-emerald-500/50 animate-slide-up">
             <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-800/80">
@@ -1472,19 +1472,21 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Item Detail & Customization Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-t-3xl rounded-b-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800/60 animate-scale-in">
-            <div className="relative h-56 bg-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800/60 animate-scale-in pb-safe">
+            <div className="relative h-52 sm:h-56 bg-slate-100 flex-shrink-0">
               <LazyImage src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" width={480} />
               <button
+                type="button"
                 onClick={() => setSelectedItem(null)}
-                className="absolute top-4 right-4 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition-colors shadow-md"
+                className="absolute top-4 right-4 bg-black/60 text-white p-2.5 rounded-full hover:bg-black/80 transition-colors shadow-md min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer"
+                aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1">
               {(() => {
                 const parsed = parseFoodItemDescription(selectedItem.description || '');
                 const dType: DietaryType = selectedItem.dietaryType || parsed.dietaryType || (selectedItem.isVeg ? 'veg' : 'non_veg');
@@ -1662,7 +1664,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       {/* Cart Drawer */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center p-0 md:p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-t-3xl w-full max-w-md h-[85vh] flex flex-col shadow-2xl border-t border-slate-100 dark:border-slate-850 animate-slide-up">
+          <div className="bg-white dark:bg-slate-900 rounded-t-3xl w-full max-w-md h-[88vh] flex flex-col shadow-2xl border-t border-slate-100 dark:border-slate-850 animate-slide-up pb-safe">
             
             {/* Cart Header */}
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">

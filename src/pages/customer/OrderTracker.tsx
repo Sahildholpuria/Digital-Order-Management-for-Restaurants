@@ -81,7 +81,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
         <div className="max-w-md md:max-w-4xl mx-auto flex items-center gap-3">
           <button 
             onClick={() => window.location.pathname = `/menu/${tableId}`}
-            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer" aria-label="Back to menu"
           >
             <ChevronLeft className="w-6 h-6 text-slate-655" />
           </button>

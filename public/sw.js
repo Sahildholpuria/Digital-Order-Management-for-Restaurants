@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restaurants-os-v5';
+const CACHE_NAME = 'restaurants-os-v6';
 const IMAGE_CACHE_NAME = 'restaurants-os-images-v1';
 
 // Install Event

@@ -1,7 +1,26 @@
 {
   "short_name": "RestaurantsOS",
-  "name": "RestaurantsOS Operating System",
+  "name": "Restaurants OS — Digital Order Management & Cloud POS",
+  "description": "Ultra-fast Digital Order Management System for Restaurants & Cafes",
   "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
     {
       "src": "/favicon.svg",
       "type": "image/svg+xml",
@@ -9,8 +28,9 @@
     }
   ],
   "start_url": "/",
-  "background_color": "#064E3B",
+  "background_color": "#070B14",
   "theme_color": "#064E3B",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait-primary",
+  "categories": ["business", "food", "productivity"]
 }
