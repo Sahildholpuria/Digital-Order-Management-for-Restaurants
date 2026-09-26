@@ -856,18 +856,6 @@ export const App: React.FC = () => {
                 </button>
               </div>
 
-              {/* Language Selector */}
-              <button
-                onClick={() => {
-                  const nextLang = lang === 'en' ? 'hi' : 'en';
-                  setLang(nextLang);
-                  localStorage.setItem('admin_lang', nextLang);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 text-slate-900 dark:text-slate-100 rounded-2xl text-xs font-black transition-all cursor-pointer shadow-sm"
-              >
-                <Globe className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" />
-                <span>{lang === 'en' ? 'हिन्दी (Hindi)' : 'English (EN)'}</span>
-              </button>
 
               {/* User Logged Details */}
               <div className="bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 px-3 py-2 rounded-xl text-xs space-y-0.5 shadow-xs">

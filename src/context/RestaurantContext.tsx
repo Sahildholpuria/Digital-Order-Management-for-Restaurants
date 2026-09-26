@@ -219,22 +219,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [tableNotFound, setTableNotFound] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
 
-  // Global Language & Translation state
-  const [lang, setLangState] = useState<Language>(() => {
-    return (localStorage.getItem('app_language') as Language) || 
-           (localStorage.getItem('customer_lang') as Language) || 
-           (localStorage.getItem('admin_lang') as Language) || 
-           'en';
-  });
+  // Standard English Translation state
+  const [lang, setLangState] = useState<Language>('en');
 
   const setLang = (newLang: Language) => {
-    setLangState(newLang);
-    localStorage.setItem('app_language', newLang);
-    localStorage.setItem('customer_lang', newLang);
-    localStorage.setItem('admin_lang', newLang);
+    setLangState('en');
   };
 
-  const t = translations[lang] || translations.en;
+  const t = translations.en;
 
   // Toast & Modal popup states
   const [toasts, setToasts] = useState<ToastConfig[]>([]);

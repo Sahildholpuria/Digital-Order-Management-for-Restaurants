@@ -793,20 +793,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           {/* Quick Staff Interactions & Language Switcher */}
           <div className="flex gap-1.5 sm:gap-2 items-center">
 
-            {/* Language Switcher (EN ⇄ हिन्दी) */}
-            <button
-              type="button"
-              onClick={() => {
-                const nextLang: Language = lang === 'en' ? 'hi' : 'en';
-                setLang(nextLang);
-              }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer active:scale-95 shadow-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750"
-              title={lang === 'en' ? 'Switch menu to हिन्दी (Hindi)' : 'Switch menu to English'}
-              aria-label="Toggle language between English and Hindi"
-            >
-              <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span>{lang === 'en' ? 'हिन्दी' : 'ENG'}</span>
-            </button>
 
             {(settings?.enableWaiterCall ?? true) && (
               <button
