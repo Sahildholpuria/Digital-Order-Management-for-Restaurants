@@ -526,76 +526,78 @@ export const ReportsManager: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={handleExport6MonthCSV}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2.5 rounded-xl sm:rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
             title="Download last 6 months transaction history in CSV format"
           >
             <Download className="w-4 h-4" />
-            <span>Last 6M Transactions (CSV)</span>
+            <span>6M Transactions (CSV)</span>
           </button>
 
-          <button
-            onClick={handleExport6MonthPDF}
-            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
-            title="Download last 6 months transaction statement in PDF format"
-          >
-            <Download className="w-4 h-4 text-emerald-400" />
-            <span>6M Statement (PDF)</span>
-          </button>
-          
-          <button
-            onClick={handleExportPDF}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-red-500/10 transition-colors cursor-pointer"
-          >
-            <Download className="w-4 h-4" />
-            <span>30-Day PDF</span>
-          </button>
+          <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleExport6MonthPDF}
+              className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold px-3 py-2.5 rounded-xl sm:rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              title="Download last 6 months transaction statement in PDF format"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>6M Statement (PDF)</span>
+            </button>
+            
+            <button
+              onClick={handleExportPDF}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-2.5 rounded-xl sm:rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-sm shadow-red-500/10 transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>30-Day PDF</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Reports Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-5 rounded-3xl shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400 rounded-2xl">
-            <DollarSign className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
+          <div className="p-3 bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400 rounded-xl sm:rounded-2xl shrink-0">
+            <DollarSign className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Sales Value</p>
-            <h3 className="text-2xl font-black text-slate-855 dark:text-slate-100">{currency}{totalRevenue.toFixed(0)}</h3>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Total Sales Value</p>
+            <h3 className="text-lg sm:text-2xl font-black text-slate-855 dark:text-slate-100 truncate">{currency}{totalRevenue.toFixed(0)}</h3>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-5 rounded-3xl shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-2xl">
-            <ShoppingBag className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
+          <div className="p-3 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-xl sm:rounded-2xl shrink-0">
+            <ShoppingBag className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">AOV (Avg Bill)</p>
-            <h3 className="text-2xl font-black text-slate-855 dark:text-slate-100">{currency}{averageOrderValue.toFixed(0)}</h3>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">AOV (Avg Bill)</p>
+            <h3 className="text-lg sm:text-2xl font-black text-slate-855 dark:text-slate-100 truncate">{currency}{averageOrderValue.toFixed(0)}</h3>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-5 rounded-3xl shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 rounded-2xl">
-            <Coffee className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
+          <div className="p-3 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 rounded-xl sm:rounded-2xl shrink-0">
+            <Coffee className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Busiest Category</p>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Busiest Category</p>
             <h3 className="text-lg font-black text-slate-855 dark:text-slate-105 truncate max-w-[150px]" title={topCategoryName}>
               {topCategoryName}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-5 rounded-3xl shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 rounded-2xl">
-            <Award className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
+          <div className="p-3 bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 rounded-xl sm:rounded-2xl shrink-0">
+            <Award className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bestseller Dish</p>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Bestseller Dish</p>
             <h3 className="text-lg font-black text-slate-855 dark:text-slate-105 truncate max-w-[150px]" title={topSellingItemName}>
               {topSellingItemName}
             </h3>
@@ -608,7 +610,7 @@ export const ReportsManager: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Daily Sales Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Weekly Revenue Flow</h3>
@@ -619,7 +621,7 @@ export const ReportsManager: React.FC = () => {
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={dailySalesData}>
+              <RechartsBarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="day" stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
@@ -631,7 +633,7 @@ export const ReportsManager: React.FC = () => {
         </div>
 
         {/* Top 5 Dishes Quantities Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Top 5 Selling Items</h3>
@@ -645,7 +647,7 @@ export const ReportsManager: React.FC = () => {
               <div className="h-full flex items-center justify-center text-xs text-slate-400">No sales data logged yet</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart data={topItems} layout="vertical" margin={{ left: 20 }}>
+                <RechartsBarChart data={topItems} layout="vertical" margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                   <XAxis type="number" stroke="#94A3B8" fontSize={11} tickLine={false} />
                   <YAxis type="category" dataKey="name" stroke="#94A3B8" fontSize={10} tickLine={false} width={80} />
@@ -658,7 +660,7 @@ export const ReportsManager: React.FC = () => {
         </div>
 
         {/* Peak Ordering Hours */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Peak Dining Hours</h3>
@@ -669,9 +671,9 @@ export const ReportsManager: React.FC = () => {
 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={peakHoursData}>
+              <LineChart data={peakHoursData} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="hour" stroke="#94A3B8" fontSize={10} tickLine={false} />
+                <XAxis dataKey="hour" stroke="#94A3B8" fontSize={9} tickLine={false} interval="preserveStartEnd" />
                 <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1E293B', color: '#FFF' }} />
                 <Line type="monotone" dataKey="orders" stroke="#F59E0B" strokeWidth={3} activeDot={{ r: 6 }} dot={{ strokeWidth: 2, r: 3 }} />
@@ -681,7 +683,7 @@ export const ReportsManager: React.FC = () => {
         </div>
 
         {/* Share of Sales by Categories */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
           <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Category Share Value</h3>
           <p className="text-[11px] text-slate-400">Total revenue generated by category</p>
 

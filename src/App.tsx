@@ -612,7 +612,7 @@ export const App: React.FC = () => {
         <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col xl:flex-row animate-fade-in">
           
           {/* Mobile/Tablet Header Bar */}
-          <header className="xl:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+          <header className="xl:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between sticky top-0 z-50 pt-[max(0.625rem,env(safe-area-inset-top))]">
             <div className="flex items-center gap-2.5">
               <RestaurantsOSLogo size="sm" showText={false} />
               <div className="flex flex-col leading-none">
@@ -742,7 +742,7 @@ export const App: React.FC = () => {
           </aside>
 
           {/* Content Container */}
-          <main className="flex-1 overflow-y-auto h-full p-4 sm:p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in pb-safe">
+          <main className="flex-1 overflow-y-auto h-full p-3.5 sm:p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in pb-32 sm:pb-36">
             
             {/* Platform-Wide Broadcast Announcement Banners */}
             {activeAnnouncements.map(ann => {

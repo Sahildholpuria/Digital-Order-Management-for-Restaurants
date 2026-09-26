@@ -212,7 +212,7 @@
 
 /* Premium Card Styles */
 .card-premium {
-  @apply rounded-3xl border border-slate-200/60 bg-white/85 p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/50 backdrop-blur-md hover:-translate-y-0.5;
+  @apply rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white/85 p-3.5 sm:p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/50 backdrop-blur-md hover:-translate-y-0.5;
 }
 
 /* Glassmorphism Styles */
@@ -221,7 +221,7 @@
 }
 
 .glass-card {
-  @apply rounded-3xl border border-white/25 bg-white/60 p-6 shadow-glass backdrop-blur-md dark:border-slate-800/30 dark:bg-slate-955/40 dark:shadow-glass-dark;
+  @apply rounded-2xl sm:rounded-3xl border border-white/25 bg-white/60 p-3.5 sm:p-6 shadow-glass backdrop-blur-md dark:border-slate-800/30 dark:bg-slate-955/40 dark:shadow-glass-dark;
 }
 
 /* Hide Spin Buttons in Inputs */
@@ -268,4 +268,16 @@ input, select, textarea {
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* iOS Safari time and date input styling & overflow prevention */
+input[type="time"],
+input[type="date"] {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
 }

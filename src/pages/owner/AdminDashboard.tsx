@@ -297,7 +297,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Date Filter & Calendar Badge Controls */}
         <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           {/* Segmented Date Range Picker */}
-          <div className="flex items-center p-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
+          <div className="flex items-center p-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar max-w-full w-full lg:w-auto">
             <div className="flex items-center gap-1 px-2 text-slate-400">
               <Filter className="w-3.5 h-3.5" />
             </div>
@@ -305,7 +305,7 @@ export const AdminDashboard: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setDateRange(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   dateRange === tab.id
                     ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/25'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -325,17 +325,17 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Metrics Card Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {metrics.map((m, index) => (
-          <div key={index} className="card-premium flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{m.title}</p>
-              <h3 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{m.value}</h3>
-              <p className="text-xs text-slate-550 dark:text-slate-400 font-semibold">{m.desc}</p>
+          <div key={index} className="rounded-2xl sm:rounded-3xl border border-slate-200/60 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/50 p-3 sm:p-5 shadow-sm backdrop-blur-md flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0 order-2 sm:order-1">
+              <p className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">{m.title}</p>
+              <h3 className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate">{m.value}</h3>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold truncate">{m.desc}</p>
             </div>
             
-            <div className={`p-3.5 rounded-2xl border border-white/20 dark:border-slate-800/40 shadow-sm ${m.color}`}>
-              <m.icon className="w-6 h-6" />
+            <div className={`p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-white/20 dark:border-slate-800/40 shadow-sm shrink-0 self-start sm:self-auto order-1 sm:order-2 ${m.color}`}>
+              <m.icon className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
         ))}

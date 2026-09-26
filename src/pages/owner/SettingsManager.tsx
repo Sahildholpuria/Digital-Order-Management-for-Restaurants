@@ -162,7 +162,7 @@ export const SettingsManager: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Brand Details Block */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4 lg:col-span-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 lg:col-span-2">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
             <Building className="w-5 h-5 text-brand-500" />
             <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">Brand Information</h3>
@@ -241,7 +241,7 @@ export const SettingsManager: React.FC = () => {
             </div>
 
             {/* Operating Times */}
-            <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Opening Time</label>
                 <div className="relative">
@@ -282,7 +282,7 @@ export const SettingsManager: React.FC = () => {
         <div className="space-y-6 lg:col-span-1">
           
           {/* Financial Invoicing */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
               <Receipt className="w-5 h-5 text-brand-500" />
               <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Invoicing Details</h3>
@@ -322,7 +322,7 @@ export const SettingsManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
                     <span>Tax Ratio (%)</span>
@@ -363,7 +363,7 @@ export const SettingsManager: React.FC = () => {
 
 
           {/* Customer Menu Feature Toggles */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
               <Bell className="w-5 h-5 text-brand-500" />
               <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Customer Menu Controls</h3>
@@ -449,7 +449,7 @@ export const SettingsManager: React.FC = () => {
           </div>
 
           {/* Audio Alerts Controls */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
               <Volume2 className="w-5 h-5 text-brand-500" />
               <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Audio Alert Controls</h3>
