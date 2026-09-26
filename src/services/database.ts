@@ -71,14 +71,22 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.planType !== undefined && { plan_type: model.planType }),
   };
 
-  if (model.themeColor !== undefined || model.websiteUrl !== undefined || model.enableWaiterCall !== undefined || model.enableBillPrinting !== undefined || model.hideSubscriptionPlan !== undefined) {
-    const color = model.themeColor || '#10B981';
-    const waiter = model.enableWaiterCall ?? true;
-    const bill = model.enableBillRequest ?? true;
-    const sound = model.enableSoundNotification ?? true;
-    const printBill = model.enableBillPrinting ?? true;
+  if (
+    model.themeColor !== undefined ||
+    model.websiteUrl !== undefined ||
+    model.enableWaiterCall !== undefined ||
+    model.enableBillRequest !== undefined ||
+    model.enableSoundNotification !== undefined ||
+    model.enableBillPrinting !== undefined ||
+    model.hideSubscriptionPlan !== undefined
+  ) {
+    const color = model.themeColor || '#064E3B';
+    const waiter = model.enableWaiterCall !== false;
+    const bill = model.enableBillRequest !== false;
+    const sound = model.enableSoundNotification !== false;
+    const printBill = model.enableBillPrinting !== false;
     const site = model.websiteUrl ?? '';
-    const hideSub = model.hideSubscriptionPlan ? 'true' : 'false';
+    const hideSub = model.hideSubscriptionPlan === true ? 'true' : 'false';
     dbRow.theme_color = `${color}|${waiter}|${bill}|${sound}|${printBill}|${site}|${hideSub}`;
   }
 
@@ -869,21 +877,38 @@ export const dbService = {
 
 
   async updateSettings(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
+    const current = await this.getSettings(restaurantId);
+    const merged = { ...current, ...updates };
+
+    // Update local cache optimistically for immediate UI reaction
+    try {
+      localStorage.setItem(`cached_settings_${restaurantId}`, JSON.stringify(merged));
+      const activeRest = localStorage.getItem('last_active_staff_restaurant_id') || 'demo-restaurant';
+      if (restaurantId === 'demo-restaurant' || restaurantId === activeRest) {
+        localStorage.setItem('restaurant_settings', JSON.stringify(merged));
+      }
+      const superAdminData = localStorage.getItem('super_admin_restaurants');
+      if (superAdminData) {
+        const list = JSON.parse(superAdminData);
+        const idx = list.findIndex((r: any) => r.id === restaurantId);
+        if (idx > -1) {
+          list[idx] = { ...list[idx], ...updates };
+          localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
+        }
+      }
+      notifyLocalSubscribers();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('restaurant-db-update'));
+      }
+    } catch (e) {}
+
     if (isSupabaseConfigured) {
-      // Fetch current settings to perform a complete merge and avoid losing toggle configuration
-      const current = await this.getSettings(restaurantId);
-      const merged = { ...current, ...updates };
       const dbUpdates = mapSettingsToDb(merged);
       const { error } = await supabase
         .from('restaurants')
         .update(dbUpdates)
         .eq('id', restaurantId);
       if (error) throw error;
-    } else {
-      const current = await this.getSettings(restaurantId);
-      const updated = { ...current, ...updates };
-      localStorage.setItem('restaurant_settings', JSON.stringify(updated));
-      notifyLocalSubscribers();
     }
   },
 

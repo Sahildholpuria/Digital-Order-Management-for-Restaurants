@@ -172,9 +172,17 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   useEffect(() => {
     if (currentUser?.isSuperAdmin) {
       fetchAllData();
-      subscriptionService.isFeatureEnabled().then(setIsSubFeatureEnabled);
     }
   }, [currentUser?.isSuperAdmin]);
+
+  useEffect(() => {
+    const unsub = subscriptionService.subscribeFeatureToggle((enabled) => {
+      setIsSubFeatureEnabled(enabled);
+    });
+    return () => {
+      unsub();
+    };
+  }, []);
 
   const handleToggleSubscriptionFeature = async () => {
     setIsTogglingSubFeature(true);

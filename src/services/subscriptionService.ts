@@ -1,12 +1,13 @@
 /**
  * Subscription Service - Secure Payment Processing & SaaS Plan Management
  *
- * Security Features:
+ * Security & Reliability Features:
+ * - Realtime Supabase synchronization for feature toggles & settings
  * - Server & DB level idempotent transaction processing
  * - Replay attack prevention via unique payment ID index and verification
  * - Strict plan pricing validation and tamper-proof amount checks
  * - Atomic database execution via Postgres SECURITY DEFINER RPC
- * - Cross-tab sync via BroadcastChannel
+ * - Cross-tab sync via BroadcastChannel & CustomEvents
  */
 
 import { supabase, isSupabaseConfigured } from "./supabase";
@@ -40,6 +41,12 @@ const FEATURE_ENABLED_KEY = "saas_subscription_feature_enabled";
 
 // In-memory replay guard cache to prevent duplicate submission races
 const processedPaymentIds = new Set<string>();
+
+const parseBooleanValue = (val: any): boolean => {
+  if (val === false || val === "false" || val === 0 || val === "0") return false;
+  if (val === true || val === "true" || val === 1 || val === "1") return true;
+  return Boolean(val);
+};
 
 export const subscriptionService = {
   /**
@@ -111,7 +118,6 @@ export const subscriptionService = {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       const list: SubscriptionPaymentRecord[] = stored ? JSON.parse(stored) : [];
-      // Prevent duplicate in local array
       const existingIdx = list.findIndex(p => p.razorpayPaymentId === payment.razorpayPaymentId);
       if (existingIdx === -1) {
         list.unshift(payment);
@@ -139,7 +145,6 @@ export const subscriptionService = {
     currentStatus?: string,
     razorpayOrderId?: string
   ): Promise<{ payment: SubscriptionPaymentRecord; newExpiresAt: string }> {
-    // 1. Strict Input & Pricing Validation
     if (!restaurantId || !restaurantId.trim()) {
       throw new Error("Invalid restaurant identifier.");
     }
@@ -157,7 +162,6 @@ export const subscriptionService = {
       throw new Error(`Price mismatch detected. Expected ₹${verifiedPlan.price}, received ₹${plan.price}`);
     }
 
-    // 2. Replay Protection: Check in-memory idempotency guard
     if (processedPaymentIds.has(razorpayPaymentId)) {
       console.warn("Idempotency notice: Payment ID already processed in this session:", razorpayPaymentId);
     }
@@ -183,7 +187,6 @@ export const subscriptionService = {
       expiresAt: newExpiresAtIso
     };
 
-    // 3. Remote Supabase Secure RPC Execution
     if (isSupabaseConfigured) {
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc(
@@ -206,7 +209,6 @@ export const subscriptionService = {
 
         if (rpcError) {
           console.warn("Secure RPC notice, falling back to direct table update:", rpcError);
-          // Fallback direct table insertion
           await supabase.from("subscription_payments").insert({
             id: paymentRecord.id,
             restaurant_id: paymentRecord.restaurantId,
@@ -234,7 +236,6 @@ export const subscriptionService = {
       }
     }
 
-    // 4. Local Optimistic State Update
     await this.recordPaymentLocally(paymentRecord);
     try {
       await dbService.updateRestaurantSubscription(restaurantId, {
@@ -246,7 +247,6 @@ export const subscriptionService = {
       console.warn("Local settings update notice:", e);
     }
 
-    // 5. Trigger celebratory confetti 🎉
     try {
       confetti({
         particleCount: 100,
@@ -273,7 +273,7 @@ export const subscriptionService = {
         const local = localStorage.getItem(FEATURE_ENABLED_KEY);
         if (local !== null) {
           this.syncRemoteFeatureState().catch(() => {});
-          return local === "true";
+          return parseBooleanValue(local);
         }
       } catch (_) {}
     }
@@ -288,31 +288,36 @@ export const subscriptionService = {
           .select("value")
           .eq("key", "subscription_feature_enabled")
           .maybeSingle();
-        if (!error && data && data.value !== undefined) {
-          const val = Boolean(data.value);
+
+        if (!error && data && data.value !== undefined && data.value !== null) {
+          const val = parseBooleanValue(data.value);
           try {
             localStorage.setItem(FEATURE_ENABLED_KEY, val ? "true" : "false");
           } catch (_) {}
           return val;
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn("Notice syncing remote system_config:", err);
+      }
     }
     try {
       const local = localStorage.getItem(FEATURE_ENABLED_KEY);
-      return local === null ? true : local === "true";
+      return local === null ? true : parseBooleanValue(local);
     } catch (_) {
       return true;
     }
   },
 
   /**
-   * Super Admin single-click toggle to show or hide the Subscription Plan feature.
+   * Super Admin single-click toggle to show or hide the Subscription Plan feature globally.
    */
   async setFeatureEnabled(enabled: boolean): Promise<void> {
+    const stringVal = enabled ? "true" : "false";
     try {
-      localStorage.setItem(FEATURE_ENABLED_KEY, enabled ? "true" : "false");
+      localStorage.setItem(FEATURE_ENABLED_KEY, stringVal);
     } catch (_) {}
 
+    // 1. Broadcast to other browser tabs/windows
     try {
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
         const channel = new BroadcastChannel("restaurantsos_feature_toggles");
@@ -321,11 +326,13 @@ export const subscriptionService = {
       }
     } catch (_) {}
 
+    // 2. Broadcast inside current window via CustomEvent
     try {
       window.dispatchEvent(new CustomEvent("subscription-feature-toggle", { detail: { enabled } }));
-      window.dispatchEvent(new Event("restaurant-db-update"));
+      window.dispatchEvent(new CustomEvent("restaurant-db-update"));
     } catch (_) {}
 
+    // 3. Persist to Supabase system_config
     if (isSupabaseConfigured) {
       try {
         await supabase
@@ -339,6 +346,85 @@ export const subscriptionService = {
         console.warn("Notice updating system_config in Supabase:", err);
       }
     }
+  },
+
+  /**
+   * Subscribes to Realtime & Local Feature Toggle changes
+   */
+  subscribeFeatureToggle(callback: (enabled: boolean) => void): () => void {
+    // Initial fetch
+    this.isFeatureEnabled(true).then(callback).catch(() => {});
+
+    // 1. Local Storage Event (other tabs)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === FEATURE_ENABLED_KEY && e.newValue !== null) {
+        callback(parseBooleanValue(e.newValue));
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // 2. Custom Event (current window)
+    const handleCustom = (e: any) => {
+      if (e.detail?.enabled !== undefined) {
+        callback(Boolean(e.detail.enabled));
+      } else {
+        this.isFeatureEnabled(true).then(callback).catch(() => {});
+      }
+    };
+    window.addEventListener("subscription-feature-toggle", handleCustom);
+
+    // 3. BroadcastChannel (cross-window)
+    let channel: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        channel = new BroadcastChannel("restaurantsos_feature_toggles");
+        channel.onmessage = (ev) => {
+          if (ev.data?.type === "SUBSCRIPTION_TOGGLE" && typeof ev.data.enabled === "boolean") {
+            callback(ev.data.enabled);
+          }
+        };
+      } catch (_) {}
+    }
+
+    // 4. Supabase Realtime channel
+    let supabaseChannel: any = null;
+    if (isSupabaseConfigured) {
+      try {
+        const chanId = `pub_sys_config_${Math.random().toString(36).substring(2, 9)}`;
+        supabaseChannel = supabase
+          .channel(chanId)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "system_config",
+              filter: "key=eq.subscription_feature_enabled"
+            },
+            (payload: any) => {
+              if (payload.new && payload.new.value !== undefined) {
+                const val = parseBooleanValue(payload.new.value);
+                try {
+                  localStorage.setItem(FEATURE_ENABLED_KEY, val ? "true" : "false");
+                } catch (_) {}
+                callback(val);
+              }
+            }
+          )
+          .subscribe();
+      } catch (_) {}
+    }
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("subscription-feature-toggle", handleCustom);
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+      if (supabaseChannel) {
+        try { supabase.removeChannel(supabaseChannel); } catch (_) {}
+      }
+    };
   }
 };
 

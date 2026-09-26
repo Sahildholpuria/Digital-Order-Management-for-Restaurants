@@ -58,54 +58,11 @@ export const SettingsManager: React.FC = () => {
   const showSubscriptionSection = isSubFeatureEnabled && settings?.hideSubscriptionPlan !== true;
 
   useEffect(() => {
-    // Sync with remote/cache immediately
-    subscriptionService.isFeatureEnabled(true).then(setIsSubFeatureEnabled);
-
-    // 1. Cross-tab BroadcastChannel listener
-    let channel: BroadcastChannel | null = null;
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        channel = new BroadcastChannel('restaurantsos_feature_toggles');
-        channel.onmessage = (ev) => {
-          if (ev.data?.type === 'SUBSCRIPTION_TOGGLE' && typeof ev.data.enabled === 'boolean') {
-            setIsSubFeatureEnabled(ev.data.enabled);
-          }
-        };
-      } catch (_) {}
-    }
-
-    // 2. Storage event listener (fires across other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'saas_subscription_feature_enabled') {
-        setIsSubFeatureEnabled(e.newValue === 'true');
-      }
-    };
-
-    // 3. In-window custom event listener
-    const handleCustomToggle = (e: any) => {
-      if (e.detail?.enabled !== undefined) {
-        setIsSubFeatureEnabled(e.detail.enabled);
-      } else {
-        subscriptionService.isFeatureEnabled().then(setIsSubFeatureEnabled);
-      }
-    };
-
-    // 4. Window focus sync (syncs when switching between browser windows/tabs)
-    const handleWindowFocus = () => {
-      subscriptionService.isFeatureEnabled(true).then(setIsSubFeatureEnabled);
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('subscription-feature-toggle', handleCustomToggle);
-    window.addEventListener('restaurant-db-update', handleCustomToggle);
-    window.addEventListener('focus', handleWindowFocus);
-
+    const unsub = subscriptionService.subscribeFeatureToggle((enabled) => {
+      setIsSubFeatureEnabled(enabled);
+    });
     return () => {
-      if (channel) channel.close();
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('subscription-feature-toggle', handleCustomToggle);
-      window.removeEventListener('restaurant-db-update', handleCustomToggle);
-      window.removeEventListener('focus', handleWindowFocus);
+      unsub();
     };
   }, []);
 
