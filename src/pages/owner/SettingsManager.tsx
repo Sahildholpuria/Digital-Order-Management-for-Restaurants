@@ -3,7 +3,7 @@ import { useRestaurant } from '../../context/RestaurantContext';
 import { SubscriptionModal } from '../../components/subscription/SubscriptionModal';
 import subscriptionService, { SubscriptionPaymentRecord } from '../../services/subscriptionService';
 import { Zap, CreditCard, ShieldCheck, Lock } from 'lucide-react';
-import { getRenewalEligibility } from '../../config/subscriptionPlans';
+import { getRenewalEligibility, getPlanById, formatINR } from '../../config/subscriptionPlans';
 import { 
   Building, 
   MapPin, 
@@ -57,14 +57,24 @@ export const SettingsManager: React.FC = () => {
   const eligibility = getRenewalEligibility(settings?.subscriptionStatus, settings?.subscriptionExpiresAt);
   const showSubscriptionSection = isSubFeatureEnabled && settings?.hideSubscriptionPlan !== true;
 
+  const [activePlan, setActivePlan] = useState(() => getPlanById(settings?.planType || "pro"));
+
   useEffect(() => {
-    const unsub = subscriptionService.subscribeFeatureToggle((enabled) => {
+    setActivePlan(getPlanById(settings?.planType || "pro"));
+  }, [settings?.planType]);
+
+  useEffect(() => {
+    const unsubToggle = subscriptionService.subscribeFeatureToggle((enabled) => {
       setIsSubFeatureEnabled(enabled);
     });
+    const unsubPricing = subscriptionService.subscribeCustomPricing(() => {
+      setActivePlan(getPlanById(settings?.planType || "pro"));
+    });
     return () => {
-      unsub();
+      unsubToggle();
+      unsubPricing();
     };
-  }, []);
+  }, [settings?.planType]);
 
   useEffect(() => {
     if (settings?.id) {
@@ -351,14 +361,14 @@ export const SettingsManager: React.FC = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-base font-black text-slate-900 dark:text-white">
-                      {settings?.planType === "pro" ? "Pro Restaurant Plan" : "Starter Plan"}
+                      {activePlan.name}
                     </p>
                     <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-2 py-0.5 rounded-md">
-                      6 Months
+                      {activePlan.durationText}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {settings?.planType === "pro" ? "₹6,999 / 6 Months (₹1,166/mo)" : "₹2,999 / 6 Months (₹500/mo)"}
+                    {formatINR(activePlan.price)} / {activePlan.durationText} ({formatINR(activePlan.pricePerMonth)}/mo)
                   </p>
                 </div>
                 

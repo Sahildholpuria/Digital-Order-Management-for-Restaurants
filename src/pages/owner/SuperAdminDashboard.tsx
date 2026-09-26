@@ -5,6 +5,7 @@ import { useRestaurant } from '../../context/RestaurantContext';
 import { PageLoader } from '../../components/PageLoader';
 import { 
   getSubscriptionPlans,
+  getPlanById,
   getCustomPlanPricing,
   formatINR,
   getRazorpayKeyId,
@@ -50,11 +51,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-const planLabels: Record<string, string> = {
-  starter: "Starter Plan (₹2,999 / 6 Mo)",
-  pro: "Pro Restaurant Plan (₹6,999 / 6 Mo)",
-  pro_6m: "Pro Restaurant Plan (₹6,999 / 6 Mo)",
-  pro_1y: "Pro Restaurant Plan (₹6,999 / 6 Mo)"
+const getPlanLabel = (type?: string): string => {
+  const p = getPlanById(type === "starter" ? "starter" : "pro");
+  return `${p.name} (${formatINR(p.price)} / ${p.durationText})`;
 };
 
 interface SuperAdminDashboardProps {
@@ -1437,7 +1436,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                         <td className="px-6 py-4">
                           <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
                             <Award className="w-3.5 h-3.5 text-brand-500" />
-                            {planLabels[r.planType || 'starter']}
+                            {getPlanLabel(r.planType || 'starter')}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -1865,8 +1864,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                       }}
                       className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
                     >
-                      <option value="starter">Starter Plan - ₹2,999 (6 Months)</option>
-                      <option value="pro_6m">Pro Restaurant Plan - ₹6,999 (6 Months)</option>
+                      <option value="starter">{getPlanLabel("starter")}</option>
+                      <option value="pro_6m">{getPlanLabel("pro")}</option>
                     </select>
                   </div>
                   <div>
@@ -2205,8 +2204,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
                   >
-                    <option value="starter">Starter Plan - ₹2,999 (6 Months)</option>
-                    <option value="pro_6m">Pro Restaurant Plan - ₹6,999 (6 Months)</option>
+                    <option value="starter">{getPlanLabel("starter")}</option>
+                    <option value="pro_6m">{getPlanLabel("pro")}</option>
                   </select>
                 </div>
 
@@ -2587,8 +2586,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
           : days === 1 
             ? 'expires tomorrow' 
             : `expires in ${days} days`;
-        const renewNoticeText = `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${r.name}* Team,\nYour ${planLabels[r.planType || 'starter']} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
-        const plainRenewNoticeText = `⚠️ RestaurantsOS Subscription Notice\n\nDear ${r.name} Team,\nYour ${planLabels[r.planType || 'starter']} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
+        const renewNoticeText = `⚠️ *RestaurantsOS Subscription Notice*\n\nDear *${r.name}* Team,\nYour ${getPlanLabel(r.planType || 'starter')} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\n📱 *Support & Renewal Desk:* ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
+        const plainRenewNoticeText = `⚠️ RestaurantsOS Subscription Notice\n\nDear ${r.name} Team,\nYour ${getPlanLabel(r.planType || 'starter')} subscription ${urgency}.\n\nTo ensure zero interruption to your live POS billing and QR guest ordering, please renew your subscription today.\n\nSupport & Renewal Desk: ${currentUser?.email || 'admin@restaurantsos.com'}\n\nThank you for choosing RestaurantsOS!`;
 
         const cleanPhone = (r.phone || '').trim().replace(/[^0-9]/g, '');
         const hasPhone = cleanPhone.length >= 7;
@@ -2644,7 +2643,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Plan:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{planLabels[r.planType || 'starter']}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{getPlanLabel(r.planType || 'starter')}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">Expiry Date:</span>
