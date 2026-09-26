@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import {
   SAAS_SUBSCRIPTION_PLANS,
+  getSubscriptionPlans,
   SubscriptionPlan,
   formatINR,
   getRazorpayKeyId,
@@ -55,6 +56,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const [selectedPlanId, setSelectedPlanId] = useState<"starter" | "pro">(
     currentPlan === "starter" ? "starter" : "pro"
   );
+  const [plans, setPlans] = useState(() => getSubscriptionPlans());
+
+  React.useEffect(() => {
+    const unsub = subscriptionService.subscribeCustomPricing(() => {
+      setPlans(getSubscriptionPlans());
+    });
+    return () => {
+      unsub();
+    };
+  }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<{
     paymentId: string;
@@ -71,8 +82,9 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const eligibility = getRenewalEligibility(currentStatus, currentExpiresAt);
 
   const selectedPlan =
-    SAAS_SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId) ||
-    SAAS_SUBSCRIPTION_PLANS[1];
+    plans.find((p) => p.id === selectedPlanId) ||
+    plans[1] ||
+    plans[0];
 
   const calculatedNewExpiry = calculateNextExpiry(
     currentExpiresAt,
@@ -462,7 +474,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
               {/* Plans Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {SAAS_SUBSCRIPTION_PLANS.map((plan) => {
+                {plans.map((plan) => {
                   const isSelected = selectedPlanId === plan.id;
                   return (
                     <div

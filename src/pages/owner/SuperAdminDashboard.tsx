@@ -4,7 +4,8 @@ import { RestaurantSettings, UserProfile, SaaSAnnouncement } from '../../types';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { PageLoader } from '../../components/PageLoader';
 import { 
-  SAAS_SUBSCRIPTION_PLANS,
+  getSubscriptionPlans,
+  getCustomPlanPricing,
   formatINR,
   getRazorpayKeyId,
   setRazorpayKeyId,
@@ -73,6 +74,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
     return val === null ? true : val === 'true';
   });
   const [isTogglingSubFeature, setIsTogglingSubFeature] = useState(false);
+  const [pricingPlans, setPricingPlans] = useState(() => getSubscriptionPlans());
+  const [starterPriceInput, setStarterPriceInput] = useState<number | string>(() => getCustomPlanPricing().starterPrice);
+  const [proPriceInput, setProPriceInput] = useState<number | string>(() => getCustomPlanPricing().proPrice);
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [rzpKeyInput, setRzpKeyInput] = useState(() => getRazorpayKeyId());
   const [rzpSecretInput, setRzpSecretInput] = useState(() => getRazorpayKeySecret());
   const [loading, setLoading] = useState(true);
@@ -176,13 +181,53 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   }, [currentUser?.isSuperAdmin]);
 
   useEffect(() => {
-    const unsub = subscriptionService.subscribeFeatureToggle((enabled) => {
+    const unsubToggle = subscriptionService.subscribeFeatureToggle((enabled) => {
       setIsSubFeatureEnabled(enabled);
     });
+    const unsubPricing = subscriptionService.subscribeCustomPricing((pricing) => {
+      setStarterPriceInput(pricing.starterPrice);
+      setProPriceInput(pricing.proPrice);
+      setPricingPlans(getSubscriptionPlans());
+    });
     return () => {
-      unsub();
+      unsubToggle();
+      unsubPricing();
     };
   }, []);
+
+  const handleSaveCustomPricing = async () => {
+    const starter = Math.round(Number(starterPriceInput));
+    const pro = Math.round(Number(proPriceInput));
+    if (isNaN(starter) || starter <= 0 || isNaN(pro) || pro <= 0) {
+      showToast("Please enter valid positive pricing amounts.", "error");
+      return;
+    }
+    setIsSavingPricing(true);
+    try {
+      await subscriptionService.setCustomPricing({ starterPrice: starter, proPrice: pro });
+      setPricingPlans(getSubscriptionPlans());
+      showToast("✓ Subscription plan prices updated successfully across the platform!", "success");
+    } catch (err: any) {
+      showToast("Failed to update prices: " + (err.message || err), "error");
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
+
+  const handleResetCustomPricing = async () => {
+    setIsSavingPricing(true);
+    try {
+      await subscriptionService.setCustomPricing({ starterPrice: 2999, proPrice: 6999 });
+      setStarterPriceInput(2999);
+      setProPriceInput(6999);
+      setPricingPlans(getSubscriptionPlans());
+      showToast("✓ Plan prices reset to system default (₹2,999 / ₹6,999).", "success");
+    } catch (err: any) {
+      showToast("Failed to reset prices: " + (err.message || err), "error");
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
 
   const handleToggleSubscriptionFeature = async () => {
     setIsTogglingSubFeature(true);
@@ -1019,9 +1064,114 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
             </div>
           </div>
 
+          {/* Subscription Plan Pricing Management Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    Subscription Plan Pricing Management
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Set or change the 6-Month subscription prices for all tenant restaurants. Updated prices apply instantly to Razorpay checkout.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">
+                Live Pricing Control
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Starter Plan Price Input */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg">⚡</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">Starter Plan (6 Months)</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    ~{formatINR(Math.round((Number(starterPriceInput) || 0) / 6))} / mo
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                    Starter Plan Total Price (₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="2999"
+                      value={starterPriceInput}
+                      onChange={(e) => setStarterPriceInput(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Default: ₹2,999 for 6 Months (~₹500/month)</p>
+                </div>
+              </div>
+
+              {/* Pro Restaurant Plan Price Input */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg">👑</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">Pro Restaurant Plan (6 Months)</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    ~{formatINR(Math.round((Number(proPriceInput) || 0) / 6))} / mo
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                    Pro Plan Total Price (₹)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="6999"
+                      value={proPriceInput}
+                      onChange={(e) => setProPriceInput(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Default: ₹6,999 for 6 Months (~₹1,166/month)</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleResetCustomPricing}
+                disabled={isSavingPricing}
+                className="w-full sm:w-auto text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
+              >
+                Reset to Default (₹2,999 / ₹6,999)
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveCustomPricing}
+                disabled={isSavingPricing}
+                className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-600/20 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isSavingPricing ? "Updating Prices..." : "Save Plan Prices"}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Pricing Plans Summary Card */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {SAAS_SUBSCRIPTION_PLANS.map(plan => (
+            {pricingPlans.map(plan => (
               <div key={plan.id} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-xl">{plan.icon}</span>

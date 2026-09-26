@@ -1,8 +1,8 @@
 /**
- * Subscription Service - Secure Payment Processing & SaaS Plan Management
+ * Subscription Service - Secure Payment Processing, SaaS Plan Management & Custom Pricing
  *
  * Security & Reliability Features:
- * - Realtime Supabase synchronization for feature toggles & settings
+ * - Realtime Supabase synchronization for feature toggles & custom plan prices
  * - Server & DB level idempotent transaction processing
  * - Replay attack prevention via unique payment ID index and verification
  * - Strict plan pricing validation and tamper-proof amount checks
@@ -13,7 +13,11 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import {
   SubscriptionPlan,
-  SAAS_SUBSCRIPTION_PLANS,
+  CustomPlanPricing,
+  getSubscriptionPlans,
+  getPlanById,
+  getCustomPlanPricing,
+  saveCustomPlanPricingLocally,
   calculateNextExpiry,
   validatePlanPricing
 } from "../config/subscriptionPlans";
@@ -38,6 +42,7 @@ export interface SubscriptionPaymentRecord {
 
 const STORAGE_KEY = "saas_subscription_payment_history";
 const FEATURE_ENABLED_KEY = "saas_subscription_feature_enabled";
+const PRICING_STORAGE_KEY = "saas_subscription_custom_pricing";
 
 // In-memory replay guard cache to prevent duplicate submission races
 const processedPaymentIds = new Set<string>();
@@ -130,7 +135,7 @@ export const subscriptionService = {
 
   /**
    * Securely completes renewal:
-   * 1. Validates plan pricing against authoritative constants.
+   * 1. Validates plan pricing against dynamic active pricing.
    * 2. Prevents replay attacks / duplicate payment ID reuse.
    * 3. Executes atomic database RPC to record payment & extend restaurant validity.
    * 4. Updates local optimistic state.
@@ -153,7 +158,7 @@ export const subscriptionService = {
       throw new Error("Invalid Razorpay payment identifier.");
     }
 
-    const verifiedPlan = SAAS_SUBSCRIPTION_PLANS.find(p => p.id === plan.id);
+    const verifiedPlan = getPlanById(plan.id);
     if (!verifiedPlan) {
       throw new Error(`Invalid plan identifier: ${plan.id}`);
     }
@@ -260,6 +265,164 @@ export const subscriptionService = {
     return {
       payment: paymentRecord,
       newExpiresAt: newExpiresAtIso
+    };
+  },
+
+  /**
+   * Retrieves current custom plan prices
+   */
+  async getCustomPricing(forceRemote: boolean = false): Promise<CustomPlanPricing> {
+    if (!forceRemote) {
+      const local = getCustomPlanPricing();
+      this.syncRemoteCustomPricing().catch(() => {});
+      return local;
+    }
+    return await this.syncRemoteCustomPricing();
+  },
+
+  async syncRemoteCustomPricing(): Promise<CustomPlanPricing> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from("system_config")
+          .select("value")
+          .eq("key", "subscription_plans_custom_pricing")
+          .maybeSingle();
+
+        if (!error && data && data.value) {
+          const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+          const starter = Number(parsed.starterPrice);
+          const pro = Number(parsed.proPrice);
+          if (!isNaN(starter) && starter > 0 && !isNaN(pro) && pro > 0) {
+            const pricing: CustomPlanPricing = { starterPrice: starter, proPrice: pro };
+            saveCustomPlanPricingLocally(pricing);
+            return pricing;
+          }
+        }
+      } catch (err) {
+        console.warn("Notice syncing remote plan pricing:", err);
+      }
+    }
+    return getCustomPlanPricing();
+  },
+
+  /**
+   * Super Admin method to update and broadcast subscription plan pricing
+   */
+  async setCustomPricing(pricing: CustomPlanPricing): Promise<void> {
+    const starterPrice = Math.max(1, Math.round(Number(pricing.starterPrice) || 2999));
+    const proPrice = Math.max(1, Math.round(Number(pricing.proPrice) || 6999));
+    const cleanPricing: CustomPlanPricing = { starterPrice, proPrice };
+
+    saveCustomPlanPricingLocally(cleanPricing);
+
+    // 1. Cross-tab Broadcast
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const channel = new BroadcastChannel("restaurantsos_pricing_toggles");
+        channel.postMessage({ type: "PRICING_UPDATED", pricing: cleanPricing });
+        channel.close();
+      }
+    } catch (_) {}
+
+    // 2. In-window CustomEvent
+    try {
+      window.dispatchEvent(new CustomEvent("subscription-pricing-updated", { detail: cleanPricing }));
+    } catch (_) {}
+
+    // 3. Supabase Remote Persistence
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from("system_config")
+          .upsert({
+            key: "subscription_plans_custom_pricing",
+            value: cleanPricing,
+            updated_at: new Date().toISOString()
+          });
+      } catch (err) {
+        console.warn("Notice updating custom pricing in Supabase:", err);
+      }
+    }
+  },
+
+  /**
+   * Subscribes to Plan Pricing Changes across tabs and Supabase Realtime
+   */
+  subscribeCustomPricing(callback: (pricing: CustomPlanPricing) => void): () => void {
+    // Initial sync
+    this.getCustomPricing(true).then(callback).catch(() => {});
+
+    // 1. Storage Event
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === PRICING_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          callback(parsed);
+        } catch (_) {}
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // 2. In-window CustomEvent
+    const handleCustom = (e: any) => {
+      if (e.detail?.starterPrice && e.detail?.proPrice) {
+        callback(e.detail);
+      }
+    };
+    window.addEventListener("subscription-pricing-updated", handleCustom);
+
+    // 3. BroadcastChannel
+    let channel: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        channel = new BroadcastChannel("restaurantsos_pricing_toggles");
+        channel.onmessage = (ev) => {
+          if (ev.data?.type === "PRICING_UPDATED" && ev.data?.pricing) {
+            callback(ev.data.pricing);
+          }
+        };
+      } catch (_) {}
+    }
+
+    // 4. Supabase Realtime
+    let supabaseChannel: any = null;
+    if (isSupabaseConfigured) {
+      try {
+        const chanId = `pub_pricing_${Math.random().toString(36).substring(2, 9)}`;
+        supabaseChannel = supabase
+          .channel(chanId)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "system_config",
+              filter: "key=eq.subscription_plans_custom_pricing"
+            },
+            (payload: any) => {
+              if (payload.new && payload.new.value) {
+                const parsed = typeof payload.new.value === "string" ? JSON.parse(payload.new.value) : payload.new.value;
+                if (parsed.starterPrice && parsed.proPrice) {
+                  saveCustomPlanPricingLocally(parsed);
+                  callback(parsed);
+                }
+              }
+            }
+          )
+          .subscribe();
+      } catch (_) {}
+    }
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("subscription-pricing-updated", handleCustom);
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+      if (supabaseChannel) {
+        try { supabase.removeChannel(supabaseChannel); } catch (_) {}
+      }
     };
   },
 

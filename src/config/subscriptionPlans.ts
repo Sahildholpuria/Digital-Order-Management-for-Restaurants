@@ -1,9 +1,10 @@
 /**
  * SaaS Subscription Plans & Razorpay Integration Configuration
  *
- * Official Plans:
- * 1. Starter Plan: ₹2,999 for 6 Months
- * 2. Pro Restaurant Plan: ₹6,999 for 6 Months
+ * Super Admins can customize the Starter and Pro plan prices from the Super Admin Panel.
+ * Default official plans:
+ * 1. Starter Plan: ₹2,999 for 6 Months (~₹500/mo)
+ * 2. Pro Restaurant Plan: ₹6,999 for 6 Months (~₹1,166/mo)
  */
 
 export interface SubscriptionPlan {
@@ -21,7 +22,7 @@ export interface SubscriptionPlan {
   icon: string;
 }
 
-export const SAAS_SUBSCRIPTION_PLANS: readonly SubscriptionPlan[] = Object.freeze([
+export const DEFAULT_SAAS_SUBSCRIPTION_PLANS: readonly SubscriptionPlan[] = Object.freeze([
   {
     id: "starter",
     name: "Starter Plan",
@@ -29,7 +30,7 @@ export const SAAS_SUBSCRIPTION_PLANS: readonly SubscriptionPlan[] = Object.freez
     price: 2999,
     durationMonths: 6,
     durationText: "6 Months",
-    pricePerMonth: Math.round(2999 / 6), // ~₹500 / month
+    pricePerMonth: Math.round(2999 / 6),
     description: "Essential POS terminal, live kitchen display, and table QR digital ordering for your restaurant.",
     features: [
       "Full POS Billing & Quick Checkout",
@@ -54,7 +55,7 @@ export const SAAS_SUBSCRIPTION_PLANS: readonly SubscriptionPlan[] = Object.freez
     price: 6999,
     durationMonths: 6,
     durationText: "6 Months",
-    pricePerMonth: Math.round(6999 / 6), // ~₹1,166 / month
+    pricePerMonth: Math.round(6999 / 6),
     description: "The complete restaurant operating system with waiter handheld consoles, audio alerts, and priority 24/7 support.",
     features: [
       "Everything in Starter Plan included",
@@ -70,19 +71,75 @@ export const SAAS_SUBSCRIPTION_PLANS: readonly SubscriptionPlan[] = Object.freez
   }
 ]);
 
+const CUSTOM_PRICING_STORAGE_KEY = "saas_subscription_custom_pricing";
+
+export interface CustomPlanPricing {
+  starterPrice: number;
+  proPrice: number;
+}
+
 /**
- * Validates and retrieves plan by id with strict fallback to default
+ * Retrieves custom plan prices from local cache or defaults
+ */
+export const getCustomPlanPricing = (): CustomPlanPricing => {
+  try {
+    const stored = localStorage.getItem(CUSTOM_PRICING_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const starter = Number(parsed.starterPrice);
+      const pro = Number(parsed.proPrice);
+      if (!isNaN(starter) && starter > 0 && !isNaN(pro) && pro > 0) {
+        return { starterPrice: starter, proPrice: pro };
+      }
+    }
+  } catch (_) {}
+  return { starterPrice: 2999, proPrice: 6999 };
+};
+
+/**
+ * Saves custom plan prices to local cache
+ */
+export const saveCustomPlanPricingLocally = (pricing: CustomPlanPricing): void => {
+  try {
+    localStorage.setItem(CUSTOM_PRICING_STORAGE_KEY, JSON.stringify(pricing));
+  } catch (_) {}
+};
+
+/**
+ * Dynamic getter for subscription plans with Super Admin custom prices applied
+ */
+export const getSubscriptionPlans = (): SubscriptionPlan[] => {
+  const custom = getCustomPlanPricing();
+  return DEFAULT_SAAS_SUBSCRIPTION_PLANS.map(plan => {
+    const customPrice = plan.id === "starter" ? custom.starterPrice : custom.proPrice;
+    const price = typeof customPrice === "number" && customPrice > 0 ? customPrice : plan.price;
+    return {
+      ...plan,
+      price,
+      pricePerMonth: Math.round(price / plan.durationMonths)
+    };
+  });
+};
+
+/**
+ * Legacy static array exported for backward compatibility
+ */
+export const SAAS_SUBSCRIPTION_PLANS: SubscriptionPlan[] = getSubscriptionPlans();
+
+/**
+ * Validates and retrieves plan by id with dynamic pricing
  */
 export const getPlanById = (id: string): SubscriptionPlan => {
-  const found = SAAS_SUBSCRIPTION_PLANS.find(p => p.id === id);
-  return found || SAAS_SUBSCRIPTION_PLANS[0];
+  const plans = getSubscriptionPlans();
+  const found = plans.find(p => p.id === id);
+  return found || plans[0];
 };
 
 /**
  * Validates whether plan ID and submitted amount strictly match system pricing
  */
 export const validatePlanPricing = (planId: string, amount: number): boolean => {
-  const plan = SAAS_SUBSCRIPTION_PLANS.find(p => p.id === planId);
+  const plan = getPlanById(planId);
   if (!plan) return false;
   return plan.price === amount;
 };
@@ -162,7 +219,6 @@ export const getRenewalEligibility = (
     };
   }
 
-  // Active plan: Only enable renew button before 15 days of subscription left
   if (daysLeft !== null && daysLeft <= 15) {
     return {
       canRenew: true,
@@ -189,7 +245,6 @@ export const getRenewalEligibility = (
 };
 
 // Razorpay Public Client Key Management
-// Note: Secret keys are strictly handled on the backend/Edge Functions and NEVER exposed to client-side bundles.
 const RAZORPAY_KEY_ID_STORAGE = "saas_razorpay_key_id";
 
 export const getRazorpayKeyId = (): string => {
@@ -209,7 +264,7 @@ export const setRazorpayKeyId = (keyId: string): void => {
 };
 
 /**
- * Dynamically loads the official Razorpay Checkout v1 script securely with SRI integrity validation
+ * Dynamically loads the official Razorpay Checkout v1 script securely
  */
 export const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
