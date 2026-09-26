@@ -91,7 +91,7 @@ export const subscriptionService = {
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from("subscription_payments").insert({
+        const { error } = await supabase.from("subscription_payments").insert({
           id: payment.id,
           restaurant_id: payment.restaurantId,
           restaurant_name: payment.restaurantName,
@@ -106,8 +106,11 @@ export const subscriptionService = {
           paid_at: payment.paidAt,
           expires_at: payment.expiresAt
         });
+        if (error) {
+          console.warn("Supabase record payment notice:", error);
+        }
       } catch (err) {
-        // Graceful fallback if table is not yet created in Supabase SQL editor
+        console.warn("Supabase record payment network error (using local storage):", err);
       }
     }
   },
@@ -127,14 +130,6 @@ export const subscriptionService = {
     const newExpiresAtDate = calculateNextExpiry(currentExpiresAt, currentStatus, plan.durationMonths);
     const newExpiresAtIso = newExpiresAtDate.toISOString();
 
-    // 1. Update restaurant settings in Database / LocalStorage
-    await dbService.updateRestaurantSubscription(restaurantId, {
-      subscriptionStatus: "active",
-      planType: plan.id,
-      subscriptionExpiresAt: newExpiresAtIso
-    });
-
-    // 2. Record payment invoice receipt
     const paymentRecord: SubscriptionPaymentRecord = {
       id: "subpay_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
       restaurantId,
@@ -150,7 +145,23 @@ export const subscriptionService = {
       expiresAt: newExpiresAtIso
     };
 
-    await this.recordPayment(paymentRecord);
+    // 1. Record payment invoice receipt locally and in Supabase (defensively)
+    try {
+      await this.recordPayment(paymentRecord);
+    } catch (err) {
+      console.warn("Notice recording payment receipt:", err);
+    }
+
+    // 2. Update restaurant settings in Database / LocalStorage (defensively)
+    try {
+      await dbService.updateRestaurantSubscription(restaurantId, {
+        subscriptionStatus: "active",
+        planType: plan.id,
+        subscriptionExpiresAt: newExpiresAtIso
+      });
+    } catch (err) {
+      console.warn("Notice updating restaurant subscription:", err);
+    }
 
     // 3. Trigger celebration confetti 🎉
     try {

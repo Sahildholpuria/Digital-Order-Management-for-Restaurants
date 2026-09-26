@@ -640,7 +640,7 @@ export const SettingsManager: React.FC = () => {
         currentStatus={settings?.subscriptionStatus}
         currentPlan={settings?.planType}
         onSuccess={() => {
-          setIsSubModalOpen(false);
+          // Keep modal open so the owner can review and print their payment receipt!
           if (settings?.id) {
             subscriptionService.getPayments(settings.id).then(setPaymentHistory);
           }
