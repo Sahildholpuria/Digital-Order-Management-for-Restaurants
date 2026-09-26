@@ -50,7 +50,31 @@ export const SettingsManager: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<SubscriptionPaymentRecord[]>([]);
+  const [isSubFeatureEnabled, setIsSubFeatureEnabled] = useState<boolean>(() => {
+    const local = localStorage.getItem('saas_subscription_feature_enabled');
+    return local === null ? true : local === 'true';
+  });
   const eligibility = getRenewalEligibility(settings?.subscriptionStatus, settings?.subscriptionExpiresAt);
+
+  useEffect(() => {
+    subscriptionService.isFeatureEnabled().then(setIsSubFeatureEnabled);
+
+    const handleToggle = (e: any) => {
+      if (e.detail?.enabled !== undefined) {
+        setIsSubFeatureEnabled(e.detail.enabled);
+      } else {
+        subscriptionService.isFeatureEnabled().then(setIsSubFeatureEnabled);
+      }
+    };
+
+    window.addEventListener('subscription-feature-toggle', handleToggle);
+    window.addEventListener('restaurant-db-update', handleToggle);
+
+    return () => {
+      window.removeEventListener('subscription-feature-toggle', handleToggle);
+      window.removeEventListener('restaurant-db-update', handleToggle);
+    };
+  }, []);
 
   useEffect(() => {
     if (settings?.id) {
@@ -311,7 +335,8 @@ export const SettingsManager: React.FC = () => {
         {/* Financial & Styling details */}
         <div className="space-y-6 lg:col-span-1">
           
-          {/* Subscription Plan & Renewal Card */}
+          {/* Subscription Plan & Renewal Card (Controlled by Super Admin single-button feature toggle) */}
+          {isSubFeatureEnabled && (
           <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/25 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 relative overflow-hidden">
             <div className="flex items-center justify-between pb-3 border-b border-emerald-500/10">
               <div className="flex items-center gap-2">
@@ -442,6 +467,7 @@ export const SettingsManager: React.FC = () => {
               )}
             </div>
           </div>
+          )}
           
           {/* Financial Invoicing */}
           <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 overflow-hidden">
@@ -651,6 +677,7 @@ export const SettingsManager: React.FC = () => {
 
       </div>
 
+      {isSubFeatureEnabled && (
       <SubscriptionModal
         isOpen={isSubModalOpen}
         onClose={() => setIsSubModalOpen(false)}
@@ -668,6 +695,7 @@ export const SettingsManager: React.FC = () => {
           }
         }}
       />
+      )}
     </form>
   );
 };

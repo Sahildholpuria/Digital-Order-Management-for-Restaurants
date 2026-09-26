@@ -20,6 +20,7 @@ export interface SubscriptionPaymentRecord {
 }
 
 const STORAGE_KEY = "saas_subscription_payments";
+const FEATURE_ENABLED_KEY = "saas_subscription_feature_enabled";
 
 export const subscriptionService = {
   /**
@@ -178,6 +179,65 @@ export const subscriptionService = {
       payment: paymentRecord,
       newExpiresAt: newExpiresAtIso
     };
+  },
+
+  /**
+   * Checks whether the Subscription Plan feature is visible to restaurant owners.
+   * Super Admins can toggle this on/off platform-wide with a single button.
+   */
+  async isFeatureEnabled(): Promise<boolean> {
+    try {
+      const local = localStorage.getItem(FEATURE_ENABLED_KEY);
+      if (local !== null) {
+        return local === "true";
+      }
+    } catch (_) {}
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from("system_config")
+          .select("value")
+          .eq("key", "subscription_feature_enabled")
+          .single();
+        if (!error && data && data.value !== undefined) {
+          const val = Boolean(data.value);
+          try {
+            localStorage.setItem(FEATURE_ENABLED_KEY, val ? "true" : "false");
+          } catch (_) {}
+          return val;
+        }
+      } catch (_) {}
+    }
+
+    return true;
+  },
+
+  /**
+   * Super Admin single-click toggle to show or hide the Subscription Plan feature.
+   */
+  async setFeatureEnabled(enabled: boolean): Promise<void> {
+    try {
+      localStorage.setItem(FEATURE_ENABLED_KEY, enabled ? "true" : "false");
+    } catch (_) {}
+
+    // Broadcast instant update across application
+    window.dispatchEvent(new CustomEvent("subscription-feature-toggle", { detail: { enabled } }));
+    window.dispatchEvent(new Event("restaurant-db-update"));
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from("system_config")
+          .upsert({
+            key: "subscription_feature_enabled",
+            value: enabled,
+            updated_at: new Date().toISOString()
+          });
+      } catch (err) {
+        console.warn("Notice updating system_config in Supabase:", err);
+      }
+    }
   }
 };
 

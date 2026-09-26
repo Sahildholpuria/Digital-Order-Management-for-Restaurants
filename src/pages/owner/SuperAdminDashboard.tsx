@@ -68,6 +68,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const [announcements, setAnnouncements] = useState<SaaSAnnouncement[]>([]);
   const [activeTab, setActiveTab] = useState<'restaurants' | 'users' | 'announcements' | 'subscriptions'>('restaurants');
   const [subPayments, setSubPayments] = useState<SubscriptionPaymentRecord[]>([]);
+  const [isSubFeatureEnabled, setIsSubFeatureEnabled] = useState<boolean>(() => {
+    const val = localStorage.getItem('saas_subscription_feature_enabled');
+    return val === null ? true : val === 'true';
+  });
+  const [isTogglingSubFeature, setIsTogglingSubFeature] = useState(false);
   const [rzpKeyInput, setRzpKeyInput] = useState(() => getRazorpayKeyId());
   const [rzpSecretInput, setRzpSecretInput] = useState(() => getRazorpayKeySecret());
   const [loading, setLoading] = useState(true);
@@ -167,8 +172,23 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   useEffect(() => {
     if (currentUser?.isSuperAdmin) {
       fetchAllData();
+      subscriptionService.isFeatureEnabled().then(setIsSubFeatureEnabled);
     }
   }, [currentUser?.isSuperAdmin]);
+
+  const handleToggleSubscriptionFeature = async () => {
+    setIsTogglingSubFeature(true);
+    const nextState = !isSubFeatureEnabled;
+    setIsSubFeatureEnabled(nextState);
+    await subscriptionService.setFeatureEnabled(nextState);
+    setIsTogglingSubFeature(false);
+    showToast(
+      nextState
+        ? "✓ Subscription Plan section is now VISIBLE in restaurant settings."
+        : "✕ Subscription Plan section is now HIDDEN from restaurant settings.",
+      "success"
+    );
+  };
 
   // Close any active modal overlay on Escape key press
   useEffect(() => {
@@ -698,6 +718,33 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
             <Plus className="w-4 h-4 text-emerald-300" />
             <span>+ Create Staff User</span>
           </button>
+
+          {/* Quick 1-Click Subscription Feature Visibility Button */}
+          <button
+            type="button"
+            onClick={handleToggleSubscriptionFeature}
+            disabled={isTogglingSubFeature}
+            className={`flex items-center justify-center gap-2 font-black px-4 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap active:scale-95 border backdrop-blur-md ${
+              isSubFeatureEnabled
+                ? "bg-emerald-500/30 hover:bg-emerald-500/40 text-white border-emerald-300/40"
+                : "bg-rose-500/30 hover:bg-rose-500/40 text-rose-100 border-rose-300/40"
+            }`}
+            title="Single-click button to toggle Subscription Plan section visibility in restaurant settings"
+          >
+            {isSubFeatureEnabled ? (
+              <>
+                <Eye className="w-4 h-4 text-emerald-300" />
+                <span>Subscriptions: Visible</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-4 h-4 text-rose-300" />
+                <span>Subscriptions: Hidden</span>
+                <span className="w-2 h-2 rounded-full bg-rose-400 ml-0.5" />
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -798,6 +845,61 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
             {/* ===== SAAS SUBSCRIPTIONS & RAZORPAY TAB VIEW ===== */}
       {activeTab === "subscriptions" && (
         <div className="space-y-6 animate-fade-in">
+          {/* Subscription Feature Visibility Master Toggle */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 p-5 sm:p-6 rounded-3xl shadow-sm text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                isSubFeatureEnabled
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                  : "bg-rose-500/20 text-rose-400 border-rose-500/30"
+              }`}>
+                {isSubFeatureEnabled ? <Eye className="w-6 h-6" /> : <EyeOff className="w-6 h-6" />}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-black text-white">
+                    Subscription Feature Visibility
+                  </h3>
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                    isSubFeatureEnabled
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                      : "bg-rose-500/20 border-rose-500/40 text-rose-300"
+                  }`}>
+                    {isSubFeatureEnabled ? "Visible in Settings" : "Hidden from Settings"}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  {isSubFeatureEnabled
+                    ? "The Subscription Plan & Renewal section is currently visible in all restaurant settings."
+                    : "The Subscription Plan & Renewal section is completely hidden from all restaurant settings. Restaurant owners cannot see or access it."}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleSubscriptionFeature}
+              disabled={isTogglingSubFeature}
+              className={`flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95 shrink-0 ${
+                isSubFeatureEnabled
+                  ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+              }`}
+            >
+              {isSubFeatureEnabled ? (
+                <>
+                  <EyeOff className="w-4 h-4" />
+                  <span>Hide Subscription Section</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4" />
+                  <span>Show Subscription Section</span>
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Revenue Overview Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm">
