@@ -162,7 +162,7 @@ export const SettingsManager: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Brand Details Block */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 lg:col-span-2">
+        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 lg:col-span-2 overflow-hidden">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
             <Building className="w-5 h-5 text-brand-500" />
             <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">Brand Information</h3>
@@ -240,36 +240,53 @@ export const SettingsManager: React.FC = () => {
               </div>
             </div>
 
-            {/* Operating Times */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Opening Time</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Clock className="w-4 h-4" />
-                  </span>
+            {/* Store Operating Hours Section */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="w-4 h-4 text-brand-500" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Store Operating Hours
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Opening Time Row */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Opening Time</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Start Service</p>
+                    </div>
+                  </div>
                   <input
                     type="time"
                     required
                     value={openingHours}
                     onChange={(e) => setOpeningHours(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono shadow-sm shrink-0"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Closing Time</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Clock className="w-4 h-4" />
-                  </span>
+                {/* Closing Time Row */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Closing Time</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Kitchen Close</p>
+                    </div>
+                  </div>
                   <input
                     type="time"
                     required
                     value={closingHours}
                     onChange={(e) => setClosingHours(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono shadow-sm shrink-0"
                   />
                 </div>
               </div>
@@ -282,7 +299,7 @@ export const SettingsManager: React.FC = () => {
         <div className="space-y-6 lg:col-span-1">
           
           {/* Financial Invoicing */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 overflow-hidden">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
               <Receipt className="w-5 h-5 text-brand-500" />
               <h3 className="font-extrabold text-slate-805 dark:text-slate-100 text-sm uppercase tracking-wider">Invoicing Details</h3>
