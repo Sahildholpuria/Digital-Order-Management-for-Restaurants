@@ -284,7 +284,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 Payment Received & Activated!
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto font-medium">
-                Thank you for renewing <strong className="text-slate-900 dark:text-white">{restaurantName}</strong>. Your payment was verified through Razorpay and your SaaS subscription is fully active.
+                Thank you for renewing <strong className="text-slate-900 dark:text-white">{restaurantName}</strong>. Your payment was verified through Razorpay and your subscription is fully active.
               </p>
             </div>
 
@@ -447,7 +447,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               <div className="relative z-10 max-w-xl">
                 <div className="flex items-center gap-2 text-emerald-200 text-xs font-black uppercase tracking-widest mb-1.5">
                   <CreditCard className="w-4 h-4" />
-                  <span>SaaS Subscription & Renewal</span>
+                  <span>Subscription & Renewal</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
                   Choose Your 6-Month Plan for {restaurantName}

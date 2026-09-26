@@ -311,13 +311,13 @@ export const SettingsManager: React.FC = () => {
         {/* Financial & Styling details */}
         <div className="space-y-6 lg:col-span-1">
           
-          {/* SaaS Subscription & Razorpay Renewal Card */}
-          <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/30 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 relative overflow-hidden">
+          {/* Subscription Plan & Renewal Card */}
+          <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/25 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 relative overflow-hidden">
             <div className="flex items-center justify-between pb-3 border-b border-emerald-500/10">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">
-                  SaaS Subscription Plan
+                  Subscription Plan
                 </h3>
               </div>
               <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
@@ -331,87 +331,109 @@ export const SettingsManager: React.FC = () => {
               </span>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-base font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>{settings?.planType === "pro" ? "Pro Restaurant Plan" : "Starter Plan"}</span>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-base font-black text-slate-900 dark:text-white">
+                      {settings?.planType === "pro" ? "Pro Restaurant Plan" : "Starter Plan"}
+                    </p>
                     <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-2 py-0.5 rounded-md">
                       6 Months
                     </span>
-                  </p>
+                  </div>
                   <p className="text-xs text-slate-400 mt-0.5">
                     {settings?.planType === "pro" ? "₹6,999 / 6 Months (₹1,166/mo)" : "₹2,999 / 6 Months (₹500/mo)"}
                   </p>
                 </div>
                 
-                <div className="text-right">
+                <div className="sm:text-right shrink-0">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Renews / Expires</span>
                   <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                    {settings?.subscriptionExpiresAt ? new Date(settings.subscriptionExpiresAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }) : "30-Day Trial"}
+                    {settings?.subscriptionExpiresAt 
+                      ? new Date(settings.subscriptionExpiresAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }) 
+                      : "30-Day Trial"}
                   </span>
                 </div>
               </div>
 
-              {/* Action Button to Open Razorpay Modal - 15 Day Window Enforced */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (eligibility.canRenew) {
-                    setIsSubModalOpen(true);
-                  }
-                }}
-                disabled={!eligibility.canRenew}
-                className={`w-full py-3.5 px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                  eligibility.canRenew
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 cursor-pointer active:scale-95"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-75"
-                }`}
-                title={!eligibility.canRenew ? `Renewal locked: opens 15 days before expiry (${eligibility.daysUntilRenewalOpens} days left)` : "Click to renew with Razorpay"}
-              >
-                {eligibility.canRenew ? (
-                  <>
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span>
-                      {settings?.subscriptionStatus === "expired"
-                        ? "⚡ Renew Expired Subscription with Razorpay"
-                        : settings?.subscriptionStatus === "trial"
-                        ? "⚡ Activate 6-Month Plan with Razorpay"
-                        : `⚡ Renew Subscription (${eligibility.daysLeft} Days Left)`}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>
-                      Renewal Opens in ${eligibility.daysUntilRenewalOpens} Days (${eligibility.daysLeft} Days Left)
-                    </span>
-                  </>
-                )}
-              </button>
-
-              {!eligibility.canRenew && (
-                <p className="text-[10px] text-slate-400 font-medium text-center leading-tight">
-                  🔒 Subscription is active. Renewal button automatically enables 15 days before expiry (on ${eligibility.renewalOpenDate?.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}).
-                </p>
+              {/* Action Button / Active Status */}
+              {eligibility.canRenew ? (
+                <button
+                  type="button"
+                  onClick={() => setIsSubModalOpen(true)}
+                  className="w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 cursor-pointer active:scale-98 transition-all flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span>
+                    {settings?.subscriptionStatus === "expired"
+                      ? "Renew Subscription with Razorpay"
+                      : settings?.subscriptionStatus === "trial"
+                      ? "Activate 6-Month Plan with Razorpay"
+                      : `Renew Subscription (${eligibility.daysLeft} Days Left)`}
+                  </span>
+                </button>
+              ) : (
+                <div className="bg-white/60 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        Active & Protected
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {eligibility.daysLeft} days left • Renewal unlocks 15 days before expiry
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2 py-1 rounded-lg shrink-0 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-slate-400" />
+                    <span>Locked</span>
+                  </span>
+                </div>
               )}
 
-              {/* Recent Payment Receipts / History preview */}
+              {/* Recent Renewal Invoices (Strictly 3 visible, clean & responsive) */}
               {paymentHistory.length > 0 && (
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Recent Renewal Invoices
-                  </span>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {paymentHistory.slice(0, 3).map(pay => (
-                      <div key={pay.id} className="flex justify-between items-center bg-white/60 dark:bg-slate-800/60 p-2 rounded-xl text-[11px] border border-slate-100 dark:border-slate-800">
-                        <div>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">{pay.planName}</span>
-                          <span className="text-[9px] text-slate-400 ml-1.5">{new Date(pay.paidAt).toLocaleDateString()}</span>
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Recent Invoices
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-400">
+                      Last 3 payments
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {paymentHistory.slice(0, 3).map((pay) => (
+                      <div
+                        key={pay.id}
+                        className="flex items-center justify-between gap-2 bg-white/80 dark:bg-slate-800/60 p-2.5 rounded-xl text-xs border border-slate-100 dark:border-slate-800 shadow-2xs hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-800 dark:text-slate-200 truncate leading-snug">
+                            {pay.planName}
+                          </p>
+                          <p className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                            <span>{new Date(pay.paidAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</span>
+                            {pay.razorpayPaymentId && (
+                              <span className="font-mono text-[9px] text-slate-400 truncate max-w-[100px]">
+                                • {pay.razorpayPaymentId}
+                              </span>
+                            )}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400">₹{pay.amount.toLocaleString()}</span>
-                          <span className="text-[9px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold uppercase">Paid</span>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-black text-slate-900 dark:text-white">
+                            ₹{pay.amount.toLocaleString()}
+                          </span>
+                          <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                            Paid
+                          </span>
                         </div>
                       </div>
                     ))}
