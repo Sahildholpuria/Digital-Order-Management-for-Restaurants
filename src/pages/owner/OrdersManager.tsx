@@ -533,7 +533,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
         {order.status === 'served' && (
           <button
             onClick={() => {
-              window.location.hash = `#billing`;
+              window.history.pushState(null, "", "/admin/billing");
+              window.dispatchEvent(new PopStateEvent("popstate"));
             }}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow-sm transition-all"
           >

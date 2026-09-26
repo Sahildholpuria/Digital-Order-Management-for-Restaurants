@@ -158,6 +158,51 @@ const CustomConfirmModal: React.FC = () => {
   );
 };
 
+export const VALID_ADMIN_TABS = [
+  "superadmin",
+  "dashboard",
+  "orders",
+  "tables",
+  "menu",
+  "billing",
+  "reports",
+  "settings",
+] as const;
+
+export type AdminTab = (typeof VALID_ADMIN_TABS)[number];
+
+export const extractTabFromLocation = (pathname: string, hash: string = ""): AdminTab | null => {
+  // Backward compatibility: If legacy hash like #billing or #orders was supplied
+  const cleanHash = hash.replace(/^#/, "").toLowerCase();
+  if (VALID_ADMIN_TABS.includes(cleanHash as AdminTab)) {
+    return cleanHash as AdminTab;
+  }
+
+  // Check /admin/:tab or /dashboard/:tab
+  const match = pathname.match(/^\/(?:admin|dashboard)(?:\/([a-zA-Z0-9_-]+))?\/?$/);
+  if (match) {
+    if (match[1] && VALID_ADMIN_TABS.includes(match[1] as AdminTab)) {
+      return match[1] as AdminTab;
+    }
+  }
+
+  // Check direct alias: /:tab (e.g. /orders, /billing, /tables, /reports, /settings, /superadmin, /dashboard)
+  const directMatch = pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+  if (directMatch && VALID_ADMIN_TABS.includes(directMatch[1] as AdminTab)) {
+    return directMatch[1] as AdminTab;
+  }
+
+  return null;
+};
+
+export const isAdminPortalRoute = (pathname: string): boolean => {
+  if (pathname === "/admin" || pathname === "/dashboard") return true;
+  if (pathname.startsWith("/admin/") || pathname.startsWith("/dashboard/")) return true;
+  const directMatch = pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+  if (directMatch && VALID_ADMIN_TABS.includes(directMatch[1] as AdminTab)) return true;
+  return false;
+};
+
 export const App: React.FC = () => {
   const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t } = useRestaurant();
   const { theme, toggleTheme } = useTheme();
@@ -172,34 +217,53 @@ export const App: React.FC = () => {
   const isImpersonating = !!(currentUser?.isSuperAdmin && impersonatedTenantId);
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const hash = window.location.hash.replace('#', '');
-    const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
-    if (validTabs.includes(hash)) {
-      return hash;
+    const tabFromUrl = extractTabFromLocation(window.location.pathname, window.location.hash);
+    if (tabFromUrl) {
+      return tabFromUrl;
     }
-    const saved = localStorage.getItem('pos_portal_active_tab');
-    if (saved && validTabs.includes(saved)) {
+    const saved = localStorage.getItem("pos_portal_active_tab");
+    if (saved && VALID_ADMIN_TABS.includes(saved as AdminTab)) {
       return saved;
     }
-    return 'dashboard';
+    return "dashboard";
   });
 
   const handleImpersonate = (targetRestaurantId: string) => {
     setImpersonatedTenantId(targetRestaurantId);
-    localStorage.setItem('superadmin_impersonated_tenant_id', targetRestaurantId);
-    localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+    localStorage.setItem("superadmin_impersonated_tenant_id", targetRestaurantId);
+    localStorage.setItem("last_active_staff_restaurant_id", targetRestaurantId);
     setRestaurantId(targetRestaurantId);
-    setActiveTab('dashboard');
-    window.location.hash = '#dashboard';
+    setActiveTab("dashboard");
+    window.history.pushState(null, "", "/admin/dashboard");
+    setCurrentPath("/admin/dashboard");
+    setCurrentHash("");
   };
 
   const handleExitImpersonation = () => {
     setImpersonatedTenantId(null);
-    localStorage.removeItem('superadmin_impersonated_tenant_id');
-    localStorage.removeItem('last_active_staff_restaurant_id');
-    setRestaurantId('');
-    setActiveTab('superadmin');
-    window.location.hash = '#superadmin';
+    localStorage.removeItem("superadmin_impersonated_tenant_id");
+    localStorage.removeItem("last_active_staff_restaurant_id");
+    setRestaurantId("");
+    setActiveTab("superadmin");
+    window.history.pushState(null, "", "/admin/superadmin");
+    setCurrentPath("/admin/superadmin");
+    setCurrentHash("");
+  };
+
+  const handleSelectTab = (tabId: string) => {
+    if (tabId === "superadmin" && isImpersonating) {
+      handleExitImpersonation();
+      return;
+    }
+    setActiveTab(tabId);
+    localStorage.setItem("pos_portal_active_tab", tabId);
+    const newPath = `/admin/${tabId}`;
+    if (window.location.pathname !== newPath || window.location.hash) {
+      window.history.pushState(null, "", newPath);
+      setCurrentPath(newPath);
+      setCurrentHash("");
+    }
+    setMobileSidebarOpen(false);
   };
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -249,23 +313,29 @@ export const App: React.FC = () => {
   // Sync route on browser navigation (back/forward)
   useEffect(() => {
     const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname);
-      setCurrentHash(window.location.hash);
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      setCurrentPath(path);
+      setCurrentHash(hash);
       setCurrentSearch(window.location.search);
       
-      const hash = window.location.hash.replace('#', '');
-      const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
-      if (validTabs.includes(hash)) {
-        setActiveTab(hash);
+      const tabFromUrl = extractTabFromLocation(path, hash);
+      if (tabFromUrl) {
+        setActiveTab(tabFromUrl);
+        // Normalize away any legacy hash (#billing) in address bar to /admin/:tab
+        if (hash) {
+          window.history.replaceState(null, "", `/admin/${tabFromUrl}`);
+          setCurrentHash("");
+        }
       }
     };
 
-    window.addEventListener('popstate', handleLocationChange);
-    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("hashchange", handleLocationChange);
 
     return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("hashchange", handleLocationChange);
     };
   }, []);
 
@@ -283,35 +353,48 @@ export const App: React.FC = () => {
   // Automatically switch to superadmin tab on login if Super Admin and not impersonating
   useEffect(() => {
     if (currentUser?.isSuperAdmin && !impersonatedTenantId) {
-      const hash = window.location.hash.replace('#', '');
-      const validTabs = ['superadmin', 'dashboard', 'orders', 'tables', 'menu', 'billing', 'reports', 'settings'];
-      if (!validTabs.includes(hash)) {
-        setActiveTab('superadmin');
+      const tabFromUrl = extractTabFromLocation(window.location.pathname, window.location.hash);
+      if (!tabFromUrl || tabFromUrl === "dashboard") {
+        setActiveTab("superadmin");
       }
     }
   }, [currentUser, impersonatedTenantId]);
 
-  // Persist tab change to URL hash and localStorage
+  // Keep URL clean and synced with activeTab when inside admin portal (removes # entirely)
   useEffect(() => {
-    if (currentPath === '/admin' || currentPath === '/dashboard') {
-      localStorage.setItem('pos_portal_active_tab', activeTab);
-      window.history.replaceState(null, '', `${currentPath}#${activeTab}`);
+    if (isAdminPortalRoute(currentPath)) {
+      localStorage.setItem("pos_portal_active_tab", activeTab);
+      const targetPath = `/admin/${activeTab}`;
+      // Clean up if currently on bare /admin or with hash or on alias like /orders
+      if (window.location.pathname !== targetPath || window.location.hash) {
+        window.history.replaceState(null, "", targetPath);
+        setCurrentPath(targetPath);
+        setCurrentHash("");
+      }
     }
   }, [activeTab, currentPath]);
 
-  const navigateTo = (pathOrUrl: string, hash: string = '') => {
+  const navigateTo = (pathOrUrl: string, hash: string = "") => {
     try {
       const parsed = new URL(pathOrUrl, window.location.origin);
       const targetHash = hash || parsed.hash;
-      window.history.pushState(null, '', parsed.pathname + parsed.search + targetHash);
+      window.history.pushState(null, "", parsed.pathname + parsed.search + targetHash);
       setCurrentPath(parsed.pathname);
       setCurrentHash(targetHash);
       setCurrentSearch(parsed.search);
+      const tab = extractTabFromLocation(parsed.pathname, targetHash);
+      if (tab) {
+        setActiveTab(tab);
+      }
     } catch {
-      window.history.pushState(null, '', pathOrUrl + hash);
+      window.history.pushState(null, "", pathOrUrl + hash);
       setCurrentPath(pathOrUrl);
       setCurrentHash(hash);
       setCurrentSearch(window.location.search);
+      const tab = extractTabFromLocation(pathOrUrl, hash);
+      if (tab) {
+        setActiveTab(tab);
+      }
     }
   };
 
@@ -424,9 +507,10 @@ export const App: React.FC = () => {
         if (redirectParam && redirectParam.startsWith('/')) {
           return redirectParam;
         }
-        if (user?.role === 'kitchen') return '/kitchen';
-        if (user?.role === 'waiter') return '/waiter';
-        return '/admin';
+        if (user?.role === "kitchen") return "/kitchen";
+        if (user?.role === "waiter") return "/waiter";
+        if (user?.isSuperAdmin) return "/admin/superadmin";
+        return "/admin/dashboard";
       };
 
       if (currentUser) {
@@ -443,14 +527,15 @@ export const App: React.FC = () => {
     // ==========================================
     // MANAGEMENT SIDEBAR PORTAL RENDER
     // ==========================================
-    if (currentPath === '/admin' || currentPath === '/dashboard') {
+    if (isAdminPortalRoute(currentPath)) {
       if (!currentUser) {
         return (
           <Suspense fallback={<LazyLoader />}>
             <Login onSuccess={(user?: UserProfile | null) => {
-              if (user?.role === 'kitchen') navigateTo('/kitchen');
-              else if (user?.role === 'waiter') navigateTo('/waiter');
-              else navigateTo('/admin');
+              if (user?.role === "kitchen") navigateTo("/kitchen");
+              else if (user?.role === "waiter") navigateTo("/waiter");
+              else if (user?.isSuperAdmin) navigateTo("/admin/superadmin");
+              else navigateTo("/admin/dashboard");
             }} />
           </Suspense>
         );
@@ -670,14 +755,7 @@ export const App: React.FC = () => {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => {
-                        if (item.id === 'superadmin' && isImpersonating) {
-                          handleExitImpersonation();
-                        } else {
-                          setActiveTab(item.id);
-                        }
-                        setMobileSidebarOpen(false);
-                      }}
+                      onClick={() => handleSelectTab(item.id)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                         isActive 
                           ? 'bg-brand-600 text-white shadow-md shadow-brand-500/15'
@@ -861,7 +939,7 @@ export const App: React.FC = () => {
           
           {/* Owner POS terminal Card */}
           <div 
-            onClick={() => navigateTo(currentUser ? '/admin' : '/login')}
+            onClick={() => navigateTo(currentUser ? (currentUser.isSuperAdmin ? "/admin/superadmin" : "/admin/dashboard") : "/login")}
             className="bg-white/75 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/60 p-8 rounded-3xl shadow-glass hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between backdrop-blur-md h-80 hover:-translate-y-1 duration-300"
           >
             <div>

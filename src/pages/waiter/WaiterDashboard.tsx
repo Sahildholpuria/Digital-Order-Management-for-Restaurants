@@ -303,7 +303,8 @@ export const WaiterDashboard: React.FC = () => {
               <button
                 onClick={() => {
                   // Direct POS Checkout link
-                  window.location.hash = `#billing`;
+                  window.history.pushState(null, "", "/admin/billing");
+                  window.dispatchEvent(new PopStateEvent("popstate"));
                   setSelectedTable(null);
                 }}
                 disabled={selectedTableOrders.length === 0}

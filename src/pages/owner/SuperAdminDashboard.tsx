@@ -435,7 +435,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
       setRestaurantId(restaurantId);
       localStorage.setItem('superadmin_impersonated_tenant_id', restaurantId);
       localStorage.setItem('last_active_staff_restaurant_id', restaurantId);
-      window.location.hash = '#dashboard';
+      window.history.pushState(null, "", "/admin/dashboard");
+      window.dispatchEvent(new PopStateEvent("popstate"));
     }
   };
 
