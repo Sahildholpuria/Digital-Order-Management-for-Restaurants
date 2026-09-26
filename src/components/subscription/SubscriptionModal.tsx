@@ -11,7 +11,12 @@ import {
   Lock,
   Building2,
   Calendar,
-  Loader2
+  Loader2,
+  Copy,
+  Check,
+  Printer,
+  Clock,
+  Info
 } from "lucide-react";
 import {
   SAAS_SUBSCRIPTION_PLANS,
@@ -19,7 +24,8 @@ import {
   formatINR,
   getRazorpayKeyId,
   loadRazorpayScript,
-  calculateNextExpiry
+  calculateNextExpiry,
+  getRenewalEligibility
 } from "../../config/subscriptionPlans";
 import subscriptionService from "../../services/subscriptionService";
 
@@ -55,11 +61,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const [paymentSuccess, setPaymentSuccess] = useState<{
     paymentId: string;
     newExpiresAt: string;
+    paidAt: string;
     plan: SubscriptionPlan;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copiedPayId, setCopiedPayId] = useState(false);
 
   if (!isOpen) return null;
+
+  // 15-day Renewal Window Enforcement Rule
+  const eligibility = getRenewalEligibility(currentStatus, currentExpiresAt);
 
   const selectedPlan =
     SAAS_SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId) ||
@@ -77,7 +88,32 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     day: "numeric"
   });
 
+  const nextRenewalOpensDate = new Date(
+    calculatedNewExpiry.getTime() - 15 * 24 * 60 * 60 * 1000
+  ).toLocaleDateString([], {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+
+  const handleCopyPaymentId = (text: string) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedPayId(true);
+    setTimeout(() => setCopiedPayId(false), 2000);
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
+  };
+
   const handlePayWithRazorpay = async () => {
+    if (!eligibility.canRenew) {
+      setErrorMessage(
+        `Renewal is locked until 15 days before expiry (${eligibility.daysUntilRenewalOpens} days left until renewal opens).`
+      );
+      return;
+    }
+
     setIsProcessing(true);
     setErrorMessage(null);
 
@@ -88,17 +124,17 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         !razorpayKey.includes("RestaurantsOS") &&
         (razorpayKey.startsWith("rzp_live_") || razorpayKey.startsWith("rzp_test_"));
 
-      // Try loading Razorpay Checkout script
+      // Load Razorpay Checkout v1 script
       const scriptLoaded = await loadRazorpayScript();
 
       if (scriptLoaded && isRealKey && (window as any).Razorpay) {
-        // Real Razorpay Standard Checkout
+        // Real Razorpay Checkout modal
         const options = {
           key: razorpayKey,
-          amount: selectedPlan.price * 100, // paise
+          amount: selectedPlan.price * 100, // in paise
           currency: "INR",
           name: "RestaurantsOS",
-          description: `${selectedPlan.name} (6 Months Renewal)`,
+          description: `${selectedPlan.name} (6 Months Subscription)`,
           image: "https://www.restaurantsos.in/favicon.svg",
           prefill: {
             name: restaurantName,
@@ -128,6 +164,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               setPaymentSuccess({
                 paymentId: result.payment.razorpayPaymentId,
                 newExpiresAt: result.newExpiresAt,
+                paidAt: result.payment.paidAt,
                 plan: selectedPlan
               });
               if (onSuccess) {
@@ -155,8 +192,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         });
         rzp.open();
       } else {
-        // Demonstration / Test Mode (Instant Sandbox Simulation)
-        // Allows testing without waiting for live merchant approval
+        // Demonstration Sandbox Simulation
         setTimeout(async () => {
           try {
             const mockPaymentId = `pay_test_${Math.random().toString(36).substring(2, 10)}`;
@@ -171,6 +207,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             setPaymentSuccess({
               paymentId: result.payment.razorpayPaymentId,
               newExpiresAt: result.newExpiresAt,
+              paidAt: result.payment.paidAt,
               plan: selectedPlan
             });
             if (onSuccess) {
@@ -209,66 +246,178 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         )}
 
         {paymentSuccess ? (
-          /* ===== PAYMENT SUCCESS STATE ===== */
-          <div className="p-8 sm:p-12 text-center space-y-6 animate-fade-in">
-            <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-emerald-500/20 animate-bounce duration-1000">
-              <ShieldCheck className="w-10 h-10" />
-            </div>
-
-            <div className="space-y-2">
+          /* ====================================================
+             ===== SUCCESS MODAL: PAYMENT, SUBSCRIPTION & RENEWAL =====
+             ==================================================== */
+          <div className="p-6 sm:p-10 space-y-6 animate-fade-in">
+            {/* Header Badge */}
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-emerald-500/20 animate-bounce duration-1000">
+                <ShieldCheck className="w-9 h-9" />
+              </div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Subscription Activated</span>
+                <span>Subscription Renewed Successfully</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                Payment Successful!
+                Payment Received & Activated!
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto font-medium">
-                Your restaurant subscription has been renewed for{" "}
-                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
-                  6 Months
-                </strong>
-                . Your live POS, tables, and KDS tickets are fully active.
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto font-medium">
+                Thank you for renewing <strong className="text-slate-900 dark:text-white">{restaurantName}</strong>. Your payment was verified through Razorpay and your SaaS subscription is fully active.
               </p>
             </div>
 
-            {/* Receipt Details Box */}
-            <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 max-w-md mx-auto text-left text-xs space-y-2.5">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700/60">
-                <span className="text-slate-400 font-bold uppercase text-[10px]">Restaurant:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{restaurantName}</span>
+            {/* Structured Invoice Summary Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              
+              {/* Box 1: Payment Details */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-700/60 text-slate-900 dark:text-white font-extrabold uppercase text-[10px] tracking-wider">
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Payment Details</span>
+                </div>
+                
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Amount Paid</span>
+                  <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                    {formatINR(paymentSuccess.plan.price)}
+                  </p>
+                  <span className="text-[10px] text-slate-400 font-medium">All taxes & GST included</span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Payment Status</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Captured & Verified</span>
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Razorpay Ref ID</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300 font-bold truncate max-w-[130px]">
+                      {paymentSuccess.paymentId}
+                    </span>
+                    <button
+                      onClick={() => handleCopyPaymentId(paymentSuccess.paymentId)}
+                      className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 transition-colors"
+                      title="Copy Payment ID"
+                    >
+                      {copiedPayId ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Paid Timestamp</span>
+                  <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                    {new Date(paymentSuccess.paidAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-bold uppercase text-[10px]">Activated Plan:</span>
-                <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{paymentSuccess.plan.name}</span>
+
+              {/* Box 2: Subscription Details */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-700/60 text-slate-900 dark:text-white font-extrabold uppercase text-[10px] tracking-wider">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Subscription Plan</span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Current Plan</span>
+                  <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
+                    {paymentSuccess.plan.name}
+                  </p>
+                  <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded">
+                    6 Months Full Access
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Tenant Account</span>
+                  <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{restaurantName}</p>
+                  <p className="font-mono text-[10px] text-slate-400">{restaurantId}</p>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Plan Inclusions</span>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                    POS Billing Terminal, Table QR Digital Ordering, Kitchen KDS, Thermal Receipts, Reports.
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-bold uppercase text-[10px]">Amount Paid:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{formatINR(paymentSuccess.plan.price)} (6 Months)</span>
+
+              {/* Box 3: Next Renewal Date & Policy */}
+              <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-extrabold uppercase text-[10px] tracking-wider">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Next Renewal Date</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold uppercase block">
+                      Expires On
+                    </span>
+                    <p className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                      {new Date(paymentSuccess.newExpiresAt).toLocaleDateString([], {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric"
+                      })}
+                    </p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
+                      180 Days Active POS Access
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-emerald-500/20 text-[10px] text-slate-600 dark:text-slate-400 space-y-1">
+                    <div className="flex items-center gap-1 font-bold text-slate-900 dark:text-white">
+                      <Clock className="w-3 h-3 text-emerald-500" />
+                      <span>15-Day Renewal Window Rule</span>
+                    </div>
+                    <p className="leading-normal">
+                      Your next renewal button unlocks on <strong>{nextRenewalOpensDate}</strong> (15 days prior to expiration). Until then, all POS features run uninterrupted.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <span className="text-[9px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider block text-center">
+                    ✓ Zero Downtime Guaranteed
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-bold uppercase text-[10px]">Next Renewal Date:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{formattedNewExpiry}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700/60 font-mono text-[10px]">
-                <span className="text-slate-400 uppercase">Razorpay Ref ID:</span>
-                <span className="text-slate-600 dark:text-slate-300 font-bold truncate max-w-[200px]">{paymentSuccess.paymentId}</span>
-              </div>
+
             </div>
 
-            <button
-              onClick={() => {
-                onClose();
-                window.location.reload();
-              }}
-              className="bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs uppercase tracking-wider py-4 px-8 rounded-2xl transition-all shadow-lg shadow-brand-500/20 cursor-pointer inline-flex items-center gap-2"
-            >
-              <span>Return to Dashboard</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Bottom Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={handlePrintReceipt}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-slate-500" />
+                <span>Print / Save Tax Receipt</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onClose();
+                  window.location.reload();
+                }}
+                className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs uppercase tracking-wider py-3.5 px-8 rounded-2xl transition-all shadow-lg shadow-brand-500/20 cursor-pointer inline-flex items-center justify-center gap-2"
+              >
+                <span>Go to Dashboard & Start POS</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ) : (
-          /* ===== PLAN SELECTION & CHECKOUT FORM ===== */
+          /* ====================================================
+             ===== PLAN SELECTION & CHECKOUT FORM =====
+             ==================================================== */
           <div>
             {/* Header Banner */}
             <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 sm:p-8 text-white relative overflow-hidden">
@@ -292,6 +441,21 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             {errorMessage && (
               <div className="mx-6 mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold">
                 {errorMessage}
+              </div>
+            )}
+
+            {/* 15-Day Renewal Eligibility Notice Banner */}
+            {!eligibility.canRenew && (
+              <div className="mx-6 mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-3">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold text-sm text-amber-800 dark:text-amber-300">
+                    Subscription Currently Active ({eligibility.daysLeft} Days Remaining)
+                  </p>
+                  <p className="text-[11px] mt-0.5 opacity-90 leading-relaxed">
+                    Per the 15-day renewal rule, the renewal button unlocks <strong>15 days prior to expiration</strong> (in {eligibility.daysUntilRenewalOpens} days). Your active POS terminal and table orders will continue to operate normally with zero interruption.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -415,13 +579,22 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
                   <button
                     onClick={handlePayWithRazorpay}
-                    disabled={isProcessing}
-                    className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider py-4 px-8 rounded-2xl transition-all shadow-lg shadow-emerald-600/20 cursor-pointer flex items-center justify-center gap-2"
+                    disabled={isProcessing || !eligibility.canRenew}
+                    className={`w-full sm:w-auto font-black text-xs uppercase tracking-wider py-4 px-8 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 ${
+                      !eligibility.canRenew
+                        ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none border border-slate-300 dark:border-slate-700"
+                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20 cursor-pointer"
+                    }`}
                   >
                     {isProcessing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Connecting Razorpay...</span>
+                      </>
+                    ) : !eligibility.canRenew ? (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        <span>Renewal Locked ({eligibility.daysLeft} Days Remaining)</span>
                       </>
                     ) : (
                       <>

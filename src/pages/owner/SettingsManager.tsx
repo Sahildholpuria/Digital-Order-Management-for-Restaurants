@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { SubscriptionModal } from '../../components/subscription/SubscriptionModal';
 import subscriptionService, { SubscriptionPaymentRecord } from '../../services/subscriptionService';
-import { Zap, CreditCard, ShieldCheck } from 'lucide-react';
+import { Zap, CreditCard, ShieldCheck, Lock } from 'lucide-react';
+import { getRenewalEligibility } from '../../config/subscriptionPlans';
 import { 
   Building, 
   MapPin, 
@@ -49,6 +50,7 @@ export const SettingsManager: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<SubscriptionPaymentRecord[]>([]);
+  const eligibility = getRenewalEligibility(settings?.subscriptionStatus, settings?.subscriptionExpiresAt);
 
   useEffect(() => {
     if (settings?.id) {
@@ -351,15 +353,48 @@ export const SettingsManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Button to Open Razorpay Modal */}
+              {/* Action Button to Open Razorpay Modal - 15 Day Window Enforced */}
               <button
                 type="button"
-                onClick={() => setIsSubModalOpen(true)}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider py-3.5 px-4 rounded-2xl transition-all shadow-md shadow-emerald-600/20 cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+                onClick={() => {
+                  if (eligibility.canRenew) {
+                    setIsSubModalOpen(true);
+                  }
+                }}
+                disabled={!eligibility.canRenew}
+                className={`w-full py-3.5 px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                  eligibility.canRenew
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 cursor-pointer active:scale-95"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-75"
+                }`}
+                title={!eligibility.canRenew ? `Renewal locked: opens 15 days before expiry (${eligibility.daysUntilRenewalOpens} days left)` : "Click to renew with Razorpay"}
               >
-                <Zap className="w-4 h-4 fill-current" />
-                <span>Renew / Upgrade with Razorpay</span>
+                {eligibility.canRenew ? (
+                  <>
+                    <Zap className="w-4 h-4 fill-current" />
+                    <span>
+                      {settings?.subscriptionStatus === "expired"
+                        ? "⚡ Renew Expired Subscription with Razorpay"
+                        : settings?.subscriptionStatus === "trial"
+                        ? "⚡ Activate 6-Month Plan with Razorpay"
+                        : `⚡ Renew Subscription (${eligibility.daysLeft} Days Left)`}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <span>
+                      Renewal Opens in ${eligibility.daysUntilRenewalOpens} Days (${eligibility.daysLeft} Days Left)
+                    </span>
+                  </>
+                )}
               </button>
+
+              {!eligibility.canRenew && (
+                <p className="text-[10px] text-slate-400 font-medium text-center leading-tight">
+                  🔒 Subscription is active. Renewal button automatically enables 15 days before expiry (on ${eligibility.renewalOpenDate?.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}).
+                </p>
+              )}
 
               {/* Recent Payment Receipts / History preview */}
               {paymentHistory.length > 0 && (

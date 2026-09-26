@@ -103,6 +103,78 @@ export const calculateNextExpiry = (
   return next;
 };
 
+export const getDaysLeft = (expiryDate?: string): number | null => {
+  if (!expiryDate) return null;
+  const expiry = new Date(expiryDate).getTime();
+  const diff = expiry - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+export interface RenewalEligibility {
+  canRenew: boolean;
+  daysLeft: number | null;
+  daysUntilRenewalOpens: number;
+  renewalOpenDate: Date | null;
+  reason: string;
+}
+
+export const getRenewalEligibility = (
+  subscriptionStatus?: string,
+  subscriptionExpiresAt?: string
+): RenewalEligibility => {
+  const daysLeft = getDaysLeft(subscriptionExpiresAt);
+  const isExpired =
+    subscriptionStatus === "expired" ||
+    subscriptionStatus === "suspended" ||
+    (daysLeft !== null && daysLeft <= 0);
+  const isTrial = subscriptionStatus === "trial" || !subscriptionStatus;
+
+  if (isExpired) {
+    return {
+      canRenew: true,
+      daysLeft,
+      daysUntilRenewalOpens: 0,
+      renewalOpenDate: null,
+      reason: "Subscription has expired"
+    };
+  }
+
+  if (isTrial) {
+    return {
+      canRenew: true,
+      daysLeft,
+      daysUntilRenewalOpens: 0,
+      renewalOpenDate: null,
+      reason: "Trial active - upgrade anytime"
+    };
+  }
+
+  // Active plan: Only enable renew button before 15 days of subscription left
+  if (daysLeft !== null && daysLeft <= 15) {
+    return {
+      canRenew: true,
+      daysLeft,
+      daysUntilRenewalOpens: 0,
+      renewalOpenDate: null,
+      reason: `Expiring in ${daysLeft} days - renewal unlocked`
+    };
+  }
+
+  const expiryTime = subscriptionExpiresAt
+    ? new Date(subscriptionExpiresAt).getTime()
+    : Date.now();
+  const renewalOpenDate = new Date(expiryTime - 15 * 24 * 60 * 60 * 1000);
+  const daysUntilRenewalOpens = daysLeft !== null ? daysLeft - 15 : 0;
+
+  return {
+    canRenew: false,
+    daysLeft,
+    daysUntilRenewalOpens,
+    renewalOpenDate,
+    reason: `Renewal opens 15 days before expiry (in ${daysUntilRenewalOpens} days)`
+  };
+};
+
 // Razorpay Key Management
 const RAZORPAY_STORAGE_KEY = "saas_razorpay_key_id";
 const RAZORPAY_SECRET_KEY = "saas_razorpay_key_secret";
