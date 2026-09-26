@@ -7,9 +7,7 @@ import {
   Mail, 
   ArrowRight, 
   ShieldAlert, 
-  Sparkles,
-  CheckCircle2,
-  Zap
+  Sparkles
 } from 'lucide-react';
 
 interface LoginProps {
@@ -103,7 +101,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
         {/* Brand Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <RestaurantsOSLogo size="lg" showText={true} subtitle="Cloud POS & Restaurant Management" />
+            <RestaurantsOSLogo size="lg" showText={true} theme="dark" subtitle="Cloud POS & Restaurant Management" />
           </div>
           <h2 className="text-2xl font-black text-white font-sans tracking-tight mt-3">
             Staff Portal Login
@@ -161,7 +159,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-2 pt-1">
+            <div className="flex items-center mt-2 pt-1">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -174,11 +172,6 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
                   Remember Me
                 </span>
               </label>
-
-              <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                <Zap className="w-3 h-3 text-emerald-400" />
-                <span>Live Cloud DB</span>
-              </div>
             </div>
 
             <button

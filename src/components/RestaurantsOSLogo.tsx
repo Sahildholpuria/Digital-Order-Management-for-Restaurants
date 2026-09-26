@@ -6,6 +6,8 @@ interface RestaurantsOSLogoProps {
   subtitle?: string;
   className?: string;
   iconOnly?: boolean;
+  theme?: 'light' | 'dark' | 'auto';
+  textColor?: string;
 }
 
 export const RestaurantsOSLogo: React.FC<RestaurantsOSLogoProps> = ({
@@ -14,6 +16,8 @@ export const RestaurantsOSLogo: React.FC<RestaurantsOSLogoProps> = ({
   subtitle,
   className = '',
   iconOnly = false,
+  theme = 'auto',
+  textColor,
 }) => {
   const sizeMap = {
     sm: { box: 'w-7 h-7 rounded-lg', icon: 16, text: 'text-sm', sub: 'text-[9px]' },
@@ -23,6 +27,19 @@ export const RestaurantsOSLogo: React.FC<RestaurantsOSLogoProps> = ({
   };
 
   const current = sizeMap[size];
+
+  // Resolve text color based on explicit prop or theme mode
+  const titleColor = textColor 
+    ? textColor 
+    : theme === 'dark' 
+      ? 'text-white' 
+      : theme === 'light' 
+        ? 'text-slate-900' 
+        : 'text-slate-900 dark:text-white';
+
+  const subColor = theme === 'dark' 
+    ? 'text-emerald-300' 
+    : 'text-emerald-600 dark:text-emerald-400';
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
@@ -52,12 +69,12 @@ export const RestaurantsOSLogo: React.FC<RestaurantsOSLogoProps> = ({
 
       {/* Brand Text */}
       {showText && !iconOnly && (
-        <div className="flex flex-col leading-tight">
-          <span className={`font-black font-sans tracking-tight text-slate-900 dark:text-white ${current.text}`}>
-            Restaurants <span className="text-emerald-500 dark:text-emerald-400">OS</span>
+        <div className="flex flex-col leading-tight text-left">
+          <span className={`font-black font-sans tracking-tight ${titleColor} ${current.text}`}>
+            Restaurants <span className="text-emerald-400">OS</span>
           </span>
           {subtitle && (
-            <span className={`font-bold tracking-wider uppercase text-emerald-600/80 dark:text-emerald-400/80 ${current.sub}`}>
+            <span className={`font-extrabold tracking-wider uppercase ${subColor} ${current.sub}`}>
               {subtitle}
             </span>
           )}
