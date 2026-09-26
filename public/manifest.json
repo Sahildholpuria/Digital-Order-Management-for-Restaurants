@@ -1,7 +1,17 @@
 {
+  "id": "/",
+  "name": "RestaurantsOS — Digital Order Management & Cloud POS",
   "short_name": "RestaurantsOS",
-  "name": "Restaurants OS — Digital Order Management & Cloud POS",
-  "description": "Ultra-fast Digital Order Management System for Restaurants & Cafes",
+  "description": "Ultra-fast Cloud POS Billing, Table QR Menus & Kitchen Display System for Restaurants",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#070B14",
+  "theme_color": "#059669",
+  "orientation": "any",
+  "categories": ["business", "food", "productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -24,13 +34,31 @@
     {
       "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "any"
+      "sizes": "any",
+      "purpose": "any"
     }
   ],
-  "start_url": "/",
-  "background_color": "#070B14",
-  "theme_color": "#064E3B",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "categories": ["business", "food", "productivity"]
+  "shortcuts": [
+    {
+      "name": "POS Billing",
+      "short_name": "POS",
+      "description": "Open POS Quick Billing Register",
+      "url": "/",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Live Orders",
+      "short_name": "Orders",
+      "description": "View Live Orders and Table Requests",
+      "url": "/",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kitchen Display",
+      "short_name": "KDS",
+      "description": "Open Live Kitchen Order Display",
+      "url": "/",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
 }

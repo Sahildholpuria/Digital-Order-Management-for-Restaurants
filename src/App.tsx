@@ -35,6 +35,7 @@ const WaiterDashboard = lazyWithRetry(() => import('./pages/waiter/WaiterDashboa
 const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 const SubscriptionModal = lazyWithRetry(() => import('./components/subscription/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
 import { SAAS_SUBSCRIPTION_PLANS, formatINR } from './config/subscriptionPlans';
+import { PWAInstallButton } from './components/common/PWAInstallButton';
 
 import { 
   Zap,
@@ -780,7 +781,8 @@ export const App: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <PWAInstallButton variant="header" />
               <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
               </button>
@@ -843,6 +845,7 @@ export const App: React.FC = () => {
 
             {/* Sidebar Bottom Profile Options */}
             <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800/50">
+              <PWAInstallButton variant="sidebar" />
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Interface Theme</span>
                 <button
