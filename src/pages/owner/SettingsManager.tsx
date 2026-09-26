@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { SubscriptionModal } from '../../components/subscription/SubscriptionModal';
+import subscriptionService, { SubscriptionPaymentRecord } from '../../services/subscriptionService';
+import { Zap, CreditCard, ShieldCheck } from 'lucide-react';
 import { 
   Building, 
   MapPin, 
@@ -44,6 +47,14 @@ export const SettingsManager: React.FC = () => {
   const [enableBillPrinting, setEnableBillPrinting] = useState(settings?.enableBillPrinting ?? true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<SubscriptionPaymentRecord[]>([]);
+
+  useEffect(() => {
+    if (settings?.id) {
+      subscriptionService.getPayments(settings.id).then(setPaymentHistory);
+    }
+  }, [settings?.id]);
 
   // Sync settings when loaded asynchronously from context
   useEffect(() => {
@@ -298,6 +309,83 @@ export const SettingsManager: React.FC = () => {
         {/* Financial & Styling details */}
         <div className="space-y-6 lg:col-span-1">
           
+          {/* SaaS Subscription & Razorpay Renewal Card */}
+          <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/30 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 relative overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b border-emerald-500/10">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">
+                  SaaS Subscription Plan
+                </h3>
+              </div>
+              <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                settings?.subscriptionStatus === "active"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                  : settings?.subscriptionStatus === "trial"
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                  : "bg-red-500/10 border-red-500/30 text-red-500"
+              }`}>
+                {settings?.subscriptionStatus || "trial"}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-base font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>{settings?.planType === "pro" ? "Pro Restaurant Plan" : "Starter Plan"}</span>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-2 py-0.5 rounded-md">
+                      6 Months
+                    </span>
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {settings?.planType === "pro" ? "₹6,999 / 6 Months (₹1,166/mo)" : "₹2,999 / 6 Months (₹500/mo)"}
+                  </p>
+                </div>
+                
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Renews / Expires</span>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                    {settings?.subscriptionExpiresAt ? new Date(settings.subscriptionExpiresAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }) : "30-Day Trial"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Button to Open Razorpay Modal */}
+              <button
+                type="button"
+                onClick={() => setIsSubModalOpen(true)}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider py-3.5 px-4 rounded-2xl transition-all shadow-md shadow-emerald-600/20 cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span>Renew / Upgrade with Razorpay</span>
+              </button>
+
+              {/* Recent Payment Receipts / History preview */}
+              {paymentHistory.length > 0 && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Recent Renewal Invoices
+                  </span>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {paymentHistory.slice(0, 3).map(pay => (
+                      <div key={pay.id} className="flex justify-between items-center bg-white/60 dark:bg-slate-800/60 p-2 rounded-xl text-[11px] border border-slate-100 dark:border-slate-800">
+                        <div>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{pay.planName}</span>
+                          <span className="text-[9px] text-slate-400 ml-1.5">{new Date(pay.paidAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-emerald-600 dark:text-emerald-400">₹{pay.amount.toLocaleString()}</span>
+                          <span className="text-[9px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold uppercase">Paid</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
           {/* Financial Invoicing */}
           <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 overflow-hidden">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-850">
@@ -506,6 +594,23 @@ export const SettingsManager: React.FC = () => {
 
       </div>
 
+      <SubscriptionModal
+        isOpen={isSubModalOpen}
+        onClose={() => setIsSubModalOpen(false)}
+        restaurantId={settings?.id || ""}
+        restaurantName={settings?.name || ""}
+        restaurantEmail={settings?.email}
+        restaurantPhone={settings?.phone}
+        currentExpiresAt={settings?.subscriptionExpiresAt}
+        currentStatus={settings?.subscriptionStatus}
+        currentPlan={settings?.planType}
+        onSuccess={() => {
+          setIsSubModalOpen(false);
+          if (settings?.id) {
+            subscriptionService.getPayments(settings.id).then(setPaymentHistory);
+          }
+        }}
+      />
     </form>
   );
 };

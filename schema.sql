@@ -33,7 +33,7 @@ create table public.restaurants (
   theme_color text default '#6366F1',
   subscription_status text check (subscription_status in ('trial', 'active', 'expired', 'suspended')) default 'trial' not null,
   subscription_expires_at timestamp with time zone default timezone('utc'::text, now() + interval '30 days') not null,
-  plan_type text check (plan_type in ('starter', 'pro_6m', 'pro_1y')) default 'starter' not null,
+  plan_type text check (plan_type in ('starter', 'pro', 'pro_6m', 'pro_1y')) default 'starter' not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -134,6 +134,24 @@ create table public.notifications (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+
+-- SaaS Tenant Subscription Payments (Razorpay Renewals)
+create table public.subscription_payments (
+  id text primary key,
+  restaurant_id text references public.restaurants(id) on delete cascade not null,
+  restaurant_name text not null,
+  plan_id text check (plan_id in ('starter', 'pro', 'pro_6m', 'pro_1y')) not null,
+  plan_name text not null,
+  amount numeric not null,
+  currency text default 'INR' not null,
+  duration_months integer default 6 not null,
+  razorpay_payment_id text not null,
+  razorpay_order_id text,
+  status text default 'successful' not null,
+  paid_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  expires_at timestamp with time zone not null
+);
+
 -- 3. ENABLE REALTIME SYNC FOR APP TABLES
 alter publication supabase_realtime add table public.tables;
 alter publication supabase_realtime add table public.categories;
@@ -141,6 +159,7 @@ alter publication supabase_realtime add table public.food_items;
 alter publication supabase_realtime add table public.orders;
 alter publication supabase_realtime add table public.payments;
 alter publication supabase_realtime add table public.notifications;
+alter publication supabase_realtime add table public.subscription_payments;
 
 -- 4. INSERT DEMO TENANT CONFIG (Required for foreign keys)
 insert into public.restaurants (id, name, theme_color)

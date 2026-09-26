@@ -33,8 +33,11 @@ const SettingsManager = lazyWithRetry(() => import('./pages/owner/SettingsManage
 const KitchenDisplay = lazyWithRetry(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
 const WaiterDashboard = lazyWithRetry(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
 const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const SubscriptionModal = lazyWithRetry(() => import('./components/subscription/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
+import { SAAS_SUBSCRIPTION_PLANS, formatINR } from './config/subscriptionPlans';
 
 import { 
+  Zap,
   TrendingUp, 
   ShoppingBag, 
   QrCode, 
@@ -266,6 +269,7 @@ export const App: React.FC = () => {
     setMobileSidebarOpen(false);
   };
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
   // Platform-Wide Broadcast Announcements State
@@ -561,48 +565,115 @@ export const App: React.FC = () => {
           : 'N/A';
 
         return (
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh flex items-center justify-center p-6 text-center animate-fade-in relative overflow-hidden">
-            {/* Glowing red backdrop aura */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex items-center justify-center p-4 sm:p-6 animate-fade-in relative overflow-hidden">
+            {/* Glowing backdrop aura */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
             
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl p-8 shadow-2xl max-w-md w-full relative z-10 space-y-6">
-              <div className="w-16 h-16 bg-red-500/10 text-red-550 rounded-3xl flex items-center justify-center mx-auto mb-2 animate-bounce duration-3000">
-                <Shield className="w-8 h-8" />
-              </div>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl max-w-2xl w-full relative z-10 space-y-6 text-center">
               
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-slate-850 dark:text-slate-100 tracking-tight font-sans">
-                  Subscription Expired
+                <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto border border-red-500/20 shadow-inner">
+                  <Shield className="w-8 h-8" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-full inline-block">
+                  Subscription Expired / Suspended
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Renew Your RestaurantsOS Plan
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                  Your restaurant subscription to <span className="font-extrabold text-brand-655">RestaurantsOS</span> has expired or been suspended on <strong className="text-red-500 font-bold">{formattedExpiry}</strong>. 
-                  Please renew the subscription if you want to continue using the system.
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium max-w-md mx-auto leading-relaxed">
+                  Your subscription for <strong className="text-slate-800 dark:text-slate-200">{settings?.name}</strong> expired on <strong className="text-red-500">{formattedExpiry}</strong>. Select a plan below to renew instantly with automated Razorpay checkout and resume full POS billing.
                 </p>
               </div>
 
-              <div className="bg-slate-50/50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800/50 p-4 rounded-2xl text-[11px] text-slate-400 text-left space-y-1.5 font-sans">
-                <p><strong>Restaurant ID:</strong> <span className="font-mono text-slate-600 dark:text-slate-350 font-bold">{settings?.id}</span></p>
-                <p><strong>Restaurant Name:</strong> <span className="text-slate-600 dark:text-slate-350 font-bold">{settings?.name}</span></p>
-                <p><strong>Billing Status:</strong> <span className="text-red-500 font-bold uppercase">{settings?.subscriptionStatus}</span></p>
+              {/* Plans Selection Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                {SAAS_SUBSCRIPTION_PLANS.map(plan => (
+                  <div 
+                    key={plan.id}
+                    onClick={() => setIsRenewModalOpen(true)}
+                    className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative flex flex-col justify-between ${
+                      plan.popular 
+                        ? 'border-emerald-500 bg-emerald-500/5 shadow-md hover:border-emerald-600' 
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    {plan.popular && (
+                      <span className="absolute -top-2.5 right-4 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                        Best Value
+                      </span>
+                    )}
+                    <div>
+                      <span className="text-2xl">{plan.icon}</span>
+                      <h3 className="font-black text-sm text-slate-900 dark:text-white mt-1">{plan.name}</h3>
+                      <p className="text-[10px] text-slate-400 font-semibold">{plan.durationText} full access</p>
+                      
+                      <div className="my-2.5">
+                        <span className="text-2xl font-black text-slate-900 dark:text-white">{formatINR(plan.price)}</span>
+                        <span className="text-[10px] text-slate-400 font-bold ml-1">/ 6 Mo</span>
+                      </div>
+
+                      <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 mb-4">
+                        {plan.features.slice(0, 3).map((f, i) => (
+                          <li key={i} className="flex items-center gap-1.5 truncate">
+                            <span className="text-emerald-500 font-bold">✓</span> {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`w-full py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1.5 ${
+                        plan.popular
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          : 'bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      <span>Pay {formatINR(plan.price)} with Razorpay</span>
+                    </button>
+                  </div>
+                ))}
               </div>
 
-              <div className="space-y-3 pt-2">
+              {/* Footer actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                 <a 
-                  href="mailto:billing@restaurantsos.app"
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer block"
+                  href="mailto:billing@restaurantsos.in"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold text-[11px]"
                 >
-                  Contact Support for Renewal
+                  Need assistance? Contact Support &rarr;
                 </a>
                 <button
                   onClick={async () => {
                     await logoutUser();
                     navigateTo('/');
                   }}
-                  className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-205 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-3.5 px-6 rounded-2xl transition-all text-xs cursor-pointer"
+                  className="text-red-500 hover:text-red-600 font-bold text-[11px] cursor-pointer"
                 >
                   Sign Out of Portal &rarr;
                 </button>
               </div>
+
+              <Suspense fallback={null}>
+                <SubscriptionModal
+                  isOpen={isRenewModalOpen}
+                  onClose={() => setIsRenewModalOpen(false)}
+                  restaurantId={settings?.id || ''}
+                  restaurantName={settings?.name || ''}
+                  restaurantEmail={settings?.email}
+                  restaurantPhone={settings?.phone}
+                  currentExpiresAt={settings?.subscriptionExpiresAt}
+                  currentStatus={settings?.subscriptionStatus}
+                  currentPlan={settings?.planType}
+                  onSuccess={() => {
+                    setIsRenewModalOpen(false);
+                    window.location.reload();
+                  }}
+                />
+              </Suspense>
+
             </div>
           </div>
         );

@@ -4,6 +4,15 @@ import { RestaurantSettings, UserProfile, SaaSAnnouncement } from '../../types';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { PageLoader } from '../../components/PageLoader';
 import { 
+  SAAS_SUBSCRIPTION_PLANS,
+  formatINR,
+  getRazorpayKeyId,
+  setRazorpayKeyId,
+  getRazorpayKeySecret,
+  setRazorpayKeySecret
+} from '../../config/subscriptionPlans';
+import subscriptionService, { SubscriptionPaymentRecord } from '../../services/subscriptionService';
+import { 
   Building, 
   Plus, 
   CheckCircle, 
@@ -41,9 +50,10 @@ import {
 } from 'lucide-react';
 
 const planLabels: Record<string, string> = {
-  starter: '1 Month Plan',
-  pro_6m: '6 Months Plan',
-  pro_1y: '12 Months Plan'
+  starter: "Starter Plan (₹2,999 / 6 Mo)",
+  pro: "Pro Restaurant Plan (₹6,999 / 6 Mo)",
+  pro_6m: "Pro Restaurant Plan (₹6,999 / 6 Mo)",
+  pro_1y: "Pro Restaurant Plan (₹6,999 / 6 Mo)"
 };
 
 interface SuperAdminDashboardProps {
@@ -56,7 +66,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const [restaurants, setRestaurants] = useState<RestaurantSettings[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [announcements, setAnnouncements] = useState<SaaSAnnouncement[]>([]);
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'users' | 'announcements'>('restaurants');
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'users' | 'announcements' | 'subscriptions'>('restaurants');
+  const [subPayments, setSubPayments] = useState<SubscriptionPaymentRecord[]>([]);
+  const [rzpKeyInput, setRzpKeyInput] = useState(() => getRazorpayKeyId());
+  const [rzpSecretInput, setRzpSecretInput] = useState(() => getRazorpayKeySecret());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,7 +81,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [planType, setPlanType] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
+  const [planType, setPlanType] = useState<'starter' | 'pro' | 'pro_6m' | 'pro_1y'>('starter');
   const [status, setStatus] = useState<'trial' | 'active' | 'expired'>('trial');
   const [expiresAt, setExpiresAt] = useState('');
 
@@ -76,14 +89,14 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editPlan, setEditPlan] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
+  const [editPlan, setEditPlan] = useState<'starter' | 'pro' | 'pro_6m' | 'pro_1y'>('starter');
   const [editStatus, setEditStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
   const [editExpiresAt, setEditExpiresAt] = useState('');
 
   // Dedicated subscription management modal
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [subRest, setSubRest] = useState<RestaurantSettings | null>(null);
-  const [subPlan, setSubPlan] = useState<'starter' | 'pro_6m' | 'pro_1y'>('starter');
+  const [subPlan, setSubPlan] = useState<'starter' | 'pro' | 'pro_6m' | 'pro_1y'>('starter');
   const [subStatus, setSubStatus] = useState<'trial' | 'active' | 'expired' | 'suspended'>('trial');
   const [subExpiresAt, setSubExpiresAt] = useState('');
   const [subSaving, setSubSaving] = useState(false);
@@ -769,9 +782,199 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           )}
         </button>
+        <button
+          onClick={() => { setActiveTab("subscriptions"); setSearchQuery(""); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
+            activeTab === "subscriptions"
+              ? "text-brand-600 dark:text-brand-400 border-b-2 border-brand-500"
+              : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>SaaS Subscriptions & Razorpay ({subPayments.length})</span>
+        </button>
       </div>
 
+            {/* ===== SAAS SUBSCRIPTIONS & RAZORPAY TAB VIEW ===== */}
+      {activeTab === "subscriptions" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Revenue Overview Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Total SaaS Revenue</span>
+              <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatINR(subPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0))}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1 font-medium">From {subPayments.length} automated renewals</p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Active Paid Tenants</span>
+              <p className="text-3xl font-black text-slate-900 dark:text-white mt-1">
+                {restaurants.filter(r => r.subscriptionStatus === "active").length}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1 font-medium">Out of {restaurants.length} total restaurants</p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Payment Gateway Status</span>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${rzpKeyInput && !rzpKeyInput.includes("RestaurantsOS") ? "bg-emerald-500 animate-ping" : "bg-amber-500"}`} />
+                <span className="font-black text-sm text-slate-900 dark:text-white">
+                  {rzpKeyInput && !rzpKeyInput.includes("RestaurantsOS") ? "Live / Connected" : "Sandbox / Demo Mode"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1 font-mono truncate">{rzpKeyInput || "No key set"}</p>
+            </div>
+          </div>
+
+          {/* Razorpay Gateway API Credentials Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    Razorpay Gateway Credentials
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Tenants will pay their Starter (₹2,999) and Pro (₹6,999) subscriptions directly into your Razorpay account.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                Instant Auto-Renew
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                  Razorpay Key ID (Key_Id)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. rzp_live_xxxxxxxx or rzp_test_xxxxxxxx"
+                  value={rzpKeyInput}
+                  onChange={(e) => setRzpKeyInput(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                  Razorpay Key Secret (Optional / Webhooks)
+                </label>
+                <input
+                  type="password"
+                  placeholder="e.g. •••••••••••••••••"
+                  value={rzpSecretInput}
+                  onChange={(e) => setRzpSecretInput(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <span className="text-[11px] text-slate-400">
+                Obtain your Key ID from <a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noreferrer" className="text-emerald-600 underline font-bold">Razorpay Dashboard &rarr; Settings &rarr; API Keys</a>.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setRazorpayKeyId(rzpKeyInput);
+                  setRazorpayKeySecret(rzpSecretInput);
+                  showToast("Razorpay credentials saved successfully!", "success");
+                }}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer"
+              >
+                Save Credentials
+              </button>
+            </div>
+          </div>
+
+          {/* Pricing Plans Summary Card */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {SAAS_SUBSCRIPTION_PLANS.map(plan => (
+              <div key={plan.id} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl shadow-sm flex items-center justify-between">
+                <div>
+                  <span className="text-xl">{plan.icon}</span>
+                  <h4 className="text-base font-black text-slate-900 dark:text-white mt-1">{plan.name}</h4>
+                  <p className="text-xs text-slate-400">{plan.durationText} validity</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{formatINR(plan.price)}</span>
+                  <span className="text-[10px] text-slate-400 block font-bold">~{formatINR(plan.pricePerMonth)} / mo</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Payments Invoices Table */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                  Automated Razorpay Payments Log
+                </h3>
+                <p className="text-xs text-slate-400">Real-time payment transactions recorded from tenant renewals.</p>
+              </div>
+              <button
+                onClick={fetchAllData}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 transition-colors"
+                title="Refresh payments"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {subPayments.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="font-bold">No online subscription payments recorded yet.</p>
+                <p className="text-[11px] text-slate-400 mt-1">When tenant restaurant owners pay or renew via Razorpay, transaction receipts appear here automatically.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                      <th className="p-4">Restaurant</th>
+                      <th className="p-4">Plan</th>
+                      <th className="p-4">Amount</th>
+                      <th className="p-4">Razorpay Payment ID</th>
+                      <th className="p-4">Date</th>
+                      <th className="p-4">Valid Until</th>
+                      <th className="p-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {subPayments.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="p-4 font-bold text-slate-900 dark:text-white">{p.restaurantName}</td>
+                        <td className="p-4 font-bold text-emerald-600 dark:text-emerald-400">{p.planName}</td>
+                        <td className="p-4 font-extrabold text-slate-900 dark:text-white">{formatINR(p.amount)}</td>
+                        <td className="p-4 font-mono text-[11px] text-slate-500 truncate max-w-[150px]">{p.razorpayPaymentId}</td>
+                        <td className="p-4 text-slate-500">{new Date(p.paidAt).toLocaleDateString()}</td>
+                        <td className="p-4 text-slate-500 font-bold">{new Date(p.expiresAt).toLocaleDateString()}</td>
+                        <td className="p-4">
+                          <span className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase">
+                            Successful
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
       {/* Table Section */}
+      {activeTab !== "subscriptions" && (
       <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/80 rounded-3xl shadow-sm overflow-hidden">
         {/* Search & Filter Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
@@ -1260,6 +1463,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
           )
         )}
       </div>
+      )}
 
       {/* Onboard Modal */}
       {isModalOpen && (
@@ -1361,9 +1565,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                       }}
                       className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
                     >
-                      <option value="starter">1 Month Plan (Starter)</option>
-                      <option value="pro_6m">6 Months Plan (Pro)</option>
-                      <option value="pro_1y">12 Months Plan (Enterprise)</option>
+                      <option value="starter">Starter Plan - ₹2,999 (6 Months)</option>
+                      <option value="pro_6m">Pro Restaurant Plan - ₹6,999 (6 Months)</option>
                     </select>
                   </div>
                   <div>
@@ -1410,34 +1613,26 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
         const plans = [
           {
-            id: 'starter' as const,
-            label: '1 Month',
-            duration: '30 days',
-            months: 1,
-            icon: '🗓️',
-            color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400',
-            ring: 'ring-amber-400',
-            badge: 'Starter Plan',
-          },
-          {
-            id: 'pro_6m' as const,
-            label: '6 Months',
-            duration: '180 days',
+            id: "starter" as const,
+            label: "Starter Plan",
+            duration: "6 Months (180 days)",
             months: 6,
-            icon: '⚡',
-            color: 'border-brand-500 bg-brand-50 dark:bg-brand-950/20 text-brand-700 dark:text-brand-400',
-            ring: 'ring-brand-500',
-            badge: 'Pro Plan',
+            price: 2999,
+            icon: "⚡",
+            color: "border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400",
+            ring: "ring-amber-400",
+            badge: "₹2,999 / 6 Mo",
           },
           {
-            id: 'pro_1y' as const,
-            label: '12 Months',
-            duration: '365 days',
-            months: 12,
-            icon: '🏆',
-            color: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400',
-            ring: 'ring-emerald-500',
-            badge: 'Enterprise Plan',
+            id: "pro_6m" as const,
+            label: "Pro Restaurant Plan",
+            duration: "6 Months (180 days)",
+            months: 6,
+            price: 6999,
+            icon: "👑",
+            color: "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400",
+            ring: "ring-emerald-500",
+            badge: "₹6,999 / 6 Mo",
           },
         ];
 
@@ -1710,9 +1905,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
                   >
-                    <option value="starter">1 Month Plan (Starter)</option>
-                    <option value="pro_6m">6 Months Plan (Pro)</option>
-                    <option value="pro_1y">12 Months Plan (Enterprise)</option>
+                    <option value="starter">Starter Plan - ₹2,999 (6 Months)</option>
+                    <option value="pro_6m">Pro Restaurant Plan - ₹6,999 (6 Months)</option>
                   </select>
                 </div>
 

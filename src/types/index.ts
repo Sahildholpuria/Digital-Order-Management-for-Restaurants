@@ -17,7 +17,7 @@ export interface RestaurantSettings {
   enableBillPrinting?: boolean; // turn thermal bill printing feature ON/OFF
   subscriptionStatus?: 'trial' | 'active' | 'expired' | 'suspended';
   subscriptionExpiresAt?: any;
-  planType?: 'starter' | 'pro_6m' | 'pro_1y';
+  planType?: 'starter' | 'pro' | 'pro_6m' | 'pro_1y';
   createdAt: any;
 }
 
