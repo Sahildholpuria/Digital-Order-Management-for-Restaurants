@@ -870,9 +870,9 @@ export const App: React.FC = () => {
               </button>
 
               {/* User Logged Details */}
-              <div className="bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 p-3 rounded-2xl text-xs space-y-1 shadow-sm">
-                <p className="font-black text-slate-900 dark:text-slate-100 truncate">{currentUser.name}</p>
-                <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 truncate">{currentUser.email}</p>
+              <div className="bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 px-3 py-2 rounded-xl text-xs space-y-0.5 shadow-xs">
+                <p className="font-bold text-[11px] text-slate-800 dark:text-slate-100 truncate leading-tight">{currentUser.name}</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate leading-tight">{currentUser.email}</p>
               </div>
 
               <button
@@ -880,9 +880,9 @@ export const App: React.FC = () => {
                   await logoutUser();
                   navigateTo('/');
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-955/20 transition-all cursor-pointer"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
               >
-                <LogOut className="w-4.5 h-4.5" />
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
                 <span>{t.logOut}</span>
               </button>
               <div className="text-center pt-2 mt-1 border-t border-slate-200 dark:border-slate-800">
