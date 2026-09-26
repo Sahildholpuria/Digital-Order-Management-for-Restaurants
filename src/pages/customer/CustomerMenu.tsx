@@ -8,7 +8,6 @@ import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
 import { PageLoader } from '../../components/PageLoader';
 import { FSSAIIndicator } from '../../components/FSSAIIndicator';
 import { RestaurantsOSLogo } from '../../components/RestaurantsOSLogo';
-import { DynamicIsland } from '../../components/DynamicIsland';
 import { parseFoodItemDescription } from '../../services/database';
 
 interface CustomerMenuProps {
@@ -773,21 +772,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-36">
-      {/* iOS Dynamic Island Live Status Pill */}
-      <DynamicIsland
-        activeOrder={tableOrders[0] || null}
-        waiterCalled={waiterCalled}
-        billRequested={billRequested}
-        tableNumber={getTableDisplayNumber()}
-        currency={settings?.currency}
-        onOpenOrders={() => setIsOrdersOpen(true)}
-        onOpenTracker={(orderId) => {
-          window.location.pathname = `/track/${orderId}/${tableId}`;
-        }}
-      />
-
       {/* Sticky Top Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 pb-2 sm:pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top,0px))] shadow-sm">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#10B981]/15 text-[#10B981] dark:text-[#10B981] rounded-xl sm:rounded-2xl flex items-center justify-center border border-[#10B981]/30 shadow-sm flex-shrink-0">

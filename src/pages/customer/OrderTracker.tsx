@@ -77,7 +77,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-955 pb-20">
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] shadow-sm">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 py-3 shadow-sm">
         <div className="max-w-md md:max-w-4xl mx-auto flex items-center gap-3">
           <button 
             onClick={() => window.location.pathname = `/menu/${tableId}`}
