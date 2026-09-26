@@ -47,7 +47,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     enableBillPrinting,
     subscriptionStatus: row.subscription_status || row.subscriptionStatus || 'trial',
     subscriptionExpiresAt: row.subscription_expires_at || row.subscriptionExpiresAt,
-    planType: row.plan_type || row.planType || 'starter',
+    planType: (row.plan_type === 'pro_6m' || row.plan_type === 'pro_1y') ? 'pro' : (row.plan_type || row.planType || 'starter'),
     createdAt: row.created_at || row.createdAt,
   };
 };
@@ -942,10 +942,21 @@ export const dbService = {
   async updateRestaurantSubscription(restaurantId: string, updates: Partial<RestaurantSettings>): Promise<void> {
     if (isSupabaseConfigured) {
       const dbRow = mapSettingsToDb(updates);
-      const { error } = await supabase
+      let { error } = await supabase
         .from('restaurants')
         .update(dbRow)
         .eq('id', restaurantId);
+
+      // Graceful fallback: If an older database constraint expects pro_6m instead of pro
+      if (error && error.message?.includes('restaurants_plan_type_check') && dbRow.plan_type === 'pro') {
+        dbRow.plan_type = 'pro_6m';
+        const retryResult = await supabase
+          .from('restaurants')
+          .update(dbRow)
+          .eq('id', restaurantId);
+        error = retryResult.error;
+      }
+
       if (error) throw error;
     } else {
       const data = localStorage.getItem('super_admin_restaurants');
