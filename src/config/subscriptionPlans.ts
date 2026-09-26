@@ -112,8 +112,8 @@ export const getRazorpayKeyId = (): string => {
   if (stored && stored.trim()) return stored.trim();
   const envKey = (import.meta as any).env?.VITE_RAZORPAY_KEY_ID;
   if (envKey && envKey.trim()) return envKey.trim();
-  // Safe default test key indicator
-  return "rzp_test_RestaurantsOS";
+  // Default configured test key
+  return "rzp_test_TgfMcpEjORTFSS";
 };
 
 export const setRazorpayKeyId = (keyId: string): void => {
@@ -123,7 +123,7 @@ export const setRazorpayKeyId = (keyId: string): void => {
 export const getRazorpayKeySecret = (): string => {
   const stored = localStorage.getItem(RAZORPAY_SECRET_KEY);
   if (stored && stored.trim()) return stored.trim();
-  return "";
+  return "R4YBqGf7akEV6LWHk9ePrXHu";
 };
 
 export const setRazorpayKeySecret = (secret: string): void => {
