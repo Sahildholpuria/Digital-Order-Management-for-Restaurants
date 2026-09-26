@@ -367,7 +367,7 @@ export const App: React.FC = () => {
         <div className="relative">
           <button 
             onClick={() => navigateTo('/')}
-            className="absolute top-5 left-6 bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-2xl text-xs font-black hover:bg-emerald-600 hover:border-emerald-500 z-50 transition-all shadow-xl cursor-pointer flex items-center gap-1.5"
+            className="absolute top-[max(1rem,calc(env(safe-area-inset-top,0px)+0.75rem))] left-4 sm:left-6 bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-2xl text-xs font-black hover:bg-emerald-600 hover:border-emerald-500 z-50 transition-all shadow-xl cursor-pointer flex items-center gap-1.5"
           >
             <span>&larr; Exit KDS</span>
           </button>
@@ -404,7 +404,7 @@ export const App: React.FC = () => {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh p-6 relative">
           <button 
             onClick={() => navigateTo('/')}
-            className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 transition-all shadow-sm"
+            className="absolute top-[max(1rem,calc(env(safe-area-inset-top,0px)+0.75rem))] right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 transition-all shadow-sm"
           >
             &larr; Exit Console
           </button>
