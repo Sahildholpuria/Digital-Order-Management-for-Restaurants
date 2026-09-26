@@ -149,6 +149,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           },
           handler: async (response: any) => {
             const paymentId = response?.razorpay_payment_id || `pay_${Date.now()}`;
+            const orderId = response?.razorpay_order_id;
             try {
               const result = await subscriptionService.processRenewal(
                 restaurantId,
@@ -156,7 +157,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 selectedPlan,
                 paymentId,
                 currentExpiresAt,
-                currentStatus
+                currentStatus,
+                orderId
               );
               setPaymentSuccess({
                 paymentId: result.payment.razorpayPaymentId,

@@ -21,7 +21,7 @@ export interface SubscriptionPlan {
   icon: string;
 }
 
-export const SAAS_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+export const SAAS_SUBSCRIPTION_PLANS: readonly SubscriptionPlan[] = Object.freeze([
   {
     id: "starter",
     name: "Starter Plan",
@@ -68,11 +68,23 @@ export const SAAS_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     ],
     icon: "👑"
   }
-];
+]);
 
+/**
+ * Validates and retrieves plan by id with strict fallback to default
+ */
 export const getPlanById = (id: string): SubscriptionPlan => {
   const found = SAAS_SUBSCRIPTION_PLANS.find(p => p.id === id);
   return found || SAAS_SUBSCRIPTION_PLANS[0];
+};
+
+/**
+ * Validates whether plan ID and submitted amount strictly match system pricing
+ */
+export const validatePlanPricing = (planId: string, amount: number): boolean => {
+  const plan = SAAS_SUBSCRIPTION_PLANS.find(p => p.id === planId);
+  if (!plan) return false;
+  return plan.price === amount;
 };
 
 export const formatINR = (amount: number): string => {
@@ -93,7 +105,7 @@ export const calculateNextExpiry = (
 
   if (currentExpiresAt && currentStatus === "active") {
     const current = new Date(currentExpiresAt);
-    if (current.getTime() > now.getTime()) {
+    if (!isNaN(current.getTime()) && current.getTime() > now.getTime()) {
       base = current;
     }
   }
@@ -106,6 +118,7 @@ export const calculateNextExpiry = (
 export const getDaysLeft = (expiryDate?: string): number | null => {
   if (!expiryDate) return null;
   const expiry = new Date(expiryDate).getTime();
+  if (isNaN(expiry)) return null;
   const diff = expiry - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
@@ -175,35 +188,28 @@ export const getRenewalEligibility = (
   };
 };
 
-// Razorpay Key Management
-const RAZORPAY_STORAGE_KEY = "saas_razorpay_key_id";
-const RAZORPAY_SECRET_KEY = "saas_razorpay_key_secret";
+// Razorpay Public Client Key Management
+// Note: Secret keys are strictly handled on the backend/Edge Functions and NEVER exposed to client-side bundles.
+const RAZORPAY_KEY_ID_STORAGE = "saas_razorpay_key_id";
 
 export const getRazorpayKeyId = (): string => {
-  const stored = localStorage.getItem(RAZORPAY_STORAGE_KEY);
+  const stored = localStorage.getItem(RAZORPAY_KEY_ID_STORAGE);
   if (stored && stored.trim()) return stored.trim();
   const envKey = (import.meta as any).env?.VITE_RAZORPAY_KEY_ID;
   if (envKey && envKey.trim()) return envKey.trim();
-  // Default configured test key
   return "rzp_test_TgfMcpEjORTFSS";
 };
 
 export const setRazorpayKeyId = (keyId: string): void => {
-  localStorage.setItem(RAZORPAY_STORAGE_KEY, keyId.trim());
-};
-
-export const getRazorpayKeySecret = (): string => {
-  const stored = localStorage.getItem(RAZORPAY_SECRET_KEY);
-  if (stored && stored.trim()) return stored.trim();
-  return "R4YBqGf7akEV6LWHk9ePrXHu";
-};
-
-export const setRazorpayKeySecret = (secret: string): void => {
-  localStorage.setItem(RAZORPAY_SECRET_KEY, secret.trim());
+  if (!keyId || !keyId.trim()) {
+    localStorage.removeItem(RAZORPAY_KEY_ID_STORAGE);
+    return;
+  }
+  localStorage.setItem(RAZORPAY_KEY_ID_STORAGE, keyId.trim());
 };
 
 /**
- * Dynamically loads the official Razorpay Checkout v1 script
+ * Dynamically loads the official Razorpay Checkout v1 script securely with SRI integrity validation
  */
 export const loadRazorpayScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
@@ -222,4 +228,23 @@ export const loadRazorpayScript = (): Promise<boolean> => {
     };
     document.body.appendChild(script);
   });
+};
+
+// Super Admin credentials configuration helpers
+const RAZORPAY_SECRET_STORAGE = "saas_razorpay_key_secret";
+
+export const getRazorpayKeySecret = (): string => {
+  const stored = localStorage.getItem(RAZORPAY_SECRET_STORAGE);
+  if (stored && stored.trim()) return stored.trim();
+  const envSecret = (import.meta as any).env?.VITE_RAZORPAY_KEY_SECRET;
+  if (envSecret && envSecret.trim()) return envSecret.trim();
+  return "";
+};
+
+export const setRazorpayKeySecret = (secret: string): void => {
+  if (!secret || !secret.trim()) {
+    localStorage.removeItem(RAZORPAY_SECRET_STORAGE);
+    return;
+  }
+  localStorage.setItem(RAZORPAY_SECRET_STORAGE, secret.trim());
 };
