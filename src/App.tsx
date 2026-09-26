@@ -64,6 +64,7 @@ import {
 import { translations, Language } from './translations';
 import { UserProfile } from './types';
 import { PageLoader } from './components/PageLoader';
+import { RestaurantsOSLogo } from './components/RestaurantsOSLogo';
 import dbService from './services/database';
 import { SaaSAnnouncement } from './types';
 
@@ -612,13 +613,16 @@ export const App: React.FC = () => {
           
           {/* Mobile/Tablet Header Bar */}
           <header className="xl:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-brand-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-brand-500/10">
-                <ChefHat className="w-4 h-4" />
+            <div className="flex items-center gap-2.5">
+              <RestaurantsOSLogo size="sm" showText={false} />
+              <div className="flex flex-col leading-none">
+                <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight">
+                  Restaurants <span className="text-emerald-500">OS</span>
+                </span>
+                <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-0.5">
+                  {currentUser?.isSuperAdmin ? (isImpersonating ? `Portal: ${settings?.name || impersonatedTenantId}` : 'Super Admin') : (settings?.name || 'POS Portal')}
+                </span>
               </div>
-              <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                {currentUser?.isSuperAdmin ? (isImpersonating ? `Portal: ${settings?.name || impersonatedTenantId}` : 'Super Admin') : 'POS Portal'}
-              </span>
             </div>
             <div className="flex gap-2">
               <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -637,15 +641,15 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               {/* Header Logo */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/35">
-                  <ChefHat className="w-5 h-5 animate-pulse" />
-                </div>
+                <RestaurantsOSLogo size="md" showText={false} />
                 <div>
-                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest leading-none block">
-                    {currentUser?.isSuperAdmin ? (isImpersonating ? 'Impersonating Tenant' : 'Super Admin SaaS') : 'Restaurant OS'}
-                  </span>
-                  <span className="font-black text-sm text-slate-850 dark:text-slate-100 uppercase tracking-tight block mt-0.5 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? (isImpersonating ? (settings?.name || impersonatedTenantId || 'Tenant') : 'Tenant Central') : (settings?.name || 'Bistro System')}>
-                    {currentUser?.isSuperAdmin ? (isImpersonating ? (settings?.name || impersonatedTenantId || 'Tenant') : 'Tenant Central') : (settings?.name || 'Bistro System')}
+                  <div className="flex items-center gap-1 leading-none">
+                    <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight font-sans">
+                      Restaurants <span className="text-emerald-500 dark:text-emerald-400">OS</span>
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-widest leading-none block mt-1 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? (isImpersonating ? (settings?.name || impersonatedTenantId || 'Tenant') : 'Tenant Central') : (settings?.name || 'POS Portal')}>
+                    {currentUser?.isSuperAdmin ? (isImpersonating ? `Tenant: ${settings?.name || impersonatedTenantId}` : 'Super Admin') : (settings?.name || 'POS Portal')}
                   </span>
                 </div>
               </div>

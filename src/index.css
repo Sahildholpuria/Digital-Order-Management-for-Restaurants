@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
 @import "tailwindcss";
 
@@ -54,7 +54,7 @@
   --color-slate-655: #1e293b;
   --color-slate-750: #1e293b;
   --color-slate-805: #0f172a;
-  --color-slate-850: #0b0f19;
+  --color-slate-850: #0b1120;
   --color-slate-855: #020617;
   --color-slate-955: #020617;
   
@@ -66,7 +66,8 @@
   --color-green-550: #16a34a;
   --color-orange-550: #ea580c;
   
-  --font-sans: "Outfit", "Inter", "system-ui", "sans-serif";
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Consolas, Menlo, monospace;
   
   --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
   --shadow-glass-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);

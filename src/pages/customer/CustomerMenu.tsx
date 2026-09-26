@@ -7,6 +7,7 @@ import { translations, Language } from '../../translations';
 import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
 import { PageLoader } from '../../components/PageLoader';
 import { FSSAIIndicator } from '../../components/FSSAIIndicator';
+import { RestaurantsOSLogo } from '../../components/RestaurantsOSLogo';
 import { parseFoodItemDescription } from '../../services/database';
 
 interface CustomerMenuProps {
@@ -1318,9 +1319,18 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       </main>
 
       <footer className="py-6 text-center border-t border-slate-100 dark:border-slate-800/50 mt-12 bg-white/30 dark:bg-slate-900/10 backdrop-blur-sm">
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-wider uppercase">
-          Powered by <span className="text-brand-655 dark:text-brand-400 font-extrabold">Restaurants OS</span>
-        </p>
+        <a 
+          href="https://www.restaurantsos.in" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="inline-flex items-center gap-2 hover:opacity-85 transition-opacity"
+          aria-label="Powered by Restaurants OS"
+        >
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-extrabold tracking-wider uppercase">
+            Powered by
+          </span>
+          <RestaurantsOSLogo size="sm" showText={true} />
+        </a>
       </footer>
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
