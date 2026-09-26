@@ -55,11 +55,34 @@ export const SettingsManager: React.FC = () => {
     return local === null ? true : local === 'true';
   });
   const eligibility = getRenewalEligibility(settings?.subscriptionStatus, settings?.subscriptionExpiresAt);
+  const showSubscriptionSection = isSubFeatureEnabled && settings?.hideSubscriptionPlan !== true;
 
   useEffect(() => {
-    subscriptionService.isFeatureEnabled().then(setIsSubFeatureEnabled);
+    // Sync with remote/cache immediately
+    subscriptionService.isFeatureEnabled(true).then(setIsSubFeatureEnabled);
 
-    const handleToggle = (e: any) => {
+    // 1. Cross-tab BroadcastChannel listener
+    let channel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        channel = new BroadcastChannel('restaurantsos_feature_toggles');
+        channel.onmessage = (ev) => {
+          if (ev.data?.type === 'SUBSCRIPTION_TOGGLE' && typeof ev.data.enabled === 'boolean') {
+            setIsSubFeatureEnabled(ev.data.enabled);
+          }
+        };
+      } catch (_) {}
+    }
+
+    // 2. Storage event listener (fires across other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'saas_subscription_feature_enabled') {
+        setIsSubFeatureEnabled(e.newValue === 'true');
+      }
+    };
+
+    // 3. In-window custom event listener
+    const handleCustomToggle = (e: any) => {
       if (e.detail?.enabled !== undefined) {
         setIsSubFeatureEnabled(e.detail.enabled);
       } else {
@@ -67,12 +90,22 @@ export const SettingsManager: React.FC = () => {
       }
     };
 
-    window.addEventListener('subscription-feature-toggle', handleToggle);
-    window.addEventListener('restaurant-db-update', handleToggle);
+    // 4. Window focus sync (syncs when switching between browser windows/tabs)
+    const handleWindowFocus = () => {
+      subscriptionService.isFeatureEnabled(true).then(setIsSubFeatureEnabled);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('subscription-feature-toggle', handleCustomToggle);
+    window.addEventListener('restaurant-db-update', handleCustomToggle);
+    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
-      window.removeEventListener('subscription-feature-toggle', handleToggle);
-      window.removeEventListener('restaurant-db-update', handleToggle);
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('subscription-feature-toggle', handleCustomToggle);
+      window.removeEventListener('restaurant-db-update', handleCustomToggle);
+      window.removeEventListener('focus', handleWindowFocus);
     };
   }, []);
 
@@ -336,7 +369,7 @@ export const SettingsManager: React.FC = () => {
         <div className="space-y-6 lg:col-span-1">
           
           {/* Subscription Plan & Renewal Card (Controlled by Super Admin single-button feature toggle) */}
-          {isSubFeatureEnabled && (
+          {showSubscriptionSection && (
           <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/25 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4 relative overflow-hidden">
             <div className="flex items-center justify-between pb-3 border-b border-emerald-500/10">
               <div className="flex items-center gap-2">
@@ -677,7 +710,7 @@ export const SettingsManager: React.FC = () => {
 
       </div>
 
-      {isSubFeatureEnabled && (
+      {showSubscriptionSection && (
       <SubscriptionModal
         isOpen={isSubModalOpen}
         onClose={() => setIsSubModalOpen(false)}

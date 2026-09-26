@@ -184,10 +184,26 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
     setIsTogglingSubFeature(false);
     showToast(
       nextState
-        ? "✓ Subscription Plan section is now VISIBLE in restaurant settings."
-        : "✕ Subscription Plan section is now HIDDEN from restaurant settings.",
+        ? "✓ Global Subscription Plan section is now VISIBLE in restaurant settings."
+        : "✕ Global Subscription Plan section is now HIDDEN from restaurant settings.",
       "success"
     );
+  };
+
+  const handleToggleRestSubscription = async (r: RestaurantSettings) => {
+    const newHidden = !r.hideSubscriptionPlan;
+    try {
+      await dbService.updateSettings(r.id, { hideSubscriptionPlan: newHidden });
+      await fetchAllData();
+      showToast(
+        newHidden
+          ? `Subscription section is now HIDDEN for ${r.name}.`
+          : `Subscription section is now VISIBLE for ${r.name}.`,
+        'success'
+      );
+    } catch (err: any) {
+      showToast('Failed to update: ' + (err.message || err), 'error');
+    }
   };
 
   // Close any active modal overlay on Escape key press
@@ -1333,6 +1349,30 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                               <Share2 className={`w-3 h-3 ${hasAnyContact ? 'text-slate-500' : 'text-slate-400 dark:text-slate-600'}`} />
                               <span>Share</span>
                             </button>
+                            {/* 1-Click Toggle for Restaurant Subscription Section */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleRestSubscription(r)}
+                              className={`border text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 inline-flex items-center gap-1 shadow-sm cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
+                                r.hideSubscriptionPlan
+                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
+                                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
+                              }`}
+                              title={r.hideSubscriptionPlan ? "Subscription section is HIDDEN in settings. Click to show." : "Subscription section is VISIBLE in settings. Click to hide."}
+                            >
+                              {r.hideSubscriptionPlan ? (
+                                <>
+                                  <EyeOff className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                                  <span>Sub: Hidden</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Sub: Visible</span>
+                                </>
+                              )}
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => handleOpenSubModal(r)}

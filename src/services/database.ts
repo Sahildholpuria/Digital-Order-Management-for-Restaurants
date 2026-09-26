@@ -27,6 +27,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
   const enableSoundNotification = themeParts[3] !== 'false';
   const enableBillPrinting = themeParts[4] !== 'false';
   const websiteUrl = themeParts[5] || row.website_url || row.websiteUrl || '';
+  const hideSubscriptionPlan = themeParts[6] === 'true' || row.hide_subscription_plan === true || row.hideSubscriptionPlan === true;
 
   return {
     id: row.id,
@@ -45,6 +46,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     enableBillRequest,
     enableSoundNotification,
     enableBillPrinting,
+    hideSubscriptionPlan,
     subscriptionStatus: row.subscription_status || row.subscriptionStatus || 'trial',
     subscriptionExpiresAt: row.subscription_expires_at || row.subscriptionExpiresAt,
     planType: (row.plan_type === 'pro_6m' || row.plan_type === 'pro_1y') ? 'pro' : (row.plan_type || row.planType || 'starter'),
@@ -69,14 +71,15 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.planType !== undefined && { plan_type: model.planType }),
   };
 
-  if (model.themeColor !== undefined || model.websiteUrl !== undefined || model.enableWaiterCall !== undefined || model.enableBillPrinting !== undefined) {
+  if (model.themeColor !== undefined || model.websiteUrl !== undefined || model.enableWaiterCall !== undefined || model.enableBillPrinting !== undefined || model.hideSubscriptionPlan !== undefined) {
     const color = model.themeColor || '#10B981';
     const waiter = model.enableWaiterCall ?? true;
     const bill = model.enableBillRequest ?? true;
     const sound = model.enableSoundNotification ?? true;
     const printBill = model.enableBillPrinting ?? true;
     const site = model.websiteUrl ?? '';
-    dbRow.theme_color = `${color}|${waiter}|${bill}|${sound}|${printBill}|${site}`;
+    const hideSub = model.hideSubscriptionPlan ? 'true' : 'false';
+    dbRow.theme_color = `${color}|${waiter}|${bill}|${sound}|${printBill}|${site}|${hideSub}`;
   }
 
   return dbRow;

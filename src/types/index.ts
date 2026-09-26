@@ -15,6 +15,7 @@ export interface RestaurantSettings {
   enableBillRequest: boolean;  // show/hide Bill button on customer menu
   enableSoundNotification: boolean; // turn order/request sound chime + voice announcement ON/OFF
   enableBillPrinting?: boolean; // turn thermal bill printing feature ON/OFF
+  hideSubscriptionPlan?: boolean; // Super Admin toggle to show/hide subscription billing for this restaurant
   subscriptionStatus?: 'trial' | 'active' | 'expired' | 'suspended';
   subscriptionExpiresAt?: any;
   planType?: 'starter' | 'pro' | 'pro_6m' | 'pro_1y';

@@ -185,21 +185,28 @@ export const subscriptionService = {
    * Checks whether the Subscription Plan feature is visible to restaurant owners.
    * Super Admins can toggle this on/off platform-wide with a single button.
    */
-  async isFeatureEnabled(): Promise<boolean> {
-    try {
-      const local = localStorage.getItem(FEATURE_ENABLED_KEY);
-      if (local !== null) {
-        return local === "true";
-      }
-    } catch (_) {}
+  async isFeatureEnabled(forceRemote: boolean = false): Promise<boolean> {
+    if (!forceRemote) {
+      try {
+        const local = localStorage.getItem(FEATURE_ENABLED_KEY);
+        if (local !== null) {
+          // Asynchronously sync in background without blocking initial paint
+          this.syncRemoteFeatureState().catch(() => {});
+          return local === "true";
+        }
+      } catch (_) {}
+    }
+    return await this.syncRemoteFeatureState();
+  },
 
+  async syncRemoteFeatureState(): Promise<boolean> {
     if (isSupabaseConfigured) {
       try {
         const { data, error } = await supabase
           .from("system_config")
           .select("value")
           .eq("key", "subscription_feature_enabled")
-          .single();
+          .maybeSingle();
         if (!error && data && data.value !== undefined) {
           const val = Boolean(data.value);
           try {
@@ -209,8 +216,12 @@ export const subscriptionService = {
         }
       } catch (_) {}
     }
-
-    return true;
+    try {
+      const local = localStorage.getItem(FEATURE_ENABLED_KEY);
+      return local === null ? true : local === "true";
+    } catch (_) {
+      return true;
+    }
   },
 
   /**
@@ -221,10 +232,22 @@ export const subscriptionService = {
       localStorage.setItem(FEATURE_ENABLED_KEY, enabled ? "true" : "false");
     } catch (_) {}
 
-    // Broadcast instant update across application
-    window.dispatchEvent(new CustomEvent("subscription-feature-toggle", { detail: { enabled } }));
-    window.dispatchEvent(new Event("restaurant-db-update"));
+    // 1. Broadcast to other browser tabs/windows instantly
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const channel = new BroadcastChannel("restaurantsos_feature_toggles");
+        channel.postMessage({ type: "SUBSCRIPTION_TOGGLE", enabled });
+        channel.close();
+      }
+    } catch (_) {}
 
+    // 2. Broadcast inside current window
+    try {
+      window.dispatchEvent(new CustomEvent("subscription-feature-toggle", { detail: { enabled } }));
+      window.dispatchEvent(new Event("restaurant-db-update"));
+    } catch (_) {}
+
+    // 3. Persist to Supabase system_config
     if (isSupabaseConfigured) {
       try {
         await supabase
