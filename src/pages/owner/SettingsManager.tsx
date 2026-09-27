@@ -394,7 +394,7 @@ export const SettingsManager: React.FC = () => {
                     {settings?.subscriptionStatus === "expired"
                       ? "Renew Subscription with Razorpay"
                       : settings?.subscriptionStatus === "trial"
-                      ? "Activate 6-Month Plan with Razorpay"
+                      ? `Activate ${activePlan.durationText} Plan with Razorpay`
                       : `Renew Subscription (${eligibility.daysLeft} Days Left)`}
                   </span>
                 </button>

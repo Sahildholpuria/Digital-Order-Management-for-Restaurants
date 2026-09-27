@@ -293,8 +293,16 @@ export const subscriptionService = {
           const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
           const starter = Number(parsed.starterPrice);
           const pro = Number(parsed.proPrice);
+          const starterDuration = Number(parsed.starterDurationMonths);
+          const proDuration = Number(parsed.proDurationMonths);
+
           if (!isNaN(starter) && starter > 0 && !isNaN(pro) && pro > 0) {
-            const pricing: CustomPlanPricing = { starterPrice: starter, proPrice: pro };
+            const pricing: CustomPlanPricing = {
+              starterPrice: starter,
+              starterDurationMonths: !isNaN(starterDuration) && starterDuration > 0 ? Math.round(starterDuration) : 6,
+              proPrice: pro,
+              proDurationMonths: !isNaN(proDuration) && proDuration > 0 ? Math.round(proDuration) : 6
+            };
             saveCustomPlanPricingLocally(pricing);
             return pricing;
           }
@@ -307,12 +315,19 @@ export const subscriptionService = {
   },
 
   /**
-   * Super Admin method to update and broadcast subscription plan pricing
+   * Super Admin method to update and broadcast subscription plan pricing and duration
    */
   async setCustomPricing(pricing: CustomPlanPricing): Promise<void> {
     const starterPrice = Math.max(1, Math.round(Number(pricing.starterPrice) || 2999));
     const proPrice = Math.max(1, Math.round(Number(pricing.proPrice) || 6999));
-    const cleanPricing: CustomPlanPricing = { starterPrice, proPrice };
+    const starterDurationMonths = Math.max(1, Math.round(Number(pricing.starterDurationMonths) || 6));
+    const proDurationMonths = Math.max(1, Math.round(Number(pricing.proDurationMonths) || 6));
+    const cleanPricing: CustomPlanPricing = {
+      starterPrice,
+      starterDurationMonths,
+      proPrice,
+      proDurationMonths
+    };
 
     saveCustomPlanPricingLocally(cleanPricing);
 
@@ -404,8 +419,14 @@ export const subscriptionService = {
               if (payload.new && payload.new.value) {
                 const parsed = typeof payload.new.value === "string" ? JSON.parse(payload.new.value) : payload.new.value;
                 if (parsed.starterPrice && parsed.proPrice) {
-                  saveCustomPlanPricingLocally(parsed);
-                  callback(parsed);
+                  const pricing: CustomPlanPricing = {
+                    starterPrice: Number(parsed.starterPrice) || 2999,
+                    starterDurationMonths: Number(parsed.starterDurationMonths) || 6,
+                    proPrice: Number(parsed.proPrice) || 6999,
+                    proDurationMonths: Number(parsed.proDurationMonths) || 6
+                  };
+                  saveCustomPlanPricingLocally(pricing);
+                  callback(pricing);
                 }
               }
             }

@@ -75,11 +75,18 @@ const CUSTOM_PRICING_STORAGE_KEY = "saas_subscription_custom_pricing";
 
 export interface CustomPlanPricing {
   starterPrice: number;
+  starterDurationMonths?: number;
   proPrice: number;
+  proDurationMonths?: number;
 }
 
+export const formatDurationText = (months: number): string => {
+  const m = Math.max(1, Math.round(Number(months) || 6));
+  return `${m} Month${m > 1 ? "s" : ""}`;
+};
+
 /**
- * Retrieves custom plan prices from local cache or defaults
+ * Retrieves custom plan prices and durations from local cache or defaults
  */
 export const getCustomPlanPricing = (): CustomPlanPricing => {
   try {
@@ -88,16 +95,27 @@ export const getCustomPlanPricing = (): CustomPlanPricing => {
       const parsed = JSON.parse(stored);
       const starter = Number(parsed.starterPrice);
       const pro = Number(parsed.proPrice);
-      if (!isNaN(starter) && starter > 0 && !isNaN(pro) && pro > 0) {
-        return { starterPrice: starter, proPrice: pro };
+      const starterDuration = Number(parsed.starterDurationMonths);
+      const proDuration = Number(parsed.proDurationMonths);
+
+      const starterValid = !isNaN(starter) && starter > 0;
+      const proValid = !isNaN(pro) && pro > 0;
+
+      if (starterValid && proValid) {
+        return {
+          starterPrice: starter,
+          starterDurationMonths: !isNaN(starterDuration) && starterDuration > 0 ? Math.round(starterDuration) : 6,
+          proPrice: pro,
+          proDurationMonths: !isNaN(proDuration) && proDuration > 0 ? Math.round(proDuration) : 6
+        };
       }
     }
   } catch (_) {}
-  return { starterPrice: 2999, proPrice: 6999 };
+  return { starterPrice: 2999, starterDurationMonths: 6, proPrice: 6999, proDurationMonths: 6 };
 };
 
 /**
- * Saves custom plan prices to local cache
+ * Saves custom plan prices and durations to local cache
  */
 export const saveCustomPlanPricingLocally = (pricing: CustomPlanPricing): void => {
   try {
@@ -106,17 +124,26 @@ export const saveCustomPlanPricingLocally = (pricing: CustomPlanPricing): void =
 };
 
 /**
- * Dynamic getter for subscription plans with Super Admin custom prices applied
+ * Dynamic getter for subscription plans with Super Admin custom prices and durations applied
  */
 export const getSubscriptionPlans = (): SubscriptionPlan[] => {
   const custom = getCustomPlanPricing();
+  const starterDuration = custom.starterDurationMonths || 6;
+  const proDuration = custom.proDurationMonths || 6;
+
   return DEFAULT_SAAS_SUBSCRIPTION_PLANS.map(plan => {
-    const customPrice = plan.id === "starter" ? custom.starterPrice : custom.proPrice;
+    const isStarter = plan.id === "starter";
+    const customPrice = isStarter ? custom.starterPrice : custom.proPrice;
+    const durationMonths = isStarter ? starterDuration : proDuration;
     const price = typeof customPrice === "number" && customPrice > 0 ? customPrice : plan.price;
+    const durationText = formatDurationText(durationMonths);
+
     return {
       ...plan,
       price,
-      pricePerMonth: Math.round(price / plan.durationMonths)
+      durationMonths,
+      durationText,
+      pricePerMonth: Math.round(price / durationMonths)
     };
   });
 };

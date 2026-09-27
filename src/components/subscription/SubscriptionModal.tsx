@@ -143,7 +143,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           amount: selectedPlan.price * 100, // in paise
           currency: "INR",
           name: "RestaurantsOS",
-          description: `${selectedPlan.name} (6 Months Subscription)`,
+          description: `${selectedPlan.name} (${selectedPlan.durationText} Subscription)`,
           image: "https://www.restaurantsos.in/favicon.svg",
           prefill: {
             name: restaurantName,
@@ -154,7 +154,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             restaurant_id: restaurantId,
             restaurant_name: restaurantName,
             plan_id: selectedPlan.id,
-            duration: "6 Months"
+            duration: selectedPlan.durationText
           },
           theme: {
             color: "#059669"
@@ -291,7 +291,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 Payment Successful & Plan Extended!
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Thank you, <strong>{restaurantName}</strong>. Your 6-Month subscription renewal is verified and active.
+                Thank you, <strong>{restaurantName}</strong>. Your {paymentSuccess.plan.durationText} subscription renewal is verified and active.
               </p>
             </div>
 
@@ -353,7 +353,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 <div>
                   <span className="text-[9px] text-slate-400 font-bold uppercase block">Duration</span>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-                    6 Months (180 Days)
+                    {paymentSuccess.plan.durationText} (~{paymentSuccess.plan.durationMonths * 30} Days)
                   </p>
                 </div>
 
@@ -440,7 +440,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   <span>Subscription & Renewal</span>
                 </div>
                 <h2 className="text-base sm:text-lg font-black tracking-tight leading-tight">
-                  Choose 6-Month Plan for {restaurantName}
+                  Choose Subscription Plan for {restaurantName}
                 </h2>
                 <p className="text-emerald-100/90 text-[11px] mt-0.5 line-clamp-1">
                   Instant Razorpay renewal with zero downtime for POS, QR menus & KDS.
@@ -525,7 +525,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                               {formatINR(plan.price)}
                             </span>
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
-                              / 6 Months
+                              / {plan.durationText}
                             </span>
                           </div>
                           <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
@@ -569,7 +569,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                       Order Summary
                     </span>
                     <p className="text-xs font-black text-slate-900 dark:text-white">
-                      {selectedPlan.name} • 6 Months Full Access
+                      {selectedPlan.name} • {selectedPlan.durationText} Full Access
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
                       <Calendar className="w-3 h-3 text-emerald-500" />

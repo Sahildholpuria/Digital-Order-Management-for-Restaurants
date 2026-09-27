@@ -75,7 +75,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const [isTogglingSubFeature, setIsTogglingSubFeature] = useState(false);
   const [pricingPlans, setPricingPlans] = useState(() => getSubscriptionPlans());
   const [starterPriceInput, setStarterPriceInput] = useState<number | string>(() => getCustomPlanPricing().starterPrice);
+  const [starterDurationInput, setStarterDurationInput] = useState<number | string>(() => getCustomPlanPricing().starterDurationMonths || 6);
   const [proPriceInput, setProPriceInput] = useState<number | string>(() => getCustomPlanPricing().proPrice);
+  const [proDurationInput, setProDurationInput] = useState<number | string>(() => getCustomPlanPricing().proDurationMonths || 6);
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [rzpKeyInput, setRzpKeyInput] = useState(() => getRazorpayKeyId());
   const [rzpSecretInput, setRzpSecretInput] = useState(() => getRazorpayKeySecret());
@@ -185,7 +187,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
     });
     const unsubPricing = subscriptionService.subscribeCustomPricing((pricing) => {
       setStarterPriceInput(pricing.starterPrice);
+      setStarterDurationInput(pricing.starterDurationMonths || 6);
       setProPriceInput(pricing.proPrice);
+      setProDurationInput(pricing.proDurationMonths || 6);
       setPricingPlans(getSubscriptionPlans());
     });
     return () => {
@@ -196,18 +200,26 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
   const handleSaveCustomPricing = async () => {
     const starter = Math.round(Number(starterPriceInput));
+    const starterMonths = Math.max(1, Math.round(Number(starterDurationInput) || 6));
     const pro = Math.round(Number(proPriceInput));
-    if (isNaN(starter) || starter <= 0 || isNaN(pro) || pro <= 0) {
-      showToast("Please enter valid positive pricing amounts.", "error");
+    const proMonths = Math.max(1, Math.round(Number(proDurationInput) || 6));
+
+    if (isNaN(starter) || starter <= 0 || isNaN(pro) || pro <= 0 || isNaN(starterMonths) || starterMonths <= 0 || isNaN(proMonths) || proMonths <= 0) {
+      showToast("Please enter valid positive pricing amounts and duration months.", "error");
       return;
     }
     setIsSavingPricing(true);
     try {
-      await subscriptionService.setCustomPricing({ starterPrice: starter, proPrice: pro });
+      await subscriptionService.setCustomPricing({
+        starterPrice: starter,
+        starterDurationMonths: starterMonths,
+        proPrice: pro,
+        proDurationMonths: proMonths
+      });
       setPricingPlans(getSubscriptionPlans());
-      showToast("✓ Subscription plan prices updated successfully across the platform!", "success");
+      showToast("✓ Subscription plan pricing & duration updated successfully across the platform!", "success");
     } catch (err: any) {
-      showToast("Failed to update prices: " + (err.message || err), "error");
+      showToast("Failed to update pricing: " + (err.message || err), "error");
     } finally {
       setIsSavingPricing(false);
     }
@@ -216,11 +228,18 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const handleResetCustomPricing = async () => {
     setIsSavingPricing(true);
     try {
-      await subscriptionService.setCustomPricing({ starterPrice: 2999, proPrice: 6999 });
+      await subscriptionService.setCustomPricing({
+        starterPrice: 2999,
+        starterDurationMonths: 6,
+        proPrice: 6999,
+        proDurationMonths: 6
+      });
       setStarterPriceInput(2999);
+      setStarterDurationInput(6);
       setProPriceInput(6999);
+      setProDurationInput(6);
       setPricingPlans(getSubscriptionPlans());
-      showToast("✓ Plan prices reset to system default (₹2,999 / ₹6,999).", "success");
+      showToast("✓ Plan pricing & duration reset to system default (6 Months @ ₹2,999 / ₹6,999).", "success");
     } catch (err: any) {
       showToast("Failed to reset prices: " + (err.message || err), "error");
     } finally {
@@ -1063,86 +1082,140 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
             </div>
           </div>
 
-          {/* Subscription Plan Pricing Management Card */}
+          {/* Subscription Plan Pricing & Duration Management Card */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                    Subscription Plan Pricing Management
+                    Subscription Plan Pricing & Duration Management
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Set or change the 6-Month subscription prices for all tenant restaurants. Updated prices apply instantly to Razorpay checkout.
+                    Configure the subscription total price (₹) and validity duration (in months) for all tenant restaurants. Updates apply in real-time.
                   </p>
                 </div>
               </div>
               <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">
-                Live Pricing Control
+                Live Pricing & Validity Control
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Starter Plan Price Input */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Starter Plan Config */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-lg">⚡</span>
-                    <span className="text-xs font-black text-slate-900 dark:text-white">Starter Plan (6 Months)</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      Starter Plan ({Number(starterDurationInput) || 6} Month{(Number(starterDurationInput) || 6) > 1 ? "s" : ""})
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                    ~{formatINR(Math.round((Number(starterPriceInput) || 0) / 6))} / mo
+                    ~{formatINR(Math.round((Number(starterPriceInput) || 0) / Math.max(1, Number(starterDurationInput) || 1)))} / mo
                   </span>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                    Starter Plan Total Price (₹)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="2999"
-                      value={starterPriceInput}
-                      onChange={(e) => setStarterPriceInput(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                      Plan Price (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="2999"
+                        value={starterPriceInput}
+                        onChange={(e) => setStarterPriceInput(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Default: ₹2,999 for 6 Months (~₹500/month)</p>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                      Duration (Months)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        placeholder="6"
+                        value={starterDurationInput}
+                        onChange={(e) => setStarterDurationInput(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold pointer-events-none">
+                        Mo
+                      </span>
+                    </div>
+                  </div>
                 </div>
+
+                <p className="text-[10px] text-slate-400">
+                  Default: ₹2,999 for 6 Months (~₹500/month)
+                </p>
               </div>
 
-              {/* Pro Restaurant Plan Price Input */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-3">
+              {/* Pro Restaurant Plan Config */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-lg">👑</span>
-                    <span className="text-xs font-black text-slate-900 dark:text-white">Pro Restaurant Plan (6 Months)</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      Pro Restaurant Plan ({Number(proDurationInput) || 6} Month{(Number(proDurationInput) || 6) > 1 ? "s" : ""})
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                    ~{formatINR(Math.round((Number(proPriceInput) || 0) / 6))} / mo
+                    ~{formatINR(Math.round((Number(proPriceInput) || 0) / Math.max(1, Number(proDurationInput) || 1)))} / mo
                   </span>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                    Pro Plan Total Price (₹)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="6999"
-                      value={proPriceInput}
-                      onChange={(e) => setProPriceInput(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                      Plan Price (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="6999"
+                        value={proPriceInput}
+                        onChange={(e) => setProPriceInput(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Default: ₹6,999 for 6 Months (~₹1,166/month)</p>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">
+                      Duration (Months)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        placeholder="6"
+                        value={proDurationInput}
+                        onChange={(e) => setProDurationInput(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold pointer-events-none">
+                        Mo
+                      </span>
+                    </div>
+                  </div>
                 </div>
+
+                <p className="text-[10px] text-slate-400">
+                  Default: ₹6,999 for 6 Months (~₹1,166/month)
+                </p>
               </div>
             </div>
 
@@ -1153,7 +1226,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 disabled={isSavingPricing}
                 className="w-full sm:w-auto text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
               >
-                Reset to Default (₹2,999 / ₹6,999)
+                Reset to Default (6 Months / ₹2,999 & ₹6,999)
               </button>
 
               <button
@@ -1163,7 +1236,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                 className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-600/20 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
-                <span>{isSavingPricing ? "Updating Prices..." : "Save Plan Prices"}</span>
+                <span>{isSavingPricing ? "Updating Plan Settings..." : "Save Pricing & Months"}</span>
               </button>
             </div>
           </div>
@@ -1910,28 +1983,32 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
         const isExpired = daysLeft !== null && daysLeft <= 0;
         const isWarning = daysLeft !== null && daysLeft > 0 && daysLeft <= 14;
 
+        const dynamicPlans = getSubscriptionPlans();
+        const starterPlanConfig = dynamicPlans.find(p => p.id === "starter") || dynamicPlans[0];
+        const proPlanConfig = dynamicPlans.find(p => p.id === "pro") || dynamicPlans[1] || dynamicPlans[0];
+
         const plans = [
           {
             id: "starter" as const,
-            label: "Starter Plan",
-            duration: "6 Months (180 days)",
-            months: 6,
-            price: 2999,
-            icon: "⚡",
+            label: starterPlanConfig.name,
+            duration: `${starterPlanConfig.durationText} (~${starterPlanConfig.durationMonths * 30} days)`,
+            months: starterPlanConfig.durationMonths,
+            price: starterPlanConfig.price,
+            icon: starterPlanConfig.icon,
             color: "border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400",
             ring: "ring-amber-400",
-            badge: "₹2,999 / 6 Mo",
+            badge: `${formatINR(starterPlanConfig.price)} / ${starterPlanConfig.durationText}`,
           },
           {
             id: "pro_6m" as const,
-            label: "Pro Restaurant Plan",
-            duration: "6 Months (180 days)",
-            months: 6,
-            price: 6999,
-            icon: "👑",
+            label: proPlanConfig.name,
+            duration: `${proPlanConfig.durationText} (~${proPlanConfig.durationMonths * 30} days)`,
+            months: proPlanConfig.durationMonths,
+            price: proPlanConfig.price,
+            icon: proPlanConfig.icon,
             color: "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400",
             ring: "ring-emerald-500",
-            badge: "₹6,999 / 6 Mo",
+            badge: `${formatINR(proPlanConfig.price)} / ${proPlanConfig.durationText}`,
           },
         ];
 
