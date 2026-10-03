@@ -158,12 +158,14 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const waiterName = currentUser?.name || currentUser?.role || "Captain";
+      const waiterId = currentUser?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+        ? currentUser.id
+        : undefined;
       const createdOrder = await punchTableOrder(
         selectedTableId,
         cartList,
         generalNotes.trim(),
-        waiterName
+        waiterId
       );
 
       setPunchedOrder(createdOrder);

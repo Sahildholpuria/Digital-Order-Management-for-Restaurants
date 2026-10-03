@@ -1072,7 +1072,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       status: "preparing", // Directly preparing for instant kitchen ticket
       createdAt: new Date().toISOString(),
       elapsedTimeStart: new Date().toISOString(),
-      waiterId: waiterId || currentUser?.id || currentUser?.name || "Captain",
+      waiterId: (waiterId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waiterId))
+        ? waiterId
+        : (currentUser?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id))
+          ? currentUser.id
+          : undefined,
     };
 
     // Save order to database

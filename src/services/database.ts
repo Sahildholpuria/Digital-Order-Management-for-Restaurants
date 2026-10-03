@@ -293,6 +293,9 @@ const mapOrderToFrontend = (row: any): RestaurantOrder => ({
   feedback: row.feedback,
 });
 
+const isValidUUID = (str?: any): boolean => 
+  typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+
 const mapOrderToDb = (model: RestaurantOrder, restaurantId: string) => ({
   id: model.id,
   restaurant_id: restaurantId,
@@ -307,7 +310,7 @@ const mapOrderToDb = (model: RestaurantOrder, restaurantId: string) => ({
   status: model.status,
   created_at: model.createdAt,
   elapsed_time_start: model.elapsedTimeStart,
-  ...(model.waiterId && { waiter_id: model.waiterId }),
+  ...(model.waiterId && isValidUUID(model.waiterId) ? { waiter_id: model.waiterId } : {}),
   ...(model.feedback && { feedback: model.feedback }),
 });
 
