@@ -702,6 +702,17 @@ export const App: React.FC = () => {
         );
       }
 
+      // Dedicated Mobile, Tablet & Handheld POS Console for Waiter / Captain Staff
+      if (currentUser.role === 'waiter') {
+        return (
+          <div className="relative">
+            <Suspense fallback={<LazyLoader />}>
+              <WaiterDashboard isStandalone={true} />
+            </Suspense>
+          </div>
+        );
+      }
+
       const roleProfile = getRoleProfile(currentUser.role);
 
       // Sidebar items based on role profile
@@ -725,11 +736,6 @@ export const App: React.FC = () => {
             { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
           ];
         }
-      } else if (currentUser.role === 'waiter') {
-        // Waiter / Captain Staff Dedicated Navigation (Only Order Taking & Service Calls)
-        sidebarItems = [
-          { id: 'waiter', label: 'Take Orders (Captain)', icon: Bell, roles: ['waiter'] },
-        ];
       } else if (currentUser.role === 'cashier') {
         // Cashier Staff Navigation
         sidebarItems = [
