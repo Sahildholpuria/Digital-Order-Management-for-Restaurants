@@ -55,6 +55,7 @@ interface RestaurantContextType {
 
   // Database Write Actions
   placeOrder: (instructions?: string) => Promise<RestaurantOrder>;
+  punchTableOrder: (tableId: string, items: OrderItem[], specialInstructions?: string, waiterId?: string) => Promise<RestaurantOrder>;
   callWaiter: () => Promise<void>;
   requestBill: () => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
@@ -1035,6 +1036,92 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return newOrder;
   };
 
+  // CAPTAIN DIRECT ORDER PUNCHING WITH INSTANT KOT GENERATION
+  const punchTableOrder = async (
+    tableId: string,
+    items: OrderItem[],
+    specialInstructions?: string,
+    waiterId?: string
+  ): Promise<RestaurantOrder> => {
+    if (!items || items.length === 0) throw new Error("Order items list cannot be empty");
+    
+    // Find target table
+    const targetTable = tables.find(t => t.id === tableId || t.number === tableId);
+    const tableNumber = targetTable ? targetTable.number : tableId.replace(/^table-/i, "");
+    const cleanTableName = `Table ${tableNumber}`;
+
+    const taxRate = settings?.taxPercentage ?? 0;
+    const subtotal = Math.round(items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
+    const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const grandTotal = Math.round((subtotal + tax) * 100) / 100;
+    const orderNum = `KOT-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newOrder: RestaurantOrder = {
+      id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      orderNumber: orderNum,
+      tableId: targetTable ? targetTable.id : tableId,
+      tableName: cleanTableName,
+      items: items.map(c => ({
+        ...c,
+        specialInstructions: c.specialInstructions || specialInstructions || "",
+      })),
+      subtotal,
+      tax,
+      discount: 0,
+      grandTotal,
+      status: "preparing", // Directly preparing for instant kitchen ticket
+      createdAt: new Date().toISOString(),
+      elapsedTimeStart: new Date().toISOString(),
+      waiterId: waiterId || currentUser?.id || currentUser?.name || "Captain",
+    };
+
+    // Save order to database
+    await dbService.saveOrder(restaurantId, newOrder);
+
+    // Optimistically update orders list
+    setOrders(prev => [newOrder, ...prev]);
+
+    // Update table status to occupied automatically in DB and state
+    if (targetTable) {
+      try {
+        await dbService.updateTableStatus(restaurantId, targetTable.id, "occupied");
+      } catch (err) {
+        console.warn("Table status auto-update notice:", err);
+      }
+
+      setTables(prev => prev.map(t => {
+        if (t.id === targetTable.id) {
+          return { ...t, status: "occupied", updatedAt: new Date().toISOString() };
+        }
+        return t;
+      }));
+    }
+
+    // Add notification for kitchen/staff
+    try {
+      const notification: RestaurantNotification = {
+        id: `notify-${Date.now()}`,
+        type: "new_order",
+        tableId: targetTable ? targetTable.id : tableId,
+        tableName: cleanTableName,
+        orderId: newOrder.id,
+        message: `⚡ Captain punched new order ${orderNum} for Table ${tableNumber}.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+      await dbService.addNotification(restaurantId, notification);
+    } catch (_) {}
+
+    // Auto-generate and print KOT ticket
+    try {
+      printKOTReceipt(newOrder, settings?.name || "Kitchen", "80mm", true);
+    } catch (printErr) {
+      console.warn("Auto KOT printing notice:", printErr);
+    }
+
+    return newOrder;
+  };
+
   const callWaiter = async () => {
     if (!currentTable) return;
     const notification: RestaurantNotification = {
@@ -1308,6 +1395,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       getCartTax,
       getCartGrandTotal,
       placeOrder,
+      punchTableOrder,
       callWaiter,
       requestBill,
       updateOrderStatus,

@@ -16,9 +16,11 @@ import {
   VolumeX,
   FileText,
   Printer,
-  RotateCw
+  RotateCw,
+  Zap
 } from 'lucide-react';
 import { printKOTReceipt } from '../../utils/printUtils';
+import { CaptainOrderPunchModal } from '../../components/captain/CaptainOrderPunchModal';
 
 export const OrdersManager: React.FC = () => {
   const { orders, settings, tables, updateOrderStatus, saveOrder, refreshData, testSoundAlert } = useRestaurant();
@@ -27,6 +29,7 @@ export const OrdersManager: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [selectedTableFilter, setSelectedTableFilter] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -165,7 +168,17 @@ export const OrdersManager: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Punch Table Order CTA */}
+          <button
+            type="button"
+            onClick={() => setIsPunchModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+          >
+            <Zap className="w-4 h-4 fill-current text-amber-300" />
+            <span>Punch Table Order (KOT)</span>
+          </button>
+
           {/* Refresh Button */}
           <button
             onClick={handleRefresh}

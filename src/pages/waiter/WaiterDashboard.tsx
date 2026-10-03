@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantTable, TableStatus, RestaurantOrder } from '../../types';
+import { CaptainOrderPunchModal } from '../../components/captain/CaptainOrderPunchModal';
 import { 
   Bell, 
   Receipt, 
@@ -12,7 +13,9 @@ import {
   Coffee, 
   X,
   Volume2,
-  VolumeX
+  VolumeX,
+  Zap,
+  Plus
 } from 'lucide-react';
 
 export const WaiterDashboard: React.FC = () => {
@@ -27,6 +30,8 @@ export const WaiterDashboard: React.FC = () => {
 
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [isPunchModalOpen, setIsPunchModalOpen] = useState<boolean>(false);
+  const [punchInitialTableId, setPunchInitialTableId] = useState<string | undefined>(undefined);
 
   const currency = settings?.currency || '₹';
 
@@ -94,10 +99,24 @@ export const WaiterDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Sound Alert Toggle */}
-        <button
-          type="button"
-          onClick={() => setSoundEnabled(!soundEnabled)}
+        <div className="flex items-center gap-2">
+          {/* Punch Order Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setPunchInitialTableId(undefined);
+              setIsPunchModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+          >
+            <Zap className="w-4 h-4 fill-current text-amber-300" />
+            <span>Punch Table Order (KOT)</span>
+          </button>
+
+          {/* Sound Alert Toggle */}
+          <button
+            type="button"
+            onClick={() => setSoundEnabled(!soundEnabled)}
           className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shadow-sm ${
             soundEnabled 
               ? 'bg-slate-900 dark:bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-800' 
@@ -107,7 +126,8 @@ export const WaiterDashboard: React.FC = () => {
         >
           {soundEnabled ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
           <span>{soundEnabled ? 'Chime ON' : 'Mute'}</span>
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* Active Service Requests Section */}
@@ -207,6 +227,20 @@ export const WaiterDashboard: React.FC = () => {
                     </span>
                   )}
                 </div>
+
+                {/* Quick Punch Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPunchInitialTableId(table.id);
+                    setIsPunchModalOpen(true);
+                  }}
+                  className="mt-2 w-full py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-300 transition-all flex items-center justify-center gap-1 shadow-2xs"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Take Order / KOT</span>
+                </button>
               </div>
             );
           })}
@@ -299,7 +333,19 @@ export const WaiterDashboard: React.FC = () => {
             </div>
 
             {/* Panel Actions */}
-            <div className="p-5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/60">
+            <div className="p-5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/60 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPunchInitialTableId(selectedTable.id);
+                  setIsPunchModalOpen(true);
+                }}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Zap className="w-4 h-4 fill-current text-amber-300" />
+                <span>Punch Items / Add KOT</span>
+              </button>
+
               <button
                 onClick={() => {
                   // Direct POS Checkout link
@@ -308,7 +354,7 @@ export const WaiterDashboard: React.FC = () => {
                   setSelectedTable(null);
                 }}
                 disabled={selectedTableOrders.length === 0}
-                className="w-full bg-brand-650 hover:bg-brand-700 disabled:bg-slate-300 text-white font-bold py-3.5 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:bg-slate-200 dark:disabled:bg-slate-800/50 disabled:text-slate-400 text-white font-bold py-3 rounded-2xl transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Receipt className="w-4 h-4" />
                 <span>Go to Bill Settlements</span>
@@ -319,6 +365,12 @@ export const WaiterDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* Captain Order Punching Modal */}
+      <CaptainOrderPunchModal
+        isOpen={isPunchModalOpen}
+        onClose={() => setIsPunchModalOpen(false)}
+        initialTableId={punchInitialTableId}
+      />
     </div>
   );
 };

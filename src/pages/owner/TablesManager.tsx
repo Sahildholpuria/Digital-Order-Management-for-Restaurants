@@ -14,9 +14,11 @@ import {
   Maximize2,
   Copy,
   Check,
-  Printer
+  Printer,
+  Zap
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { CaptainOrderPunchModal } from '../../components/captain/CaptainOrderPunchModal';
 import html2canvas from 'html2canvas-pro';
 
 export const TablesManager: React.FC = () => {
@@ -30,6 +32,8 @@ export const TablesManager: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [previewTable, setPreviewTable] = useState<RestaurantTable | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
+  const [punchInitialTableId, setPunchInitialTableId] = useState<string | undefined>(undefined);
 
   const flyerRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const previewFlyerRef = useRef<HTMLDivElement | null>(null);
@@ -176,13 +180,27 @@ export const TablesManager: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Table</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setPunchInitialTableId(undefined);
+              setIsPunchModalOpen(true);
+            }}
+            className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+          >
+            <Zap className="w-4 h-4 fill-current text-amber-300" />
+            <span>Punch Order (KOT)</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/10 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Table</span>
+          </button>
+        </div>
       </div>
 
       {/* Grid of Tables */}
@@ -320,6 +338,19 @@ export const TablesManager: React.FC = () => {
                   )}
                 </button>
               </div>
+
+              {/* Quick Order Punch Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setPunchInitialTableId(table.id);
+                  setIsPunchModalOpen(true);
+                }}
+                className="w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+                <span>Take Order / Punch KOT</span>
+              </button>
 
               {/* Action Buttons */}
               <div className="flex gap-2">
