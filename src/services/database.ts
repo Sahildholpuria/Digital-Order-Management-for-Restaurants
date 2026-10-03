@@ -138,7 +138,8 @@ const mapCategoryToDb = (model: MenuCategory, restaurantId: string) => ({
 });
 
 export const parseFoodItemDescription = (desc: string) => {
-  let cleanDesc = desc || '';
+  const rawDesc = desc || '';
+  let cleanDesc = rawDesc.split('||attrs:')[0].split('||variants:')[0].trim();
   let attrs: {
     dietaryType?: 'veg' | 'non_veg' | 'egg';
     serves?: string;
@@ -147,9 +148,8 @@ export const parseFoodItemDescription = (desc: string) => {
   } = {};
   let variants: { name: string; price: number }[] = [];
 
-  if (cleanDesc.includes('||attrs:')) {
-    const [beforeAttrs, rest] = cleanDesc.split('||attrs:');
-    cleanDesc = beforeAttrs;
+  if (rawDesc.includes('||attrs:')) {
+    const [, rest] = rawDesc.split('||attrs:');
     const attrsStr = rest.includes('||variants:') ? rest.split('||variants:')[0] : rest;
     
     attrsStr.split(';').forEach(pair => {
@@ -169,8 +169,8 @@ export const parseFoodItemDescription = (desc: string) => {
     });
   }
 
-  if (desc && desc.includes('||variants:')) {
-    const [, variantsStr] = desc.split('||variants:');
+  if (rawDesc.includes('||variants:')) {
+    const [, variantsStr] = rawDesc.split('||variants:');
     variants = variantsStr.split(';').map(v => {
       const [name, price] = v.split('=');
       return { name, price: Number(price) };

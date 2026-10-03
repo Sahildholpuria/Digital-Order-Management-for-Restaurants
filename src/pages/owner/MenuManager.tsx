@@ -515,18 +515,16 @@ export const MenuManager: React.FC = () => {
                           </h3>
                         </div>
                         {(() => {
-                          const rawDesc = item.description || '';
-                          const hasVariants = rawDesc.includes('||variants:');
-                          const [cleanText, variantsStr] = hasVariants ? rawDesc.split('||variants:') : [rawDesc, ''];
-                          const variantNames = variantsStr
-                            ? variantsStr.split(';').map(v => v.split('=')[0]).filter(Boolean).join(', ')
+                          const cleanText = parsedAttrs.cleanDescription || '';
+                          const variantNames = parsedAttrs.variants && parsedAttrs.variants.length > 0
+                            ? parsedAttrs.variants.map(v => v.name).join(', ')
                             : '';
 
                           return (
                             <div className="space-y-1">
-                              {cleanText.trim() ? (
+                              {cleanText ? (
                                 <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
-                                  {cleanText.trim()}
+                                  {cleanText}
                                 </p>
                               ) : null}
                               {variantNames ? (

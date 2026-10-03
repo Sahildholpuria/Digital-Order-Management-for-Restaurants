@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { FoodItem, OrderItem, RestaurantOrder } from "../../types";
+import { parseFoodItemDescription } from "../../services/database";
 import { printKOTReceipt } from "../../utils/printUtils";
 import {
   X,
@@ -80,7 +81,8 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = item.name.toLowerCase().includes(q);
-        const matchesDesc = (item.description || "").toLowerCase().includes(q);
+        const parsed = parseFoodItemDescription(item.description || "");
+        const matchesDesc = (parsed.cleanDescription || "").toLowerCase().includes(q);
         if (!matchesName && !matchesDesc) return false;
       }
       return true;
@@ -489,11 +491,14 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                                   {item.name}
                                 </h4>
                               </div>
-                              {item.description && (
-                                <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
-                                  {item.description}
-                                </p>
-                              )}
+                              {(() => {
+                                const clean = parseFoodItemDescription(item.description || "").cleanDescription;
+                                return clean ? (
+                                  <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
+                                    {clean}
+                                  </p>
+                                ) : null;
+                              })()}
                             </div>
                             <span className="font-black text-xs text-emerald-600 dark:text-emerald-400 shrink-0">
                               {currency}{item.price}
