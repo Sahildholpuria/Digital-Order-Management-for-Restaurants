@@ -63,9 +63,11 @@ import {
   Info,
   Megaphone,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Bell
 } from 'lucide-react';
 import { translations, Language } from './translations';
+import { getRoleProfile, isTabAllowedForRole } from './config/rolePermissions';
 import { UserProfile } from './types';
 import { PageLoader } from './components/PageLoader';
 import { RestaurantsOSLogo } from './components/RestaurantsOSLogo';
@@ -171,6 +173,8 @@ export const VALID_ADMIN_TABS = [
   "billing",
   "reports",
   "settings",
+  "waiter",
+  "kitchen",
 ] as const;
 
 export type AdminTab = (typeof VALID_ADMIN_TABS)[number];
@@ -698,22 +702,9 @@ export const App: React.FC = () => {
         );
       }
 
-      // Waiter Console redirect for waiters
-      if (currentUser.role === 'waiter') {
-        return (
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-955 bg-mesh p-6 relative">
-            <button 
-              onClick={async () => { await logoutUser(); navigateTo('/'); }}
-              className="absolute top-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 z-50 flex items-center gap-1.5 shadow-sm"
-            >
-              <LogOut className="w-4.5 h-4.5" /> Sign Out
-            </button>
-            <WaiterDashboard />
-          </div>
-        );
-      }
+      const roleProfile = getRoleProfile(currentUser.role);
 
-      // Sidebar items based on role
+      // Sidebar items based on role profile
       let sidebarItems: Array<{ id: string; label: string; icon: any; roles: string[] }> = [];
 
       if (currentUser?.isSuperAdmin) {
@@ -734,24 +725,48 @@ export const App: React.FC = () => {
             { id: 'superadmin', label: t.superadmin, icon: Shield, roles: ['admin'] }
           ];
         }
+      } else if (currentUser.role === 'waiter') {
+        // Waiter / Captain Staff Dedicated Sidebar Navigation
+        sidebarItems = [
+          { id: 'waiter', label: 'Waiter Console', icon: Bell, roles: ['waiter'] },
+          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['waiter'] },
+          { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['waiter'] },
+        ];
+      } else if (currentUser.role === 'cashier') {
+        // Cashier Staff Navigation
+        sidebarItems = [
+          { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['cashier'] },
+          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['cashier'] },
+          { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['cashier'] },
+        ];
       } else {
-        // Regular restaurant staff account
+        // Administrator and Store Manager Navigation
         sidebarItems = [
           { id: 'dashboard', label: t.dashboard, icon: TrendingUp, roles: ['admin', 'manager'] },
-          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['admin', 'manager', 'cashier'] },
+          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['admin', 'manager'] },
           { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['admin', 'manager'] },
           { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin', 'manager'] },
-          { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin', 'manager', 'cashier'] },
-          { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
+          { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin', 'manager'] },
+          { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin', 'manager'] },
           { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
         ].filter(item => item.roles.includes(currentUser.role));
       }
 
-      // Render active tab body
+      // Render active tab body with role permissions enforcement
       const renderActiveTabContent = () => {
         if (currentUser?.isSuperAdmin && (!isImpersonating || activeTab === 'superadmin')) {
           return <SuperAdminDashboard onImpersonate={handleImpersonate} />;
         }
+
+        // Role authorization check for current active tab
+        if (!currentUser?.isSuperAdmin && !isTabAllowedForRole(currentUser.role, activeTab)) {
+          // Fallback to default allowed tab
+          const fallbackTab = roleProfile.defaultTab;
+          if (fallbackTab === 'waiter') return <WaiterDashboard />;
+          if (fallbackTab === 'billing') return <BillingManager />;
+          return <AdminDashboard />;
+        }
+
         switch (activeTab) {
           case 'superadmin': return <SuperAdminDashboard onImpersonate={handleImpersonate} />;
           case 'dashboard': return <AdminDashboard />;
@@ -761,7 +776,9 @@ export const App: React.FC = () => {
           case 'billing': return <BillingManager />;
           case 'reports': return <ReportsManager />;
           case 'settings': return <SettingsManager />;
-          default: return isImpersonating ? <AdminDashboard /> : (currentUser?.isSuperAdmin ? <SuperAdminDashboard onImpersonate={handleImpersonate} /> : <AdminDashboard />);
+          case 'waiter': return <WaiterDashboard />;
+          case 'kitchen': return <KitchenDisplay />;
+          default: return isImpersonating ? <AdminDashboard /> : (currentUser?.isSuperAdmin ? <SuperAdminDashboard onImpersonate={handleImpersonate} /> : (currentUser.role === 'waiter' ? <WaiterDashboard /> : <AdminDashboard />));
         }
       };
 
@@ -857,10 +874,39 @@ export const App: React.FC = () => {
               </div>
 
 
-              {/* User Logged Details */}
-              <div className="bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 px-3 py-2 rounded-xl text-xs space-y-0.5 shadow-xs">
-                <p className="font-bold text-[11px] text-slate-800 dark:text-slate-100 truncate leading-tight">{currentUser.name}</p>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate leading-tight">{currentUser.email}</p>
+              {/* Quick Stations Links for Admin / Managers */}
+              {(currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.isSuperAdmin) && (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('/kitchen')}
+                    className="py-2 px-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    title="Open Kitchen Display Screen"
+                  >
+                    <span>👨‍🍳 KDS Station</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('/waiter')}
+                    className="py-2 px-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    title="Open Waiter & Captain Console"
+                  >
+                    <span>🛎️ Waiter App</span>
+                  </button>
+                </div>
+              )}
+
+              {/* User Role Profile & Details */}
+              <div className="bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 p-3 rounded-2xl text-xs space-y-1.5 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${roleProfile.badgeBg} ${roleProfile.badgeText} ${roleProfile.badgeBorder}`}>
+                    {currentUser?.isSuperAdmin ? '👑 Super Admin' : roleProfile.badge}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-bold text-[11px] text-slate-800 dark:text-slate-100 truncate leading-tight">{currentUser.name}</p>
+                  <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate leading-tight">{currentUser.email}</p>
+                </div>
               </div>
 
               <button

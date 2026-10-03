@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export const SettingsManager: React.FC = () => {
-  const { settings, updateSettings, showToast } = useRestaurant();
+  const { settings, updateSettings, showToast, currentUser } = useRestaurant();
 
   // Settings states
   const [name, setName] = useState(settings?.name || '');

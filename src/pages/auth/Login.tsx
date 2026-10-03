@@ -34,13 +34,14 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
     }
   }, []);
 
-  // Mock roles for easy testing
+  // Mock roles for easy testing & access profile preview
   const mockRoles = [
-    { role: 'superadmin', label: 'Super Admin (SaaS Owner)', desc: 'Central subscription & tenant manager', color: 'bg-emerald-500' },
-    { role: 'admin', label: 'Administrator', desc: 'Full system control & reports', color: 'bg-teal-500' },
-    { role: 'manager', label: 'Store Manager', desc: 'Menu and order overrides', color: 'bg-emerald-600' },
-    { role: 'kitchen', label: 'Kitchen Chef', desc: 'KDS display screen access', color: 'bg-amber-500' },
-    { role: 'waiter', label: 'Waiter Staff', desc: 'Table requests & ordering', color: 'bg-pink-500' },
+    { role: 'superadmin', label: 'Super Admin (SaaS Owner)', desc: 'Platform tenant onboarding & subscription management', color: 'bg-emerald-500' },
+    { role: 'admin', label: 'Restaurant Administrator', desc: 'Full system authority, reports, billing, settings & POS', color: 'bg-teal-500' },
+    { role: 'manager', label: 'Store Manager', desc: 'Operational floor supervisor, menu availability & reports', color: 'bg-indigo-500' },
+    { role: 'waiter', label: 'Captain & Waiter Staff', desc: 'Direct table order punching, KOT tickets & service chimes', color: 'bg-amber-500' },
+    { role: 'kitchen', label: 'Kitchen Head Chef', desc: 'Live KDS cooking display & preparation timer screen', color: 'bg-rose-500' },
+    { role: 'cashier', label: 'Cashier Staff', desc: 'POS checkout, bill settlements & invoice receipts', color: 'bg-teal-600' },
   ];
 
   const handleSupabaseLogin = async (e: React.FormEvent) => {
