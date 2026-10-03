@@ -726,11 +726,9 @@ export const App: React.FC = () => {
           ];
         }
       } else if (currentUser.role === 'waiter') {
-        // Waiter / Captain Staff Dedicated Sidebar Navigation
+        // Waiter / Captain Staff Dedicated Navigation (Only Order Taking & Service Calls)
         sidebarItems = [
-          { id: 'waiter', label: 'Waiter Console', icon: Bell, roles: ['waiter'] },
-          { id: 'orders', label: t.liveOrders, icon: ShoppingBag, roles: ['waiter'] },
-          { id: 'tables', label: t.tableQR, icon: QrCode, roles: ['waiter'] },
+          { id: 'waiter', label: 'Take Orders (Captain)', icon: Bell, roles: ['waiter'] },
         ];
       } else if (currentUser.role === 'cashier') {
         // Cashier Staff Navigation
