@@ -95,6 +95,7 @@ class QZTrayService {
 
   constructor() {
     this.loadStoredConfig();
+    this.setupSecurity();
   }
 
   public getStatus(): QZConnectionStatus {
