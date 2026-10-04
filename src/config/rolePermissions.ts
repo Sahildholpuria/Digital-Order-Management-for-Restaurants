@@ -144,6 +144,7 @@ export const getRoleProfile = (role?: UserRole | string): RoleProfile => {
 };
 
 export const isTabAllowedForRole = (role: UserRole | undefined, tabId: string): boolean => {
+  if (tabId === 'help') return true;
   const profile = getRoleProfile(role);
   return profile.allowedTabs.includes(tabId);
 };

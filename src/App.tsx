@@ -30,6 +30,7 @@ const MenuManager = lazyWithRetry(() => import('./pages/owner/MenuManager').then
 const BillingManager = lazyWithRetry(() => import('./pages/owner/BillingManager').then(m => ({ default: m.BillingManager })));
 const ReportsManager = lazyWithRetry(() => import('./pages/owner/ReportsManager').then(m => ({ default: m.ReportsManager })));
 const SettingsManager = lazyWithRetry(() => import('./pages/owner/SettingsManager').then(m => ({ default: m.SettingsManager })));
+const HelpSupportManager = lazyWithRetry(() => import('./pages/owner/HelpSupportManager').then(m => ({ default: m.HelpSupportManager })));
 const KitchenDisplay = lazyWithRetry(() => import('./pages/kitchen/KitchenDisplay').then(m => ({ default: m.KitchenDisplay })));
 const WaiterDashboard = lazyWithRetry(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
 const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
@@ -178,6 +179,7 @@ export const VALID_ADMIN_TABS = [
   "settings",
   "waiter",
   "kitchen",
+  "help",
 ] as const;
 
 export type AdminTab = (typeof VALID_ADMIN_TABS)[number];
@@ -783,6 +785,7 @@ export const App: React.FC = () => {
           case 'billing': return <BillingManager />;
           case 'reports': return <ReportsManager />;
           case 'settings': return <SettingsManager />;
+          case 'help': return <HelpSupportManager />;
           case 'waiter': return <WaiterDashboard />;
           case 'kitchen': return <KitchenDisplay />;
           default: return isImpersonating ? <AdminDashboard /> : (currentUser?.isSuperAdmin ? <SuperAdminDashboard onImpersonate={handleImpersonate} /> : (currentUser.role === 'waiter' ? <WaiterDashboard /> : <AdminDashboard />));
@@ -979,15 +982,23 @@ export const App: React.FC = () => {
                             type="button"
                             onClick={() => {
                               setUserMenuOpen(false);
-                              setIsHelpModalOpen(true);
+                              handleSelectTab("help");
                             }}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              activeTab === "help"
+                                ? "bg-emerald-600 text-white shadow-xs font-black"
+                                : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            }`}
                           >
                             <div className="flex items-center gap-2.5">
-                              <LifeBuoy className="w-4 h-4 text-sky-500" />
+                              <LifeBuoy className={`w-4 h-4 ${activeTab === "help" ? "text-white" : "text-sky-500"}`} />
                               <span>Help & Support</span>
                             </div>
-                            <span className="text-[9px] bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-extrabold px-1.5 py-0.5 rounded border border-sky-500/20">
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${
+                              activeTab === "help"
+                                ? "bg-white/20 text-white border-white/30"
+                                : "bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                            }`}>
                               24/7
                             </span>
                           </button>
@@ -1163,15 +1174,23 @@ export const App: React.FC = () => {
                   key="help_support"
                   onClick={() => {
                     setMobileSidebarOpen(false);
-                    setIsHelpModalOpen(true);
+                    handleSelectTab("help");
                   }}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === "help"
+                      ? "bg-emerald-600 text-white shadow-xs font-black"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <LifeBuoy className="w-4 h-4 text-sky-500" />
+                    <LifeBuoy className={`w-4 h-4 ${activeTab === "help" ? "text-white" : "text-sky-500"}`} />
                     <span>Help & Support</span>
                   </div>
-                  <span className="text-[9px] bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-extrabold px-1.5 py-0.5 rounded border border-sky-500/20">
+                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${
+                    activeTab === "help"
+                      ? "bg-white/20 text-white border-white/30"
+                      : "bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                  }`}>
                     24/7
                   </span>
                 </button>
