@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { useRestaurant } from '../../context/RestaurantContext';
-import { RestaurantOrder, PaymentRecord } from '../../types';
-import { printBillReceipt } from '../../utils/printUtils';
+import React, { useState, useRef } from "react";
+import { useRestaurant } from "../../context/RestaurantContext";
+import { RestaurantOrder, PaymentRecord } from "../../types";
+import { printBillReceipt } from "../../utils/printUtils";
+import { CaptainOrderPunchModal } from "../../components/captain/CaptainOrderPunchModal";
 import { 
   FileText, 
   Printer, 
@@ -12,11 +13,14 @@ import {
   DollarSign,
   Receipt,
   User,
+  Phone,
   ShoppingBag,
-  Percent
-} from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas-pro';
+  Percent,
+  Plus,
+  UtensilsCrossed
+} from "lucide-react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas-pro";
 
 export const BillingManager: React.FC = () => {
   const { 
@@ -32,18 +36,29 @@ export const BillingManager: React.FC = () => {
     connectQZTray
   } = useRestaurant();
 
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'wallet'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi" | "card" | "wallet">("cash");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [queueFilter, setQueueFilter] = useState<"all" | "dine_in" | "takeaway">("all");
+  const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
 
   const receiptRef = useRef<HTMLDivElement>(null);
-  const currency = settings?.currency || '₹';
+  const currency = settings?.currency || "₹";
 
   // Get active orders that need payment (either ready, served or completed, but let's show served as primary target for POS cash-out)
-  const billableOrders = orders.filter(o => ['ready', 'served'].includes(o.status));
+  const allBillableOrders = orders.filter(o => ["ready", "served"].includes(o.status));
   
+  const billableOrders = allBillableOrders.filter(o => {
+    const isTakeaway = o.orderType === "takeaway" || !!o.tokenNumber;
+    if (queueFilter === "dine_in") return !isTakeaway;
+    if (queueFilter === "takeaway") return isTakeaway;
+    return true;
+  });
+
   const selectedOrder = orders.find(o => o.id === selectedOrderId) || billableOrders[0];
+
+  const isSelectedTakeaway = selectedOrder ? (selectedOrder.orderType === "takeaway" || !!selectedOrder.tokenNumber) : false;
 
   // Calculations
   const subtotal = selectedOrder 
@@ -67,6 +82,10 @@ export const BillingManager: React.FC = () => {
         orderId: selectedOrder.id,
         orderNumber: selectedOrder.orderNumber,
         tableName: selectedOrder.tableName,
+        orderType: selectedOrder.orderType,
+        customerName: selectedOrder.customerName,
+        customerPhone: selectedOrder.customerPhone,
+        tokenNumber: selectedOrder.tokenNumber,
         subtotal,
         tax: taxAmount,
         discount: discountAmount,
@@ -82,36 +101,38 @@ export const BillingManager: React.FC = () => {
         discount: discountAmount,
         tax: taxAmount,
         grandTotal,
-        status: 'completed' as const
+        status: "completed" as const
       };
       await saveOrder(settledOrder);
-      await updateOrderStatus(selectedOrder.id, 'completed');
+      await updateOrderStatus(selectedOrder.id, "completed");
       
-      showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, 'success');
+      showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, "success");
 
-      // 3. If no other active orders remain for this table, mark table available
-      const otherActiveOrders = orders.filter(o => 
-        o.id !== selectedOrder.id &&
-        (o.tableId === selectedOrder.tableId || o.tableName === selectedOrder.tableName) &&
-        ['pending', 'accepted', 'preparing', 'ready', 'served'].includes(o.status)
-      );
-      if (otherActiveOrders.length === 0 && selectedOrder.tableId) {
-        try {
-          await updateTableStatus(selectedOrder.tableId, 'available');
-        } catch (_) {}
+      // 3. If no other active orders remain for this table, mark table available (for dine-in only)
+      if (!isSelectedTakeaway && selectedOrder.tableId && selectedOrder.tableId !== "takeaway") {
+        const otherActiveOrders = orders.filter(o => 
+          o.id !== selectedOrder.id &&
+          (o.tableId === selectedOrder.tableId || o.tableName === selectedOrder.tableName) &&
+          ["pending", "accepted", "preparing", "ready", "served"].includes(o.status)
+        );
+        if (otherActiveOrders.length === 0) {
+          try {
+            await updateTableStatus(selectedOrder.tableId, "available");
+          } catch (_) {}
+        }
       }
 
       // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
       if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
-        triggerPrint('80mm', false);
+        triggerPrint("80mm", false);
       }
 
       // Reset POS terminal selection
-      setSelectedOrderId('');
+      setSelectedOrderId("");
       setDiscountPercent(0);
     } catch (err) {
       console.error(err);
-      showToast('Settlement failed.', 'error');
+      showToast("Settlement failed.", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -123,22 +144,22 @@ export const BillingManager: React.FC = () => {
 
     try {
       const canvas = await html2canvas(receiptRef.current, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL("image/png");
       
       // Thermal receipt standard size (3 inches wide, dynamic height based on aspect ratio)
       const width = 3;
       const height = (canvas.height * width) / canvas.width;
 
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'in',
+        orientation: "portrait",
+        unit: "in",
         format: [width, height + 0.5]
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0.25, width, height);
+      pdf.addImage(imgData, "PNG", 0, 0.25, width, height);
       pdf.save(`${selectedOrder.orderNumber}_Receipt.pdf`);
     } catch (err) {
-      console.error('Error generating PDF:', err);
+      console.error("Error generating PDF:", err);
     }
   };
 
@@ -155,6 +176,9 @@ export const BillingManager: React.FC = () => {
     }
   };
 
+  const dineInCount = allBillableOrders.filter(o => o.orderType !== "takeaway" && !o.tokenNumber).length;
+  const takeawayCount = allBillableOrders.filter(o => o.orderType === "takeaway" || !!o.tokenNumber).length;
+
   return (
     <div className="space-y-6 animate-fade-in">
       
@@ -165,12 +189,23 @@ export const BillingManager: React.FC = () => {
             POS Billing Terminal
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Generate professional invoices, apply discount margins, and settle payments.
+            Generate professional invoices, apply discount margins, and settle payments for Dine-In & Takeaway.
           </p>
         </div>
 
-        {/* QZ Tray Printer Status Badge */}
-        <div className="flex items-center gap-2">
+        {/* Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Takeaway Punch */}
+          <button
+            type="button"
+            onClick={() => setIsPunchModalOpen(true)}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white px-4 py-2 rounded-2xl text-xs font-black shadow-md shadow-orange-500/20 transition-all cursor-pointer active:scale-95"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>+ Quick Takeaway</span>
+          </button>
+
+          {/* QZ Tray Printer Status Badge */}
           {qzStatus === "connected" ? (
             <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-2xl text-xs font-bold shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -184,7 +219,7 @@ export const BillingManager: React.FC = () => {
               title="Click to connect QZ Tray for silent direct printing"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Connect QZ Tray (Silent Print)</span>
+              <span>Connect QZ Tray</span>
             </button>
           )}
         </div>
@@ -194,45 +229,99 @@ export const BillingManager: React.FC = () => {
         
         {/* Left Side: Billable Table queues */}
         <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-5 rounded-3xl shadow-sm space-y-4 lg:col-span-1">
-          <div className="pb-2 border-b border-slate-100 dark:border-slate-850">
-            <h3 className="font-extrabold text-slate-700 dark:text-slate-205 text-sm uppercase tracking-wider">Awaiting Billing</h3>
+          <div className="space-y-3 pb-2 border-b border-slate-100 dark:border-slate-850">
+            <div className="flex justify-between items-center">
+              <h3 className="font-extrabold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">
+                Awaiting Billing ({allBillableOrders.length})
+              </h3>
+            </div>
+
+            {/* Queue Filter Segment */}
+            <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setQueueFilter("all")}
+                className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  queueFilter === "all" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                All ({allBillableOrders.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueueFilter("dine_in")}
+                className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  queueFilter === "dine_in" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                🍽️ Table ({dineInCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueueFilter("takeaway")}
+                className={`py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  queueFilter === "takeaway" ? "bg-orange-600 text-white shadow-xs" : "text-orange-600/80 hover:text-orange-600"
+                }`}
+              >
+                🛍️ Parcel ({takeawayCount})
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
             {billableOrders.length === 0 ? (
               <div className="text-center py-10 text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
-                No tables ready for check-out.
+                No orders waiting for check-out.
               </div>
             ) : (
-              billableOrders.map(order => (
-                <button
-                  key={order.id}
-                  onClick={() => {
-                    setSelectedOrderId(order.id);
-                    setDiscountPercent(0);
-                  }}
-                  className={`w-full text-left p-4 rounded-2xl border transition-all flex flex-col gap-1.5 ${
-                    (selectedOrder?.id === order.id)
-                      ? 'bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30'
-                      : 'bg-slate-50/50 border-slate-100 dark:bg-slate-800/10 dark:border-slate-850 text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className="flex justify-between items-center w-full">
-                    <span className="font-black text-xs font-mono">#{order.orderNumber}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
-                      {order.status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-end w-full">
-                    <div>
-                      <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-205">{order.tableName}</h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{order.items.reduce((acc, curr) => acc + curr.quantity, 0)} items</p>
+              billableOrders.map(order => {
+                const isOrderTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
+                return (
+                  <button
+                    key={order.id}
+                    onClick={() => {
+                      setSelectedOrderId(order.id);
+                      setDiscountPercent(0);
+                    }}
+                    className={`w-full text-left p-4 rounded-2xl border transition-all flex flex-col gap-1.5 cursor-pointer ${
+                      (selectedOrder?.id === order.id)
+                        ? "bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30"
+                        : "bg-slate-50/50 border-slate-100 dark:bg-slate-800/10 dark:border-slate-850 text-slate-500 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-xs font-mono">#{order.orderNumber}</span>
+                        {isOrderTakeaway && (
+                          <span className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black px-1.5 py-0.2 rounded">
+                            🛍️ {order.tokenNumber ? `TK #${order.tokenNumber}` : "TAKEAWAY"}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
+                        {order.status.toUpperCase()}
+                      </span>
                     </div>
-                    <span className="font-black text-sm text-slate-800 dark:text-slate-200">{currency}{order.grandTotal.toFixed(0)}</span>
-                  </div>
-                </button>
-              ))
+
+                    <div className="flex justify-between items-end w-full">
+                      <div>
+                        <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                          {isOrderTakeaway 
+                            ? (order.tokenNumber ? `Takeaway Token #${order.tokenNumber}` : order.tableName)
+                            : order.tableName}
+                        </h4>
+                        {order.customerName && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                            {order.customerName} {order.customerPhone ? `(${order.customerPhone})` : ""}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-slate-400 mt-0.5">{order.items.reduce((acc, curr) => acc + curr.quantity, 0)} items</p>
+                      </div>
+                      <span className="font-black text-sm text-slate-800 dark:text-slate-200">{currency}{order.grandTotal.toFixed(0)}</span>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -252,12 +341,20 @@ export const BillingManager: React.FC = () => {
               >
                 <div className="text-center space-y-1">
                   <Receipt className="w-8 h-8 mx-auto text-emerald-500" />
-                  <h4 className="font-bold text-sm uppercase tracking-wide">{settings?.name || 'The Grand Bistro'}</h4>
+                  <h4 className="font-bold text-sm uppercase tracking-wide">{settings?.name || "The Grand Bistro"}</h4>
                   <p className="text-[10px] text-slate-500 leading-tight">
-                    {settings?.address || '102 Gourmet Blvd, Culinary District'}
+                    {settings?.address || "102 Gourmet Blvd, Culinary District"}
                   </p>
                   {settings?.gstNumber && (
                     <p className="text-[10px] text-slate-500 font-bold">GSTIN: {settings.gstNumber}</p>
+                  )}
+                  {isSelectedTakeaway && (
+                    <div className="mt-1 pt-1 border-t border-b border-black py-0.5">
+                      <p className="font-black text-xs uppercase tracking-wider">*** TAKEAWAY / PARCEL INVOICE ***</p>
+                      {selectedOrder.tokenNumber && (
+                        <p className="font-black text-sm mt-0.5">TOKEN NUMBER: #{selectedOrder.tokenNumber}</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -269,9 +366,15 @@ export const BillingManager: React.FC = () => {
                     <span>Date: {new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Table: {selectedOrder.tableName.replace(/table\s*-\s*/gi, '')}</span>
-                    <span>Time: {new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>{isSelectedTakeaway ? "Order Type:" : "Table:"} {isSelectedTakeaway ? "TAKEAWAY / PARCEL" : selectedOrder.tableName.replace(/table\s*-\s*/gi, "")}</span>
+                    <span>Time: {new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
+                  {selectedOrder.customerName && (
+                    <div className="flex justify-between font-bold">
+                      <span>Customer: {selectedOrder.customerName}</span>
+                      {selectedOrder.customerPhone && <span>{selectedOrder.customerPhone}</span>}
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t border-dashed border-slate-300 my-2"></div>
@@ -327,7 +430,7 @@ export const BillingManager: React.FC = () => {
 
                 <div className="text-center text-[9px] text-slate-550 space-y-0.5">
                   <p>Settled via {paymentMethod.toUpperCase()}</p>
-                  <p>Thank you for dining with us!</p>
+                  <p>{isSelectedTakeaway ? "Thank you for picking up with us!" : "Thank you for dining with us!"}</p>
                   {settings?.websiteUrl ? (
                     <p className="font-mono text-[9px] text-slate-600 font-semibold">{settings.websiteUrl}</p>
                   ) : (
@@ -340,8 +443,13 @@ export const BillingManager: React.FC = () => {
             {/* Billing settlement panel */}
             <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-6 rounded-3xl shadow-sm space-y-6">
               
-              <div className="pb-3 border-b border-slate-50 dark:border-slate-850">
+              <div className="pb-3 border-b border-slate-50 dark:border-slate-850 flex justify-between items-center">
                 <h3 className="font-extrabold text-slate-800 dark:text-slate-105 text-base">Settlement Terminal</h3>
+                {isSelectedTakeaway && (
+                  <span className="bg-orange-500/15 text-orange-700 dark:text-orange-400 text-xs font-black px-2.5 py-1 rounded-full border border-orange-500/30">
+                    🛍️ Takeaway Token #{selectedOrder.tokenNumber || "N/A"}
+                  </span>
+                )}
               </div>
 
               {/* Adjust discount */}
@@ -358,7 +466,7 @@ export const BillingManager: React.FC = () => {
                     type="number"
                     min={0}
                     max={100}
-                    value={discountPercent || ''}
+                    value={discountPercent || ""}
                     onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-850 rounded-2xl py-3 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white text-slate-805 dark:text-slate-100 dark:focus:bg-slate-800"
                   />
@@ -369,15 +477,15 @@ export const BillingManager: React.FC = () => {
               <div className="space-y-3.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Payment Method</label>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {(['cash', 'upi', 'card', 'wallet'] as const).map(method => (
+                  {(["cash", "upi", "card", "wallet"] as const).map(method => (
                     <button
                       key={method}
                       type="button"
                       onClick={() => setPaymentMethod(method)}
-                      className={`py-3 rounded-2xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 ${
+                      className={`py-3 rounded-2xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         paymentMethod === method
-                          ? 'bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/10'
-                          : 'bg-white border-slate-200 text-slate-600 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:bg-slate-50'
+                          ? "bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/10"
+                          : "bg-white border-slate-200 text-slate-600 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 hover:bg-slate-50"
                       }`}
                     >
                       <CreditCard className="w-3.5 h-3.5" />
@@ -394,16 +502,16 @@ export const BillingManager: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2.5">
                       <button
                         type="button"
-                        onClick={() => triggerPrint('80mm')}
-                        className="py-3 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm"
+                        onClick={() => triggerPrint("80mm")}
+                        className="py-3 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm cursor-pointer"
                       >
                         <Printer className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                         <span>Print Bill (80mm)</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => triggerPrint('58mm')}
-                        className="py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-800"
+                        onClick={() => triggerPrint("58mm")}
+                        className="py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
                       >
                         <Printer className="w-4 h-4 text-slate-500" />
                         <span>Mini Bill (58mm)</span>
@@ -423,7 +531,7 @@ export const BillingManager: React.FC = () => {
                       <button
                         type="button"
                         onClick={downloadReceiptPDF}
-                        className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1"
+                        className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>PDF Invoice</span>
@@ -439,7 +547,7 @@ export const BillingManager: React.FC = () => {
                     <button
                       type="button"
                       onClick={downloadReceiptPDF}
-                      className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1"
+                      className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>PDF Invoice</span>
@@ -451,10 +559,10 @@ export const BillingManager: React.FC = () => {
                 <button
                   onClick={handleMarkPaid}
                   disabled={isProcessing}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hover:shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hover:shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer"
                 >
                   <Check className="w-5 h-5" />
-                  <span>{isProcessing ? 'Processing Settle...' : `Settle & Mark Paid (${currency}${grandTotal.toFixed(0)})`}</span>
+                  <span>{isProcessing ? "Processing Settle..." : `Settle & Mark Paid (${currency}${grandTotal.toFixed(0)})`}</span>
                 </button>
               </div>
 
@@ -463,11 +571,18 @@ export const BillingManager: React.FC = () => {
           </div>
         ) : (
           <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 rounded-3xl p-12 text-center text-slate-400">
-            No active billing orders selected. Pick a waiting table from the left list.
+            No active billing orders selected. Pick an awaiting order from the left list.
           </div>
         )}
 
       </div>
+
+      {/* POS Quick Takeaway Punch Modal */}
+      <CaptainOrderPunchModal
+        isOpen={isPunchModalOpen}
+        onClose={() => setIsPunchModalOpen(false)}
+        initialOrderType="takeaway"
+      />
 
     </div>
   );

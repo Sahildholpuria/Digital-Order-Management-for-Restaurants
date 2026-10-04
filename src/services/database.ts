@@ -276,22 +276,35 @@ const mapFoodItemToDb = (model: FoodItem, restaurantId: string) => {
   };
 };
 
-const mapOrderToFrontend = (row: any): RestaurantOrder => ({
-  id: row.id,
-  orderNumber: row.order_number,
-  tableId: row.table_id,
-  tableName: row.table_name,
-  items: row.items, // jsonb is parsed automatically
-  subtotal: Number(row.subtotal),
-  tax: Number(row.tax),
-  discount: Number(row.discount),
-  grandTotal: Number(row.grand_total),
-  status: row.status,
-  createdAt: row.created_at,
-  elapsedTimeStart: row.elapsed_time_start,
-  waiterId: row.waiter_id,
-  feedback: row.feedback,
-});
+const mapOrderToFrontend = (row: any): RestaurantOrder => {
+  const isTakeaway = row.order_type === "takeaway" || row.orderType === "takeaway" || 
+    row.table_id === "takeaway" || row.tableId === "takeaway" ||
+    (typeof row.table_name === "string" && row.table_name.toLowerCase().includes("takeaway")) ||
+    (typeof row.tableName === "string" && row.tableName.toLowerCase().includes("takeaway"));
+
+  return {
+    id: row.id,
+    orderNumber: row.order_number || row.orderNumber,
+    tableId: row.table_id || row.tableId,
+    tableName: row.table_name || row.tableName,
+    orderType: isTakeaway ? "takeaway" : (row.order_type || row.orderType || "dine_in"),
+    customerName: row.customer_name || row.customerName,
+    customerPhone: row.customer_phone || row.customerPhone,
+    tokenNumber: row.token_number || row.tokenNumber,
+    pickupTime: row.pickup_time || row.pickupTime,
+    orderNotes: row.order_notes || row.orderNotes,
+    items: row.items, // jsonb is parsed automatically
+    subtotal: Number(row.subtotal),
+    tax: Number(row.tax),
+    discount: Number(row.discount),
+    grandTotal: Number(row.grand_total || row.grandTotal),
+    status: row.status,
+    createdAt: row.created_at || row.createdAt,
+    elapsedTimeStart: row.elapsed_time_start || row.elapsedTimeStart,
+    waiterId: row.waiter_id || row.waiterId,
+    feedback: row.feedback,
+  };
+};
 
 const isValidUUID = (str?: any): boolean => 
   typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
@@ -302,6 +315,12 @@ const mapOrderToDb = (model: RestaurantOrder, restaurantId: string) => ({
   order_number: model.orderNumber,
   table_id: model.tableId,
   table_name: model.tableName,
+  order_type: model.orderType || "dine_in",
+  ...(model.customerName && { customer_name: model.customerName }),
+  ...(model.customerPhone && { customer_phone: model.customerPhone }),
+  ...(model.tokenNumber && { token_number: model.tokenNumber }),
+  ...(model.pickupTime && { pickup_time: model.pickupTime }),
+  ...(model.orderNotes && { order_notes: model.orderNotes }),
   items: model.items, // serialized as jsonb automatically
   subtotal: model.subtotal,
   tax: model.tax,
@@ -316,15 +335,19 @@ const mapOrderToDb = (model: RestaurantOrder, restaurantId: string) => ({
 
 const mapPaymentToFrontend = (row: any): PaymentRecord => ({
   id: row.id,
-  orderId: row.order_id,
-  orderNumber: row.order_number,
-  tableName: row.table_name,
+  orderId: row.order_id || row.orderId,
+  orderNumber: row.order_number || row.orderNumber,
+  tableName: row.table_name || row.tableName,
+  orderType: row.order_type || row.orderType,
+  customerName: row.customer_name || row.customerName,
+  customerPhone: row.customer_phone || row.customerPhone,
+  tokenNumber: row.token_number || row.tokenNumber,
   subtotal: Number(row.subtotal),
   tax: Number(row.tax),
   discount: Number(row.discount),
-  grandTotal: Number(row.grand_total),
-  paymentMethod: row.payment_method,
-  createdAt: row.created_at,
+  grandTotal: Number(row.grand_total || row.grandTotal),
+  paymentMethod: row.payment_method || row.paymentMethod,
+  createdAt: row.created_at || row.createdAt,
 });
 
 const mapPaymentToDb = (model: PaymentRecord, restaurantId: string) => ({

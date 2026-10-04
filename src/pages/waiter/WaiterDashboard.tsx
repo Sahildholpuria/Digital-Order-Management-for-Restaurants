@@ -27,7 +27,11 @@ import {
   Layers,
   UtensilsCrossed,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ShoppingBag,
+  User,
+  Phone,
+  Tag
 } from "lucide-react";
 
 interface WaiterDashboardProps {
@@ -53,7 +57,8 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isPunchModalOpen, setIsPunchModalOpen] = useState<boolean>(false);
   const [punchInitialTableId, setPunchInitialTableId] = useState<string | undefined>(undefined);
-  const [filterStatus, setFilterStatus] = useState<"all" | "available" | "occupied" | "calling">("all");
+  const [punchInitialOrderType, setPunchInitialOrderType] = useState<"dine_in" | "takeaway">("dine_in");
+  const [filterStatus, setFilterStatus] = useState<"all" | "available" | "occupied" | "calling" | "takeaway">("all");
   const [searchTableQuery, setSearchTableQuery] = useState<string>("");
 
   const currency = settings?.currency || "₹";
@@ -79,6 +84,13 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
     });
     return ids;
   }, [activeAlerts, tables]);
+
+  // Active Takeaway Orders
+  const activeTakeawayOrders = useMemo(() => {
+    return orders.filter(
+      o => (o.orderType === "takeaway" || !!o.tokenNumber) && !["completed", "cancelled"].includes(o.status)
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [orders]);
 
   const prevAlertsCountRef = useRef<number>(activeAlerts.length);
   const isInitialMount = useRef<boolean>(true);
@@ -118,6 +130,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   const filteredTables = useMemo(() => {
     return tables.filter(t => {
       const isCalling = callingTableIds.has(t.id);
+
       if (filterStatus === "available" && t.status !== "available") return false;
       if (filterStatus === "occupied" && t.status !== "occupied") return false;
       if (filterStatus === "calling" && !isCalling) return false;
@@ -154,9 +167,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
     showToast("Service request marked as attended", "success");
   };
 
-  const handleOpenPunchForTable = (tableId?: string, e?: React.MouseEvent) => {
+  const handleOpenPunchForTable = (tableId?: string, orderType: "dine_in" | "takeaway" = "dine_in", e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setPunchInitialTableId(tableId);
+    setPunchInitialOrderType(orderType);
     setIsPunchModalOpen(true);
     if (selectedTable) setSelectedTable(null);
   };
@@ -177,7 +191,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                   {settings?.name || "RestaurantsOS"}
                 </span>
                 <span className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  Floor Captain POS
+                  Floor Captain & Takeaway POS
                 </span>
               </div>
             </div>
@@ -258,36 +272,47 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
       {/* MAIN CONTENT WRAPPER */}
       <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-4 sm:pt-6 space-y-4 sm:space-y-6 flex-1">
-        
-        {/* HERO BANNER & PRIMARY PUNCH CTA */}
-        <div className="bg-gradient-to-r from-emerald-700 via-teal-800 to-slate-900 rounded-3xl p-4 sm:p-6 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          
-          <div className="space-y-1 relative z-10 max-w-xl">
+
+        {/* HERO BANNER & INSTANT PUNCH CTAs */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-emerald-950/20 flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-xl z-10">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-sm">
-                Fast KOT Mode
+              <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-300" />
+                <span>Real-Time Captain Floor</span>
               </span>
               <span className="text-xs text-emerald-200 font-medium">
-                Dining Floor: {occupiedCount} / {tables.length} Tables Busy
+                Floor: {occupiedCount} / {tables.length} Tables Busy &bull; {activeTakeawayOrders.length} Parcels Active
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              Take Table Order & Dispatch KOT
+              Punch Dine-In or Takeaway Orders
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 font-medium">
-              Tap any table card below or use the quick punch button to take guest orders on mobile or tablet.
+              Take guest orders on mobile or tablet. KOT prints silently and alerts the kitchen instantly.
             </p>
           </div>
 
-          {/* Big Quick Punch CTA */}
-          <button
-            type="button"
-            onClick={() => handleOpenPunchForTable(undefined)}
-            className="w-full md:w-auto relative z-10 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 px-6 py-3.5 rounded-2xl font-black text-sm tracking-wide shadow-lg shadow-amber-500/20 transition-all cursor-pointer shrink-0"
-          >
-            <Zap className="w-5 h-5 fill-current text-slate-950" />
-            <span>+ PUNCH NEW TABLE ORDER</span>
-          </button>
+          {/* Dual Quick Punch CTAs */}
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 z-10 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleOpenPunchForTable(undefined, "dine_in")}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 px-5 py-3 rounded-2xl font-black text-xs tracking-wide shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+            >
+              <Zap className="w-4 h-4 fill-current text-slate-950" />
+              <span>+ TABLE DINE-IN</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 active:scale-95 text-white px-5 py-3 rounded-2xl font-black text-xs tracking-wide shadow-lg shadow-orange-500/30 transition-all cursor-pointer border border-white/20"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>+ TAKEAWAY PARCEL</span>
+            </button>
+          </div>
 
           {/* Decorative subtle pattern */}
           <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-white/10 to-transparent pointer-events-none" />
@@ -350,7 +375,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                         type="button"
                         onClick={(e) => {
                           handleResolveAlert(alert.id, e);
-                          handleOpenPunchForTable(alert.tableId);
+                          handleOpenPunchForTable(alert.tableId, "dine_in");
                         }}
                         className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs flex items-center gap-0.5"
                       >
@@ -410,6 +435,20 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                 <span>Occupied ({occupiedCount})</span>
               </button>
 
+              {/* Takeaway Filter Pill */}
+              <button
+                type="button"
+                onClick={() => setFilterStatus("takeaway")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                  filterStatus === "takeaway"
+                    ? "bg-orange-600 text-white shadow-sm"
+                    : "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 hover:bg-orange-100"
+                }`}
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Takeaways ({activeTakeawayOrders.length})</span>
+              </button>
+
               {callingTableIds.size > 0 && (
                 <button
                   type="button"
@@ -431,7 +470,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search table # or capacity..."
+                placeholder="Search table # or takeaway token..."
                 value={searchTableQuery}
                 onChange={(e) => setSearchTableQuery(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -451,140 +490,273 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
         </div>
 
-        {/* DINING TABLES RESPONSIVE GRID */}
-        {filteredTables.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center space-y-3">
-            <UtensilsCrossed className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700" />
-            <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">
-              No Dining Tables Found
-            </h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              No tables match your active status or search filters. Try clearing the filters.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setFilterStatus("all");
-                setSearchTableQuery("");
-              }}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-            {filteredTables.map(table => {
-              const isOccupied = table.status === "occupied";
-              const isCalling = callingTableIds.has(table.id);
+        {/* TAKEAWAY ORDERS GRID (WHEN TAKEAWAY TAB SELECTED) */}
+        {filterStatus === "takeaway" ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-orange-500" />
+                <span>Active Takeaway & Parcel Orders ({activeTakeawayOrders.length})</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+                className="px-3 py-1.5 rounded-xl text-xs font-black bg-orange-600 hover:bg-orange-500 text-white flex items-center gap-1 shadow-sm cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Takeaway</span>
+              </button>
+            </div>
 
-              const activeOrders = orders.filter(
-                o =>
-                  (o.tableId === table.id ||
-                    o.tableId === `table-${table.number}` ||
-                    o.tableName === `Table ${table.number}` ||
-                    o.tableName === table.number) &&
-                  !["completed", "cancelled"].includes(o.status)
-              );
-
-              const totalAmount = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
-              const itemCount = activeOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0);
-
-              return (
-                <div
-                  key={table.id}
-                  onClick={() => {
-                    if (isOccupied) {
-                      setSelectedTable(table);
-                    } else {
-                      handleOpenPunchForTable(table.id);
-                    }
-                  }}
-                  className={`group relative p-4 rounded-3xl border-2 transition-all flex flex-col justify-between cursor-pointer hover:shadow-lg active:scale-98 ${
-                    isCalling
-                      ? "bg-rose-500/10 border-rose-500 dark:bg-rose-950/30 shadow-rose-500/20 shadow-md animate-pulse-gentle"
-                      : isOccupied
-                      ? "bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/40 hover:border-amber-500"
-                      : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-emerald-500"
-                  }`}
+            {activeTakeawayOrders.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center space-y-3">
+                <ShoppingBag className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700" />
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">
+                  No Active Takeaway Orders
+                </h3>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Punch a new parcel order for a takeaway customer with auto-token generation.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+                  className="px-4 py-2 rounded-xl text-xs font-black bg-orange-600 hover:bg-orange-500 text-white cursor-pointer shadow-md"
                 >
-                  {/* Card Header: Table Number & Status Pill */}
-                  <div>
-                    <div className="flex items-start justify-between gap-1 mb-2">
+                  + Punch First Takeaway Order
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {activeTakeawayOrders.map(order => {
+                  const itemCount = order.items.reduce((sum, i) => sum + i.quantity, 0);
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-white dark:bg-slate-900 border-2 border-orange-500/40 hover:border-orange-500 p-4 rounded-3xl transition-all shadow-xs flex flex-col justify-between"
+                    >
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                          Table
-                        </span>
-                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
-                          {table.number}
-                        </h3>
+                        {/* Header: Token & Status */}
+                        <div className="flex items-start justify-between gap-1 mb-2">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 block">
+                              🛍️ Takeaway Token
+                            </span>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white leading-none">
+                              {order.tokenNumber ? `#${order.tokenNumber}` : order.orderNumber}
+                            </h3>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                            ["ready", "served"].includes(order.status)
+                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                              : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                          }`}>
+                            {order.status === "ready" ? "PACKED / READY" : order.status}
+                          </span>
+                        </div>
+
+                        {/* Customer Details */}
+                        {(order.customerName || order.customerPhone) && (
+                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 py-1.5 border-t border-slate-100 dark:border-slate-800 space-y-0.5">
+                            {order.customerName && (
+                              <p className="flex items-center gap-1 truncate">
+                                <User className="w-3 h-3 text-slate-400" />
+                                <span>{order.customerName}</span>
+                              </p>
+                            )}
+                            {order.customerPhone && (
+                              <p className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                                <Phone className="w-3 h-3" />
+                                <span>{order.customerPhone}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Items preview */}
+                        <div className="py-2 border-t border-slate-100 dark:border-slate-800 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            {itemCount} Items:
+                          </p>
+                          {order.items.slice(0, 3).map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-[11px]">
+                              <span className="truncate pr-1">{item.name} x{item.quantity}</span>
+                              <span className="font-bold shrink-0">{currency}{(item.price * item.quantity).toFixed(0)}</span>
+                            </div>
+                          ))}
+                          {order.items.length > 3 && (
+                            <p className="text-[10px] text-orange-500 font-bold">+{order.items.length - 3} more items...</p>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Status Pill */}
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                          isCalling
-                            ? "bg-rose-500 text-white border-rose-500 animate-bounce"
-                            : isOccupied
-                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                            : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                        }`}
-                      >
-                        {isCalling ? "CALLING 🔔" : isOccupied ? "OCCUPIED" : "AVAILABLE"}
-                      </span>
+                      {/* Card Footer Amount & Punch More */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Total</span>
+                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            {currency}{order.grandTotal.toFixed(0)}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-slate-900 hover:bg-orange-600 text-white dark:bg-slate-800 dark:hover:bg-orange-600 transition-all cursor-pointer shadow-xs"
+                        >
+                          + Punch More
+                        </button>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* DINING TABLES RESPONSIVE GRID */
+          filteredTables.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center space-y-3">
+              <UtensilsCrossed className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700" />
+              <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">
+                No Dining Tables Found
+              </h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                No tables match your active status or search filters. Try clearing the filters.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterStatus("all");
+                  setSearchTableQuery("");
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              {filteredTables.map(table => {
+                const isOccupied = table.status === "occupied";
+                const isCalling = callingTableIds.has(table.id);
 
-                    {/* Capacity & Live Orders info */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-slate-100 dark:border-slate-800/80">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3 text-slate-400" />
-                        <span>{table.capacity} Seats</span>
-                      </span>
+                const activeOrders = orders.filter(
+                  o =>
+                    (o.tableId === table.id ||
+                      o.tableId === `table-${table.number}` ||
+                      o.tableName === `Table ${table.number}` ||
+                      o.tableName === table.number) &&
+                    !["completed", "cancelled"].includes(o.status)
+                );
 
-                      {isOccupied && (
-                        <span className="font-extrabold text-amber-600 dark:text-amber-400 text-[10px]">
-                          {activeOrders.length} KOT ({itemCount})
+                const totalAmount = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+                const itemCount = activeOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0);
+
+                return (
+                  <div
+                    key={table.id}
+                    onClick={() => {
+                      if (isOccupied) {
+                        setSelectedTable(table);
+                      } else {
+                        handleOpenPunchForTable(table.id, "dine_in");
+                      }
+                    }}
+                    className={`group relative p-4 rounded-3xl border-2 transition-all flex flex-col justify-between cursor-pointer hover:shadow-lg active:scale-98 ${
+                      isCalling
+                        ? "bg-rose-500/10 border-rose-500 dark:bg-rose-950/30 shadow-rose-500/20 shadow-md animate-pulse-gentle"
+                        : isOccupied
+                        ? "bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/40 hover:border-amber-500"
+                        : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-emerald-500"
+                    }`}
+                  >
+                    {/* Card Header: Table Number & Status Pill */}
+                    <div>
+                      <div className="flex items-start justify-between gap-1 mb-2">
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                            Table
+                          </span>
+                          <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                            {table.number}
+                          </h3>
+                        </div>
+
+                        {/* Status Pill */}
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                            isCalling
+                              ? "bg-rose-500 text-white border-rose-500 animate-bounce"
+                              : isOccupied
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                              : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                          }`}
+                        >
+                          {isCalling ? "CALLING 🔔" : isOccupied ? "OCCUPIED" : "AVAILABLE"}
                         </span>
+                      </div>
+
+                      {/* Capacity & Live Orders info */}
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3 text-slate-400" />
+                          <span>{table.capacity} Seats</span>
+                        </span>
+
+                        {isOccupied && (
+                          <span className="font-extrabold text-amber-600 dark:text-amber-400 text-[10px]">
+                            {activeOrders.length} KOT ({itemCount})
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Running Amount if Occupied */}
+                      {isOccupied && totalAmount > 0 && (
+                        <div className="mt-2 pt-1.5 border-t border-dashed border-amber-500/25 flex justify-between items-center text-xs font-black text-amber-700 dark:text-amber-400">
+                          <span>Running:</span>
+                          <span>{currency}{totalAmount.toFixed(0)}</span>
+                        </div>
                       )}
                     </div>
 
-                    {/* Running Bill Amount if Occupied */}
-                    {isOccupied && totalAmount > 0 && (
-                      <div className="mt-2 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl px-2.5 py-1 flex items-center justify-between text-[11px] font-black text-amber-700 dark:text-amber-300">
-                        <span>Running:</span>
-                        <span>{currency}{totalAmount.toFixed(0)}</span>
-                      </div>
-                    )}
+                    {/* Primary Touch Button */}
+                    <div className="mt-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenPunchForTable(table.id, "dine_in", e)}
+                        className={`w-full py-2.5 px-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
+                          isOccupied
+                            ? "bg-slate-900 hover:bg-amber-600 dark:bg-slate-800 dark:hover:bg-amber-600 text-white"
+                            : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20"
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{isOccupied ? "Add Dishes" : "Take Order"}</span>
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Primary Touch Button */}
-                  <div className="mt-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenPunchForTable(table.id, e)}
-                      className={`w-full py-2.5 px-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
-                        isOccupied
-                          ? "bg-slate-900 hover:bg-amber-600 dark:bg-slate-800 dark:hover:bg-amber-600 text-white"
-                          : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20"
-                      }`}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{isOccupied ? "Add Dishes" : "Take Order"}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )
         )}
 
       </main>
 
-      {/* MOBILE FLOATING ACTION BUTTON (FAB) FOR INSTANT ORDER PUNCHING */}
-      <div className="fixed bottom-4 right-4 z-40 sm:hidden">
+      {/* MOBILE FLOATING ACTION BUTTONS (FAB) */}
+      <div className="fixed bottom-4 right-4 z-40 sm:hidden flex flex-col gap-2 items-end">
         <button
           type="button"
-          onClick={() => handleOpenPunchForTable(undefined)}
+          onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+          className="flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-600 active:scale-95 text-white px-4 py-2.5 rounded-full font-black text-xs tracking-wider shadow-xl shadow-orange-600/40 border border-white/20 cursor-pointer"
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
+          <span>+ TAKEAWAY</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleOpenPunchForTable(undefined, "dine_in")}
           className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 active:scale-95 text-white px-5 py-3.5 rounded-full font-black text-xs tracking-wider shadow-2xl shadow-emerald-600/50 border border-white/20 cursor-pointer"
         >
           <Zap className="w-4 h-4 fill-current text-amber-300 animate-pulse" />
@@ -705,7 +877,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
             <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => handleOpenPunchForTable(selectedTable.id)}
+                onClick={() => handleOpenPunchForTable(selectedTable.id, "dine_in")}
                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Zap className="w-4 h-4 fill-current text-amber-300" />
@@ -722,6 +894,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
         isOpen={isPunchModalOpen}
         onClose={() => setIsPunchModalOpen(false)}
         initialTableId={punchInitialTableId}
+        initialOrderType={punchInitialOrderType}
       />
 
     </div>

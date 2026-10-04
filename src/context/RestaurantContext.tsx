@@ -9,6 +9,7 @@ import {
   FoodItem,
   RestaurantOrder,
   PaymentRecord,
+  OrderType,
   RestaurantNotification,
   OrderItem,
   OrderStatus,
@@ -55,8 +56,9 @@ interface RestaurantContextType {
   getCartGrandTotal: () => number;
 
   // Database Write Actions
-  placeOrder: (instructions?: string) => Promise<RestaurantOrder>;
+  placeOrder: (instructions?: string, orderType?: OrderType, customerInfo?: { name?: string; phone?: string }) => Promise<RestaurantOrder>;
   punchTableOrder: (tableId: string, items: OrderItem[], specialInstructions?: string, waiterId?: string) => Promise<RestaurantOrder>;
+  punchTakeawayOrder: (items: OrderItem[], customerDetails?: { customerName?: string; customerPhone?: string; tokenNumber?: string; specialInstructions?: string }, waiterId?: string) => Promise<RestaurantOrder>;
   callWaiter: () => Promise<void>;
   requestBill: () => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
@@ -1062,31 +1064,47 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return Math.round(total * 100) / 100;
   };
 
-  // PLACE ORDER
-  const placeOrder = async (instructions?: string): Promise<RestaurantOrder> => {
-    if (cart.length === 0) throw new Error('Cart is empty');
-    if (!currentTable) throw new Error('Table not assigned');
+  // PLACE ORDER (Supports Dine-In Tables & Customer Takeaway Pickup)
+  const placeOrder = async (
+    instructions?: string,
+    orderType: OrderType = "dine_in",
+    customerInfo?: { name?: string; phone?: string }
+  ): Promise<RestaurantOrder> => {
+    if (cart.length === 0) throw new Error("Cart is empty");
+    if (orderType === "dine_in" && !currentTable) throw new Error("Table not assigned");
+
+    const isTakeaway = orderType === "takeaway";
+    const todayTakeaways = orders.filter(o => {
+      const isToday = new Date(o.createdAt).toDateString() === new Date().toDateString();
+      return isToday && o.orderType === "takeaway";
+    });
+    const tokenStr = isTakeaway ? `TK-${String(todayTakeaways.length + 1).padStart(2, "0")}` : undefined;
+    const cleanTableName = isTakeaway ? `Takeaway • ${tokenStr}` : `Table ${currentTable?.number || ""}`;
 
     const taxRate = settings?.taxPercentage ?? 0;
     const subtotal = getCartSubtotal();
     const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
-    const orderNum = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+    const orderNum = `${isTakeaway ? "TAK" : "ORD"}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newOrder: RestaurantOrder = {
       id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       orderNumber: orderNum,
-      tableId: currentTable.id,
-      tableName: `Table ${currentTable.number}`,
+      tableId: isTakeaway ? "takeaway" : (currentTable ? currentTable.id : "takeaway"),
+      tableName: cleanTableName,
+      orderType,
+      customerName: customerInfo?.name?.trim() || undefined,
+      customerPhone: customerInfo?.phone?.trim() || undefined,
+      tokenNumber: tokenStr,
       items: cart.map(c => ({
         ...c,
-        specialInstructions: c.specialInstructions || instructions || '',
+        specialInstructions: c.specialInstructions || instructions || "",
       })),
       subtotal,
       tax,
       discount: 0,
       grandTotal,
-      status: 'pending',
+      status: "pending",
       createdAt: new Date().toISOString(),
       elapsedTimeStart: new Date().toISOString(),
     };
@@ -1094,41 +1112,129 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Save order to database
     await dbService.saveOrder(restaurantId, newOrder);
     
-    // Update table status to occupied automatically in DB and local state
-    try {
-      await dbService.updateTableStatus(restaurantId, currentTable.id, 'occupied');
-    } catch (err) {
-      console.warn('Table status auto-update notice:', err);
-    }
-
-    // Optimistically update currentTable and tables list to 'occupied' immediately
-    setCurrentTable(prev => prev ? { ...prev, status: 'occupied' } : null);
-    setTables(prev => prev.map(t => {
-      const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, '');
-      if (t.id === currentTable.id || t.number === cleanNum || t.number === currentTable.number || t.id.replace(/^table-/i, '') === cleanNum) {
-        return { ...t, status: 'occupied', updatedAt: new Date().toISOString() };
+    // Update table status to occupied if Dine-In
+    if (!isTakeaway && currentTable) {
+      try {
+        await dbService.updateTableStatus(restaurantId, currentTable.id, "occupied");
+      } catch (err) {
+        console.warn("Table status auto-update notice:", err);
       }
-      return t;
-    }));
+      setCurrentTable(prev => prev ? { ...prev, status: "occupied" } : null);
+      setTables(prev => prev.map(t => {
+        const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, "");
+        if (t.id === currentTable.id || t.number === cleanNum || t.number === currentTable.number || t.id.replace(/^table-/i, "") === cleanNum) {
+          return { ...t, status: "occupied", updatedAt: new Date().toISOString() };
+        }
+        return t;
+      }));
+    }
 
     // Add alert notification for kitchen/staff
     try {
       const notification: RestaurantNotification = {
         id: `notify-${Date.now()}`,
-        type: 'new_order',
-        tableId: currentTable.id,
-        tableName: `Table ${currentTable.number}`,
+        type: "new_order",
+        tableId: isTakeaway ? "takeaway" : (currentTable?.id || "takeaway"),
+        tableName: cleanTableName,
         orderId: newOrder.id,
-        message: `New order ${orderNum} received from Table ${currentTable.number}.`,
+        message: isTakeaway
+          ? `New Takeaway pickup order ${orderNum} (${tokenStr}) received.`
+          : `New order ${orderNum} received from Table ${currentTable?.number}.`,
         isRead: false,
         createdAt: new Date().toISOString(),
       };
       await dbService.addNotification(restaurantId, notification);
-    } catch (_) {
-      // Notification failure must not block the customer's order confirmation
-    }
+    } catch (_) {}
 
     clearCart();
+    return newOrder;
+  };
+
+  // CAPTAIN DIRECT TAKEAWAY / PARCEL ORDER PUNCHING
+  const punchTakeawayOrder = async (
+    items: OrderItem[],
+    customerDetails?: {
+      customerName?: string;
+      customerPhone?: string;
+      tokenNumber?: string;
+      specialInstructions?: string;
+    },
+    waiterId?: string
+  ): Promise<RestaurantOrder> => {
+    if (!items || items.length === 0) throw new Error("Order items list cannot be empty");
+
+    // Calculate sequential token number if not provided
+    const todayOrders = orders.filter(o => {
+      const isToday = new Date(o.createdAt).toDateString() === new Date().toDateString();
+      return isToday && o.orderType === "takeaway";
+    });
+    const tokenStr = customerDetails?.tokenNumber?.trim() || `TK-${String(todayOrders.length + 1).padStart(2, "0")}`;
+    const cleanTableName = `Takeaway • ${tokenStr}`;
+
+    const taxRate = settings?.taxPercentage ?? 0;
+    const subtotal = Math.round(items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
+    const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+    const grandTotal = Math.round((subtotal + tax) * 100) / 100;
+    const orderNum = `TAK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newOrder: RestaurantOrder = {
+      id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      orderNumber: orderNum,
+      tableId: "takeaway",
+      tableName: cleanTableName,
+      orderType: "takeaway",
+      customerName: customerDetails?.customerName?.trim() || undefined,
+      customerPhone: customerDetails?.customerPhone?.trim() || undefined,
+      tokenNumber: tokenStr,
+      orderNotes: customerDetails?.specialInstructions?.trim() || undefined,
+      items: items.map(c => ({
+        ...c,
+        specialInstructions: c.specialInstructions || customerDetails?.specialInstructions || "",
+      })),
+      subtotal,
+      tax,
+      discount: 0,
+      grandTotal,
+      status: "preparing", // Sent straight to kitchen prep queue
+      createdAt: new Date().toISOString(),
+      elapsedTimeStart: new Date().toISOString(),
+      waiterId: (waiterId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waiterId))
+        ? waiterId
+        : (currentUser?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id))
+          ? currentUser.id
+          : undefined,
+    };
+
+    // Save order to database
+    await dbService.saveOrder(restaurantId, newOrder);
+
+    // Optimistically update orders list
+    setOrders(prev => [newOrder, ...prev]);
+
+    // Dispatch real-time notification
+    try {
+      const notification: RestaurantNotification = {
+        id: `notify-${Date.now()}`,
+        type: "new_order",
+        tableId: "takeaway",
+        tableName: cleanTableName,
+        orderId: newOrder.id,
+        message: `New Takeaway order ${orderNum} (${tokenStr}) placed.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+      await dbService.addNotification(restaurantId, notification);
+    } catch (_) {}
+
+    // Auto silent thermal KOT printing via QZ Tray if online
+    if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
+      try {
+        await printKOTReceipt(newOrder, settings?.name || "Kitchen", qzConfig.paperWidth, false);
+      } catch (err) {
+        console.warn("Auto QZ KOT takeaway print notice:", err);
+      }
+    }
+
     return newOrder;
   };
 
@@ -1496,6 +1602,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       getCartGrandTotal,
       placeOrder,
       punchTableOrder,
+      punchTakeawayOrder,
       callWaiter,
       requestBill,
       updateOrderStatus,

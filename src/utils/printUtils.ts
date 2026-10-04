@@ -113,17 +113,21 @@ export const generateKOTHtml = (
       </head>
       <body>
         <div class="text-center">
-          <h1 style="margin: 0; font-size: 18px; font-weight: 900;">*** KOT ***</h1>
-          <div style="font-size: 11px; font-weight: bold; margin-top: 2px;">KITCHEN ORDER TICKET</div>
+          <h1 style="margin: 0; font-size: 18px; font-weight: 900;">${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "*** TAKEAWAY / PARCEL ***" : "*** KOT ***"}</h1>
+          <div style="font-size: 11px; font-weight: bold; margin-top: 2px;">${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "PARCEL PACKING TICKET" : "KITCHEN ORDER TICKET"}</div>
           <div style="font-size: 10px; color: #333;">${restaurantName}</div>
         </div>
 
         <div class="double-divider"></div>
 
         <div style="font-size: 13px; font-weight: 900; display: flex; justify-content: space-between;">
-          <span>TABLE: ${order.tableName.toUpperCase()}</span>
+          <span>${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "ORDER: " + (order.tokenNumber ? "TOKEN #" + order.tokenNumber : order.tableName.toUpperCase()) : "TABLE: " + order.tableName.toUpperCase()}</span>
           <span>#${order.orderNumber}</span>
         </div>
+        ${order.customerName || order.customerPhone ? `
+        <div style="font-size: 11px; font-weight: bold; margin-top: 3px; background: #eee; padding: 2px 4px;">
+          <span>Customer: ${order.customerName || "Guest"} ${order.customerPhone ? "(" + order.customerPhone + ")" : ""}</span>
+        </div>` : ""}
         <div style="font-size: 10px; display: flex; justify-content: space-between; margin-top: 2px;">
           <span>Date: ${new Date(order.createdAt).toLocaleDateString()}</span>
           <span>Time: ${new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
@@ -256,10 +260,18 @@ export const generateBillReceiptHtml = (
 
         <div class="double-divider"></div>
 
+        <div style="font-size: 11px; font-weight: 900; text-align: center; margin-bottom: 4px;">
+          ${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "*** TAKEAWAY / PARCEL INVOICE ***" : "TAX INVOICE"}
+        </div>
+
         <div style="font-size: 10px; display: flex; justify-content: space-between;">
           <span>INV: #${order.orderNumber}</span>
-          <span>TBL: ${order.tableName.toUpperCase()}</span>
+          <span>${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? (order.tokenNumber ? "TOKEN: #" + order.tokenNumber : order.tableName.toUpperCase()) : "TBL: " + order.tableName.toUpperCase()}</span>
         </div>
+        ${order.customerName || order.customerPhone ? `
+        <div style="font-size: 10px; margin-top: 2px;">
+          <span>Customer: ${order.customerName || "Guest"} ${order.customerPhone ? "(" + order.customerPhone + ")" : ""}</span>
+        </div>` : ""}
         <div style="font-size: 10px; display: flex; justify-content: space-between;">
           <span>Date: ${new Date(order.createdAt).toLocaleDateString()}</span>
           <span>Time: ${new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>

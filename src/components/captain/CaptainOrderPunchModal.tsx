@@ -26,6 +26,7 @@ interface CaptainOrderPunchModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTableId?: string;
+  initialOrderType?: "dine_in" | "takeaway";
   onOrderPunched?: (order: RestaurantOrder) => void;
 }
 
@@ -33,6 +34,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
   isOpen,
   onClose,
   initialTableId,
+  initialOrderType = "dine_in",
   onOrderPunched
 }) => {
   const {
@@ -42,10 +44,16 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
     settings,
     currentUser,
     punchTableOrder,
+    punchTakeawayOrder,
+    orders,
     showToast
   } = useRestaurant();
 
+  const [orderType, setOrderType] = useState<"dine_in" | "takeaway">(initialOrderType);
   const [selectedTableId, setSelectedTableId] = useState<string>(initialTableId || "");
+  const [customerName, setCustomerName] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
+  const [tokenNumber, setTokenNumber] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [dietaryFilter, setDietaryFilter] = useState<"all" | "veg" | "non_veg">("all");
@@ -61,16 +69,25 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setOrderType(initialOrderType);
       if (initialTableId) {
         setSelectedTableId(initialTableId);
       } else if (!selectedTableId && tables.length > 0) {
         const available = tables.find(t => t.status === "available");
         setSelectedTableId(available ? available.id : tables[0].id);
       }
+      // Calculate token for takeaway
+      const todayTakeaways = orders.filter(o => {
+        const isToday = new Date(o.createdAt).toDateString() === new Date().toDateString();
+        return isToday && o.orderType === "takeaway";
+      });
+      setTokenNumber(`TK-${String(todayTakeaways.length + 1).padStart(2, "0")}`);
+      setCustomerName("");
+      setCustomerPhone("");
       setPunchedOrder(null);
       setIsMobileCartDrawerOpen(false);
     }
-  }, [isOpen, initialTableId, tables]);
+  }, [isOpen, initialTableId, initialOrderType, tables, orders]);
 
   const filteredItems = useMemo(() => {
     return foodItems.filter(item => {
@@ -163,7 +180,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
   };
 
   const handlePunchOrder = async () => {
-    if (!selectedTableId) {
+    if (orderType === "dine_in" && !selectedTableId) {
       showToast("Please select a dining table first.", "error");
       return;
     }
@@ -178,18 +195,35 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
         ? currentUser.id
         : undefined;
       
-      const createdOrder = await punchTableOrder(
-        selectedTableId,
-        cartList,
-        generalNotes.trim(),
-        waiterId
-      );
+      let createdOrder: RestaurantOrder;
+      
+      if (orderType === "takeaway") {
+        createdOrder = await punchTakeawayOrder(
+          cartList,
+          {
+            customerName: customerName.trim() || undefined,
+            customerPhone: customerPhone.trim() || undefined,
+            tokenNumber: tokenNumber.trim() || undefined,
+            specialInstructions: generalNotes.trim() || undefined,
+          },
+          waiterId
+        );
+      } else {
+        createdOrder = await punchTableOrder(
+          selectedTableId,
+          cartList,
+          generalNotes.trim(),
+          waiterId
+        );
+      }
 
       setPunchedOrder(createdOrder);
       setCartItems({});
       setGeneralNotes("");
+      setCustomerName("");
+      setCustomerPhone("");
       setIsMobileCartDrawerOpen(false);
-      showToast("Order #" + createdOrder.orderNumber + " punched & KOT queued to kitchen!", "success");
+      showToast(`${orderType === "takeaway" ? "Takeaway" : "Table"} Order #${createdOrder.orderNumber} punched & KOT queued!`, "success");
       
       // Auto-trigger kitchen KOT print
       try {
@@ -335,28 +369,86 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
             {/* LEFT 7/12: MENU BROWSING & SEARCH */}
             <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden">
               
-              {/* Controls Bar: Table Picker + Fast Search */}
+              {/* Controls Bar: Order Mode + Table / Customer Details + Search */}
               <div className="p-3 sm:p-4 bg-slate-50/90 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-slate-800 space-y-2.5 shrink-0">
+                
+                {/* Order Type Toggle */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setOrderType("dine_in")}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      orderType === "dine_in"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>🍽️ Dine-In Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderType("takeaway")}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      orderType === "takeaway"
+                        ? "bg-amber-500 text-white shadow-xs font-black"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>🛍️ Takeaway / Parcel</span>
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   
-                  {/* Table Selection Dropdown */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                      Dining Table *
-                    </label>
-                    <select
-                      value={selectedTableId}
-                      onChange={(e) => setSelectedTableId(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-2xs"
-                    >
-                      <option value="" disabled>-- Select Table --</option>
-                      {tables.map(t => (
-                        <option key={t.id} value={t.id}>
-                          Table {t.number} ({t.status.toUpperCase()} • Cap: {t.capacity})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Table Selection Dropdown OR Takeaway Customer Details */}
+                  {orderType === "dine_in" ? (
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        Dining Table *
+                      </label>
+                      <select
+                        value={selectedTableId}
+                        onChange={(e) => setSelectedTableId(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-2xs"
+                      >
+                        <option value="" disabled>-- Select Table --</option>
+                        {tables.map(t => (
+                          <option key={t.id} value={t.id}>
+                            Table {t.number} ({t.status.toUpperCase()} • Cap: {t.capacity})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Token #
+                        </label>
+                        <input
+                          type="text"
+                          value={tokenNumber}
+                          onChange={(e) => setTokenNumber(e.target.value)}
+                          placeholder="TK-01"
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold text-amber-600 dark:text-amber-400 font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          Customer
+                        </label>
+                        <input
+                          type="text"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          placeholder="Name (opt)"
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Search Field */}
                   <div>

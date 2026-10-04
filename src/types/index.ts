@@ -15,6 +15,7 @@ export interface RestaurantSettings {
   enableBillRequest: boolean;  // show/hide Bill button on customer menu
   enableSoundNotification: boolean; // turn order/request sound chime + voice announcement ON/OFF
   enableBillPrinting?: boolean; // turn thermal bill printing feature ON/OFF
+  enableTakeawayOrders?: boolean; // enable takeaway / parcel ordering
   hideSubscriptionPlan?: boolean; // Super Admin toggle to show/hide subscription billing for this restaurant
   subscriptionStatus?: 'trial' | 'active' | 'expired' | 'suspended';
   subscriptionExpiresAt?: any;
@@ -85,6 +86,8 @@ export interface OrderItem {
   specialInstructions?: string;
 }
 
+export type OrderType = 'dine_in' | 'takeaway' | 'delivery';
+
 export type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
 
 export interface RestaurantOrder {
@@ -92,6 +95,12 @@ export interface RestaurantOrder {
   orderNumber: string;
   tableId: string;
   tableName: string;
+  orderType?: OrderType;
+  customerName?: string;
+  customerPhone?: string;
+  tokenNumber?: string;
+  pickupTime?: string;
+  orderNotes?: string;
   items: OrderItem[];
   subtotal: number;
   tax: number;
@@ -112,6 +121,10 @@ export interface PaymentRecord {
   orderId: string;
   orderNumber: string;
   tableName: string;
+  orderType?: OrderType;
+  customerName?: string;
+  customerPhone?: string;
+  tokenNumber?: string;
   subtotal: number;
   tax: number;
   discount: number;

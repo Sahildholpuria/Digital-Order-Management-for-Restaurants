@@ -165,6 +165,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [selectedVariantName, setSelectedVariantName] = useState<string>('');
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [customerOrderType, setCustomerOrderType] = useState<"dine_in" | "takeaway">("dine_in");
+  const [customerName, setCustomerName] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   
@@ -405,7 +408,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     }
     setIsPlacingOrder(true);
     try {
-      const placed = await placeOrder();
+      const placed = await placeOrder(
+        specialInstructions,
+        customerOrderType,
+        customerOrderType === "takeaway" ? { name: customerName, phone: customerPhone } : undefined
+      );
       setOrderSuccess(placed);
       setIsCartOpen(false);
       
@@ -573,15 +580,38 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
 
   if (orderSuccess) {
+    const isSuccessTakeaway = orderSuccess.orderType === "takeaway" || !!orderSuccess.tokenNumber;
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
         <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800/80 animate-scale-in">
-          <div className="w-20 h-20 bg-green-500/10 dark:bg-green-950/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-550/20">
-            <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-450" />
+          <div className={`w-20 h-20 ${isSuccessTakeaway ? "bg-orange-500/10 dark:bg-orange-950/30 border-orange-500/20" : "bg-green-500/10 dark:bg-green-950/30 border-green-500/20"} rounded-full flex items-center justify-center mx-auto mb-6 border`}>
+            {isSuccessTakeaway ? (
+              <ShoppingBag className="w-10 h-10 text-orange-600 dark:text-orange-400" />
+            ) : (
+              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+            )}
           </div>
           
-          <h2 className="text-3xl font-black mb-2 text-slate-800 dark:text-slate-100 font-sans tracking-tight">Order Sent!</h2>
-          <p className="text-slate-550 dark:text-slate-455 mb-6 text-sm font-semibold">Your items are sent directly to our kitchen staff.</p>
+          <h2 className="text-3xl font-black mb-2 text-slate-800 dark:text-slate-100 font-sans tracking-tight">
+            {isSuccessTakeaway ? "Takeaway Placed!" : "Order Sent!"}
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm font-semibold">
+            {isSuccessTakeaway 
+              ? "Your parcel order is sent to the kitchen. Please present your token number at the pickup counter." 
+              : "Your items are sent directly to our kitchen staff."}
+          </p>
+
+          {/* Prominent Takeaway Token Banner */}
+          {isSuccessTakeaway && orderSuccess.tokenNumber && (
+            <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-2 border-orange-500/30 rounded-2xl p-4 mb-5 text-center">
+              <span className="text-[10px] font-black uppercase tracking-wider text-orange-700 dark:text-orange-300 block">
+                YOUR PICKUP TOKEN NUMBER
+              </span>
+              <span className="text-3xl font-black text-orange-600 dark:text-orange-400 font-mono mt-1 block tracking-wider">
+                #{orderSuccess.tokenNumber}
+              </span>
+            </div>
+          )}
           
           <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 mb-6 space-y-3.5 text-left border border-slate-100 dark:border-slate-800/40 text-xs">
             <div className="flex justify-between items-center">
@@ -589,16 +619,24 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               <span className="font-extrabold text-slate-800 dark:text-slate-200">{orderSuccess.orderNumber}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-500 font-semibold uppercase tracking-wider">Table Assigned</span>
-              <span className="font-extrabold text-slate-800 dark:text-slate-200">{getTableDisplayNumber()}</span>
+              <span className="text-slate-500 font-semibold uppercase tracking-wider">Service Type</span>
+              <span className={`font-black px-2 py-0.5 rounded text-[10px] uppercase ${isSuccessTakeaway ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"}`}>
+                {isSuccessTakeaway ? "🛍️ Takeaway / Pickup" : `🍽️ Table #${getTableDisplayNumber()}`}
+              </span>
             </div>
+            {orderSuccess.customerName && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-semibold uppercase tracking-wider">Customer</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{orderSuccess.customerName}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-slate-500 font-semibold uppercase tracking-wider">Est. Preparation</span>
               <span className="font-extrabold text-brand-600 dark:text-brand-400">~15 - 20 Mins</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 font-semibold uppercase tracking-wider">Order Value</span>
-              <span className="font-black text-slate-900 dark:text-slate-105 text-sm">
+              <span className="font-black text-slate-900 dark:text-slate-100 text-sm">
                 {settings?.currency || '₹'}{orderSuccess.grandTotal.toFixed(2)}
               </span>
             </div>
@@ -722,8 +760,67 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       )}
 
+      {/* Dining / Takeaway Preference Toggle */}
+      {(settings?.enableTakeawayOrders !== false) && (
+        <div className="pt-3 pb-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+          <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+            Select Dining Preference
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setCustomerOrderType("dine_in")}
+              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border cursor-pointer ${
+                customerOrderType === "dine_in"
+                  ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                  : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+              }`}
+            >
+              <span>🍽️ Dine-In Table</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCustomerOrderType("takeaway")}
+              className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border cursor-pointer ${
+                customerOrderType === "takeaway"
+                  ? "bg-orange-600 border-orange-600 text-white shadow-sm"
+                  : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>🛍️ Takeaway</span>
+            </button>
+          </div>
+
+          {customerOrderType === "takeaway" && (
+            <div className="bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/40 p-2.5 rounded-2xl space-y-2 animate-fade-in">
+              <p className="text-[10px] font-bold text-orange-700 dark:text-orange-300">
+                Pickup Token Details:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Your Name (e.g. John)"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+                <input
+                  type="tel"
+                  placeholder="Mobile No. (optional)"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Cart Summary & CTA */}
-      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
         <div className="space-y-2 text-[11px] text-slate-500 dark:text-slate-400 mb-4">
           <div className="flex justify-between items-center">
             <span>Subtotal</span>
