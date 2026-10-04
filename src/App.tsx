@@ -37,6 +37,7 @@ const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdmin
 const SubscriptionModal = lazyWithRetry(() => import('./components/subscription/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
 import { SAAS_SUBSCRIPTION_PLANS, formatINR } from './config/subscriptionPlans';
 import { PWAInstallButton } from './components/common/PWAInstallButton';
+import { APP_VERSION } from './config/appVersion';
 import { HelpSupportModal } from './components/common/HelpSupportModal';
 
 import { 
@@ -1023,6 +1024,14 @@ export const App: React.FC = () => {
                             <span>{t.logOut}</span>
                           </button>
                         </div>
+
+                        {/* App Version Badge */}
+                        <div className="pt-2 px-1 text-center flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                          <span>RestaurantsOS</span>
+                          <span className="font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60">
+                            v{APP_VERSION}
+                          </span>
+                        </div>
                       </div>
                     </>
                   )}
@@ -1237,6 +1246,13 @@ export const App: React.FC = () => {
                 <LogOut className="w-4 h-4" />
                 <span>{t.logOut}</span>
               </button>
+
+              <div className="pt-1 px-1 text-center flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                <span>RestaurantsOS POS</span>
+                <span className="font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60">
+                  v{APP_VERSION}
+                </span>
+              </div>
             </div>
           </aside>
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
+import { APP_VERSION } from "../../config/appVersion";
 import {
   MessageSquare,
   Mail,
@@ -193,7 +194,7 @@ export const HelpSupportManager: React.FC = () => {
 
       </div>
 
-      {/* FAQs Section */}
+            {/* FAQs Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-7 rounded-3xl shadow-sm space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <FileQuestion className="w-5 h-5 text-indigo-500" />
@@ -230,6 +231,17 @@ export const HelpSupportManager: React.FC = () => {
             );
           })}
         </div>
+      </div>
+
+      {/* App Version Info & Live Status Footer */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 border-t border-slate-200/80 dark:border-slate-800 pt-6">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold text-slate-600 dark:text-slate-300">RestaurantsOS Live Cloud</span>
+          <span>•</span>
+          <span>Version <span className="font-mono font-bold text-slate-800 dark:text-slate-100">v{APP_VERSION}</span></span>
+        </div>
+        <span className="text-[11px] text-slate-400">All systems operational & up to date</span>
       </div>
 
     </div>
