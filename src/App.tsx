@@ -903,8 +903,7 @@ export const App: React.FC = () => {
                   <span>{qzStatus === "connected" ? "QZ Online" : qzStatus === "connecting" ? "Connecting..." : "QZ Offline"}</span>
                 </div>
 
-                {/* PWA Install Button */}
-                <PWAInstallButton variant="header" />
+
 
                 {/* Theme Switcher */}
                 <button
@@ -1002,6 +1001,12 @@ export const App: React.FC = () => {
                               24/7
                             </span>
                           </button>
+
+                          {/* Install App Option under Profile */}
+                          <PWAInstallButton
+                            variant="menu"
+                            onInstalled={() => setUserMenuOpen(false)}
+                          />
                         </div>
 
                         {/* Station Switchers */}

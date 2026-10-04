@@ -4,7 +4,7 @@ import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 interface PWAInstallButtonProps {
   className?: string;
-  variant?: 'sidebar' | 'header' | 'banner' | 'icon-only';
+  variant?: 'sidebar' | 'header' | 'banner' | 'icon-only' | 'menu';
   onInstalled?: () => void;
 }
 
@@ -34,6 +34,31 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
       setShowDesktopModal(true);
     }
   };
+
+    // Profile Dropdown Menu item variant
+  if (variant === "menu") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={handleClick}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer ${className}`}
+          title="Install RestaurantsOS as Desktop or Mobile App"
+        >
+          <div className="flex items-center gap-2.5">
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Install App</span>
+          </div>
+          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+            PWA
+          </span>
+        </button>
+
+        {showIosModal && <IosInstallModal onClose={() => setShowIosModal(false)} />}
+        {showDesktopModal && <DesktopInstallModal onClose={() => setShowDesktopModal(false)} />}
+      </>
+    );
+  }
 
   // Header pill variant (similar to Chrome address bar button)
   if (variant === 'header') {
