@@ -19,7 +19,8 @@ import {
 } from '../types';
 
 import { translations, Language } from '../translations';
-import { printKOTReceipt } from '../utils/printUtils';
+import { printKOTReceipt, printBillReceipt } from '../utils/printUtils';
+import { qzTrayService, QZPrinterConfig, QZConnectionStatus } from '../services/qzTrayService';
 
 interface RestaurantContextType {
   lang: Language;
@@ -86,6 +87,16 @@ interface RestaurantContextType {
   confirmModal: ConfirmModalConfig;
   askConfirmation: (title: string, message: string, onConfirm: () => void) => void;
   closeConfirmation: () => void;
+
+  // QZ Tray Silent Thermal Printing Station
+  qzStatus: QZConnectionStatus;
+  qzPrinters: string[];
+  qzConfig: QZPrinterConfig;
+  connectQZTray: () => Promise<boolean>;
+  disconnectQZTray: () => Promise<void>;
+  refreshQZPrinters: () => Promise<string[]>;
+  saveQZConfig: (cfg: Partial<QZPrinterConfig>) => void;
+  testQZPrint: (type: "kot" | "bill") => Promise<{ success: boolean; message?: string }>;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -266,6 +277,91 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const closeConfirmation = () => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // QZ Tray State & Subscription
+  const [qzStatus, setQzStatus] = useState<QZConnectionStatus>(qzTrayService.getStatus());
+  const [qzPrinters, setQzPrinters] = useState<string[]>(qzTrayService.getPrinters());
+  const [qzConfig, setQzConfig] = useState<QZPrinterConfig>(qzTrayService.getConfig());
+
+  useEffect(() => {
+    const unsubscribe = qzTrayService.subscribe((status, printers) => {
+      setQzStatus(status);
+      setQzPrinters(printers);
+      setQzConfig(qzTrayService.getConfig());
+    });
+
+    // Auto-connect if enabled
+    if (qzConfig.autoConnect !== false) {
+      qzTrayService.connect().catch(() => {});
+    }
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const connectQZTray = async () => {
+    const success = await qzTrayService.connect();
+    if (success) {
+      showToast("🟢 Connected to QZ Tray thermal printer service!", "success");
+    } else {
+      const err = qzTrayService.getLastError();
+      showToast(err || "Failed to connect to QZ Tray. Ensure QZ Tray is running.", "error");
+    }
+    return success;
+  };
+
+  const disconnectQZTray = async () => {
+    await qzTrayService.disconnect();
+    showToast("QZ Tray disconnected.", "info");
+  };
+
+  const refreshQZPrinters = async () => {
+    const list = await qzTrayService.refreshPrinters();
+    showToast(`Discovered ${list.length} thermal printers`, "info");
+    return list;
+  };
+
+  const saveQZConfig = (cfg: Partial<QZPrinterConfig>) => {
+    qzTrayService.saveConfig(cfg);
+    setQzConfig(qzTrayService.getConfig());
+    showToast("Printer preferences saved!", "success");
+  };
+
+  const testQZPrint = async (type: "kot" | "bill") => {
+    const restName = settings?.name || "Main Kitchen";
+    const mockOrder: RestaurantOrder = {
+      id: "test-kot-" + Date.now(),
+      orderNumber: "TEST-99",
+      tableId: "t-1",
+      tableName: "Table 1",
+      items: [
+        { itemId: "item-1", name: "Paneer Butter Masala", price: 280, quantity: 2, specialInstructions: "Test Spicy" },
+        { itemId: "item-2", name: "Butter Naan", price: 40, quantity: 4 }
+      ],
+      subtotal: 720,
+      tax: 36,
+      discount: 0,
+      grandTotal: 756,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      elapsedTimeStart: new Date().toISOString()
+    };
+
+    if (type === "kot") {
+      const res = await printKOTReceipt(mockOrder, restName, qzConfig.paperWidth, true);
+      if (res.mode === "qz-tray") {
+        showToast("⚡ Test KOT sent silently to thermal printer!", "success");
+      }
+      return { success: true, message: "KOT printed" };
+    } else {
+      const res = await printBillReceipt(mockOrder, settings, qzConfig.paperWidth, true);
+      if (res.mode === "qz-tray") {
+        showToast("⚡ Test Receipt sent silently to thermal printer!", "success");
+      }
+      return { success: true, message: "Bill printed" };
+    }
   };
   
   const isFirstLoad = useRef(true);
@@ -1425,6 +1521,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       confirmModal,
       askConfirmation,
       closeConfirmation,
+      qzStatus,
+      qzPrinters,
+      qzConfig,
+      connectQZTray,
+      disconnectQZTray,
+      refreshQZPrinters,
+      saveQZConfig,
+      testQZPrint,
     }}>
       {settings?.themeColor && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(settings.themeColor) && !['#10B981', '#059669', '#6366F1', '#4f46e5', '#0B132B', '#18251D', '#39FF88', '#0F172A', '#F59E0B', '#064E3B'].includes(settings.themeColor) && (
         <style dangerouslySetInnerHTML={{ __html: `

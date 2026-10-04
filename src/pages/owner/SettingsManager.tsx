@@ -24,11 +24,29 @@ import {
   VolumeX,
   FileText,
   Printer,
-  Globe
-} from 'lucide-react';
+  Globe,
+  RefreshCw,
+  ExternalLink,
+  Cpu,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
 
 export const SettingsManager: React.FC = () => {
-  const { settings, updateSettings, showToast, currentUser } = useRestaurant();
+  const { 
+    settings, 
+    updateSettings, 
+    showToast, 
+    currentUser,
+    qzStatus,
+    qzPrinters,
+    qzConfig,
+    connectQZTray,
+    disconnectQZTray,
+    refreshQZPrinters,
+    saveQZConfig,
+    testQZPrint
+  } = useRestaurant();
 
   // Settings states
   const [name, setName] = useState(settings?.name || '');
@@ -622,8 +640,8 @@ export const SettingsManager: React.FC = () => {
                   onClick={() => setEnableBillPrinting(v => !v)}
                   className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                     enableBillPrinting
-                      ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                      ? "bg-brand-600 border-brand-600 text-white shadow-sm"
+                      : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500"
                   }`}
                 >
                   {enableBillPrinting ? (
@@ -632,6 +650,236 @@ export const SettingsManager: React.FC = () => {
                     <><ToggleLeft className="w-4 h-4" /><span>Disabled</span></>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* QZ TRAY HARDWARE & SILENT THERMAL PRINTING STATION */}
+          <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500/30 dark:border-emerald-500/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <Cpu className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">
+                      QZ Tray Silent Thermal Station
+                    </h3>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Zero Popups
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Direct thermal printing for Kitchen Order Tickets (KOT) & POS Invoices without browser print dialogs.
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Badge & Reconnect Button */}
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border ${
+                    qzStatus === "connected"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                      : qzStatus === "connecting"
+                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 animate-pulse"
+                      : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      qzStatus === "connected" ? "bg-emerald-500 animate-pulse" : qzStatus === "connecting" ? "bg-amber-500" : "bg-rose-500"
+                    }`}
+                  />
+                  <span>
+                    {qzStatus === "connected"
+                      ? "QZ Connected"
+                      : qzStatus === "connecting"
+                      ? "Connecting..."
+                      : "QZ Offline"}
+                  </span>
+                </span>
+
+                {qzStatus === "connected" ? (
+                  <button
+                    type="button"
+                    onClick={() => refreshQZPrinters()}
+                    className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-all cursor-pointer"
+                    title="Refresh Detected Printers"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => connectQZTray()}
+                    className="px-3 py-1 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer shadow-xs"
+                  >
+                    Connect
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* QZ Printer Selection Controls */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Kitchen KOT Printer Picker */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Kitchen KOT Thermal Printer
+                  </label>
+                  <select
+                    value={qzConfig.kotPrinter || ""}
+                    onChange={(e) => saveQZConfig({ kotPrinter: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="">-- Auto-detect Default Thermal Printer --</option>
+                    {qzPrinters.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400">
+                    Dispatches orders punched by captains or accepted on KDS directly to this thermal printer.
+                  </p>
+                </div>
+
+                {/* POS Billing Receipt Printer Picker */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Counter POS Bill Receipt Printer
+                  </label>
+                  <select
+                    value={qzConfig.billPrinter || ""}
+                    onChange={(e) => saveQZConfig({ billPrinter: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="">-- Auto-detect Default Thermal Printer --</option>
+                    {qzPrinters.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400">
+                    Prints customer tax invoices & checkout receipts upon bill settlement.
+                  </p>
+                </div>
+              </div>
+
+              {/* Thermal Paper Width & Automation Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                
+                {/* Paper Width Selector */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                    Paper Roll Size
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => saveQZConfig({ paperWidth: "80mm" })}
+                      className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        qzConfig.paperWidth === "80mm"
+                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      80mm (3-inch)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => saveQZConfig({ paperWidth: "58mm" })}
+                      className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        qzConfig.paperWidth === "58mm"
+                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      58mm (2-inch)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Auto-print KOT Toggle */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Auto-Print KOT</span>
+                    <span className="text-[10px] text-slate-400 block">Silent on new order</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => saveQZConfig({ autoPrintKOT: !qzConfig.autoPrintKOT })}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      qzConfig.autoPrintKOT
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
+                    }`}
+                  >
+                    {qzConfig.autoPrintKOT ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+                {/* Auto-print Bill Toggle */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">Auto-Print Bill</span>
+                    <span className="text-[10px] text-slate-400 block">Silent on settlement</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => saveQZConfig({ autoPrintBill: !qzConfig.autoPrintBill })}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      qzConfig.autoPrintBill
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
+                    }`}
+                  >
+                    {qzConfig.autoPrintBill ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+              </div>
+
+              {/* Action Test Buttons & Setup Help */}
+              <div className="p-3.5 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">
+                    Physical Printer Test:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => testQZPrint("kot")}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white transition-all cursor-pointer active:scale-95 shadow-xs flex items-center gap-1"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>⚡ Test KOT</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => testQZPrint("bill")}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer active:scale-95 shadow-xs flex items-center gap-1"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>⚡ Test Bill</span>
+                    </button>
+                  </div>
+                </div>
+
+                <a
+                  href="https://qz.io/download/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                >
+                  <span>Download QZ Tray (v2.2+)</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
             </div>
           </div>

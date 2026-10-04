@@ -5,7 +5,7 @@ import { Clock, CheckSquare, ChefHat, Play, Printer, Volume2, VolumeX, RotateCcw
 import { printKOTReceipt } from '../../utils/printUtils';
 
 export const KitchenDisplay: React.FC = () => {
-  const { orders, updateOrderStatus, settings } = useRestaurant();
+  const { orders, updateOrderStatus, settings, qzStatus, qzConfig, connectQZTray } = useRestaurant();
   
   // Local states
   const [crossedItems, setCrossedItems] = useState<{ [key: string]: boolean }>({});

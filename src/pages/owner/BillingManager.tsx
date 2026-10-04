@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { RestaurantOrder, PaymentRecord } from '../../types';
-import { printHTMLContent } from '../../utils/printUtils';
+import { printBillReceipt } from '../../utils/printUtils';
 import { 
   FileText, 
   Printer, 
@@ -26,7 +26,10 @@ export const BillingManager: React.FC = () => {
     updateOrderStatus,
     updateTableStatus,
     saveOrder,
-    showToast
+    showToast,
+    qzStatus,
+    qzConfig,
+    connectQZTray
   } = useRestaurant();
 
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
@@ -140,177 +143,51 @@ export const BillingManager: React.FC = () => {
   };
 
   // Trigger POS Thermal Receipt Print (80mm / 58mm POS billing machine)
-  const triggerPrint = (paperWidth: '80mm' | '58mm' = '80mm') => {
+  const triggerPrint = async (paperWidth: "80mm" | "58mm" = "80mm") => {
     if (!selectedOrder) return;
-
-    const itemsHtml = selectedOrder.items.map(item => `
-      <tr>
-        <td style="padding: 3px 0; vertical-align: top;">
-          <div style="font-weight: bold;">${item.name}</div>
-          ${item.specialInstructions ? `<div style="font-size: 9px; color: #444;">(${item.specialInstructions})</div>` : ''}
-        </td>
-        <td style="text-align: center; vertical-align: top; padding: 3px 0;">${item.quantity}</td>
-        <td style="text-align: right; vertical-align: top; padding: 3px 0;">${currency}${item.price.toFixed(2)}</td>
-        <td style="text-align: right; vertical-align: top; font-weight: bold; padding: 3px 0;">${currency}${(item.price * item.quantity).toFixed(2)}</td>
-      </tr>
-    `).join('');
-
-    const restName = settings?.name || 'Restaurant OS';
-    const restAddress = settings?.address || '';
-    const restPhone = settings?.phone ? `Tel: ${settings.phone}` : '';
-    const gstNo = settings?.gstNumber ? `GSTIN: ${settings.gstNumber}` : '';
-    const websiteStr = settings?.websiteUrl || '';
-    const bodyWidth = paperWidth === '58mm' ? '58mm' : '80mm';
-
-    const receiptHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt_${selectedOrder.orderNumber}</title>
-          <meta charset="utf-8" />
-          <style>
-            @page {
-              size: ${bodyWidth} auto;
-              margin: 0;
-            }
-            @media print {
-              html, body {
-                width: ${bodyWidth};
-                margin: 0 auto;
-                padding: 0;
-              }
-              .no-print { display: none !important; }
-            }
-            body {
-              font-family: 'Courier New', Courier, monospace, sans-serif;
-              width: ${bodyWidth};
-              margin: 0 auto;
-              padding: 8px;
-              box-sizing: border-box;
-              font-size: 11px;
-              line-height: 1.35;
-              color: #000;
-              background: #fff;
-            }
-            .text-center { text-align: center; }
-            .text-right { text-align: right; }
-            .text-left { text-align: left; }
-            .font-bold { font-weight: bold; }
-            .dashed-divider {
-              border-top: 1px dashed #000;
-              margin: 6px 0;
-            }
-            .double-divider {
-              border-top: 2px double #000;
-              margin: 6px 0;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th {
-              border-bottom: 1px dashed #000;
-              padding: 4px 0;
-              font-size: 10px;
-            }
-            .total-row {
-              font-size: 13px;
-              font-weight: bold;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="text-center">
-            <h2 style="margin: 0; font-size: 15px; font-weight: 900; text-transform: uppercase;">${restName}</h2>
-            ${restAddress ? `<div style="font-size: 9.5px;">${restAddress}</div>` : ''}
-            ${restPhone ? `<div style="font-size: 9.5px;">${restPhone}</div>` : ''}
-            ${gstNo ? `<div style="font-size: 9.5px; font-weight: bold;">${gstNo}</div>` : ''}
-          </div>
-
-          <div class="dashed-divider"></div>
-
-          <div style="display: flex; justify-content: space-between; font-size: 10px;">
-            <span>Bill #${selectedOrder.orderNumber}</span>
-            <span>Table: <strong>${selectedOrder.tableName || 'N/A'}</strong></span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 10px;">
-            <span>Date: ${new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
-            <span>Time: ${new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-
-          <div class="dashed-divider"></div>
-
-          <table>
-            <thead>
-              <tr>
-                <th class="text-left" style="width: 45%;">Item</th>
-                <th class="text-center" style="width: 15%;">Qty</th>
-                <th class="text-right" style="width: 20%;">Price</th>
-                <th class="text-right" style="width: 20%;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
-
-          <div class="dashed-divider"></div>
-
-          <table>
-            <tr>
-              <td class="text-left">Subtotal:</td>
-              <td class="text-right">${currency}${subtotal.toFixed(2)}</td>
-            </tr>
-            ${discountAmount > 0 ? `
-              <tr>
-                <td class="text-left">Discount (${discountPercent}%):</td>
-                <td class="text-right">-${currency}${discountAmount.toFixed(2)}</td>
-              </tr>
-            ` : ''}
-            ${taxAmount > 0 ? `
-              <tr>
-                <td class="text-left">Taxes / GST:</td>
-                <td class="text-right">+${currency}${taxAmount.toFixed(2)}</td>
-              </tr>
-            ` : ''}
-          </table>
-
-          <div class="double-divider"></div>
-
-          <table class="total-row">
-            <tr>
-              <td class="text-left">GRAND TOTAL:</td>
-              <td class="text-right">${currency}${grandTotal.toFixed(2)}</td>
-            </tr>
-          </table>
-
-          <div class="dashed-divider"></div>
-
-          <div class="text-center" style="font-size: 10px; margin-top: 4px;">
-            <div>Payment: <strong>${paymentMethod.toUpperCase()}</strong></div>
-            <div style="margin-top: 6px;" class="font-bold">Thank you for dining with us!</div>
-            ${websiteStr ? `<div style="font-size: 9px; color: #555; margin-top: 2px;">${websiteStr}</div>` : '<div style="font-size: 9px; color: #555; margin-top: 2px;">Please visit again</div>'}
-          </div>
-
-          <div style="height: 35px;"></div>
-        </body>
-      </html>
-    `;
-
-    printHTMLContent(receiptHtml, 'pos-receipt-print-frame');
+    try {
+      const res = await printBillReceipt(selectedOrder, settings, paperWidth, true);
+      if (res.mode === "qz-tray") {
+        showToast("⚡ Silent thermal receipt sent directly to printer!", "success");
+      }
+    } catch (e: any) {
+      showToast("Print error: " + (e.message || e), "error");
+    }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       
       {/* Title */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight font-sans">
-          POS Billing Terminal
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Generate professional invoices, apply discount margins, and settle payments.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight font-sans">
+            POS Billing Terminal
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Generate professional invoices, apply discount margins, and settle payments.
+          </p>
+        </div>
+
+        {/* QZ Tray Printer Status Badge */}
+        <div className="flex items-center gap-2">
+          {qzStatus === "connected" ? (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-2xl text-xs font-bold shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Silent Thermal: {qzConfig.billPrinter || "Default Printer"}</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => connectQZTray()}
+              className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              title="Click to connect QZ Tray for silent direct printing"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Connect QZ Tray (Silent Print)</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
