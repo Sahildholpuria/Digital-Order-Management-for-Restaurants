@@ -823,27 +823,7 @@ export const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Quick Station Badges for Large Screens */}
-                {(currentUser.role === "admin" || currentUser.role === "manager" || currentUser.isSuperAdmin) && (
-                  <div className="hidden 2xl:flex items-center gap-1.5 pl-3 border-l border-slate-200 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => navigateTo("/kitchen")}
-                      className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1 transition-all cursor-pointer"
-                      title="Open Kitchen Display Screen (KDS)"
-                    >
-                      <span>👨‍🍳 KDS</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigateTo("/waiter")}
-                      className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1 transition-all cursor-pointer"
-                      title="Open Waiter Console"
-                    >
-                      <span>🛎️ Waiter</span>
-                    </button>
-                  </div>
-                )}
+
               </div>
 
               {/* Center Navigation Links (Desktop xl Screens) */}
