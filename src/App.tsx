@@ -730,7 +730,6 @@ export const App: React.FC = () => {
             { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin'] },
             { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin'] },
             { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
-            { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
           ];
         } else {
           // Pure Super Admin SaaS Mode: ALWAYS show ONLY Super Admin Panel
@@ -948,8 +947,34 @@ export const App: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Station Switchers */}
+                        {/* Store Settings Option under Profile */}
                         <div className="space-y-1 pt-1">
+                          {(currentUser.role === "admin" || currentUser.isSuperAdmin) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                handleSelectTab("settings");
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                activeTab === "settings"
+                                  ? "bg-emerald-600 text-white shadow-xs font-black"
+                                  : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <SettingsIcon className={`w-4 h-4 ${activeTab === "settings" ? "text-white" : "text-emerald-600 dark:text-emerald-400"}`} />
+                                <span>{t.settings || "Store Settings"}</span>
+                              </div>
+                              {activeTab === "settings" && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Station Switchers */}
+                        <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                           <button
                             type="button"
                             onClick={() => { setUserMenuOpen(false); navigateTo("/kitchen"); }}
@@ -1097,6 +1122,22 @@ export const App: React.FC = () => {
                     </button>
                   );
                 })}
+                {(currentUser.role === "admin" || currentUser.isSuperAdmin) && (
+                  <button
+                    key="settings"
+                    onClick={() => handleSelectTab("settings")}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === "settings"
+                        ? "bg-emerald-600 text-white shadow-xs font-black"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <SettingsIcon className={`w-4 h-4 ${activeTab === "settings" ? "text-white" : "text-emerald-500"}`} />
+                      <span>{t.settings || "Store Settings"}</span>
+                    </div>
+                  </button>
+                )}
               </nav>
 
               {/* Station Consoles */}
