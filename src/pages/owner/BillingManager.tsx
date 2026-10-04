@@ -103,7 +103,7 @@ export const BillingManager: React.FC = () => {
 
       // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
       if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
-        triggerPrint('80mm');
+        triggerPrint('80mm', false);
       }
 
       // Reset POS terminal selection
@@ -143,10 +143,10 @@ export const BillingManager: React.FC = () => {
   };
 
   // Trigger POS Thermal Receipt Print (80mm / 58mm POS billing machine)
-  const triggerPrint = async (paperWidth: "80mm" | "58mm" = "80mm") => {
+  const triggerPrint = async (paperWidth: "80mm" | "58mm" = "80mm", forcePrint: boolean = true) => {
     if (!selectedOrder) return;
     try {
-      const res = await printBillReceipt(selectedOrder, settings, paperWidth, true);
+      const res = await printBillReceipt(selectedOrder, settings, paperWidth, forcePrint);
       if (res.mode === "qz-tray") {
         showToast("⚡ Silent thermal receipt sent directly to printer!", "success");
       }

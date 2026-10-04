@@ -334,8 +334,8 @@ export const printKOTReceipt = async (
   restaurantName: string = "Main Kitchen",
   paperWidth?: "80mm" | "58mm",
   forcePrint: boolean = false
-): Promise<{ success: boolean; mode: "qz-tray" | "browser" }> => {
-  if (!order || !order.id) return { success: false, mode: "browser" };
+): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> => {
+  if (!order || !order.id) return { success: false, mode: "none" };
 
   const now = Date.now();
   const lastPrintTime = lastPrintedKotMap.get(order.id) || 0;
@@ -343,7 +343,7 @@ export const printKOTReceipt = async (
   // Prevent duplicate print triggers for the exact same order within 15 seconds unless user explicitly clicks manual Print button
   if (!forcePrint && now - lastPrintTime < 15000) {
     console.log(`[PrintKOT] Skipped duplicate print trigger for order ${order.orderNumber || order.id}`);
-    return { success: true, mode: "browser" };
+    return { success: true, mode: "none" };
   }
 
   lastPrintedKotMap.set(order.id, now);
@@ -352,8 +352,13 @@ export const printKOTReceipt = async (
   const effectiveWidth = paperWidth || qzConfig.paperWidth || "80mm";
   const kotHtml = generateKOTHtml(order, restaurantName, effectiveWidth);
 
-  // Check if QZ Tray is available and configured for silent direct printing
+  // 1. If QZ Tray is connected, execute silent direct thermal printing
   if (qzTrayService.isConnected() && (qzConfig.kotPrinter || qzTrayService.getPrinters().length > 0)) {
+    // If it is an automatic print trigger, check if autoPrintKOT is enabled
+    if (!forcePrint && qzConfig.autoPrintKOT === false) {
+      return { success: true, mode: "none", message: "Auto-print KOT disabled" };
+    }
+
     try {
       const res = await qzTrayService.printHTML({
         printerName: qzConfig.kotPrinter,
@@ -363,17 +368,24 @@ export const printKOTReceipt = async (
       });
 
       if (res.success) {
-        return { success: true, mode: "qz-tray" };
+        return { success: true, mode: "qz-tray", message: res.message };
       }
-      console.warn("QZ Tray print failed, falling back to browser dialog:", res.message);
+      console.warn("QZ Tray print failed:", res.message);
     } catch (qzErr) {
-      console.warn("QZ Tray print exception, falling back to browser dialog:", qzErr);
+      console.warn("QZ Tray print exception:", qzErr);
     }
   }
 
-  // Fallback to standard browser print iframe
-  printHTMLContent(kotHtml, "pos-kot-print-frame");
-  return { success: true, mode: "browser" };
+  // 2. If QZ Tray is NOT connected:
+  // ONLY open browser print dialog if the user MANUALLY clicked print (forcePrint === true).
+  // Automatic background events (like accepting orders in Live Orders or auto-punching) will NEVER pop up the browser dialog.
+  if (forcePrint) {
+    printHTMLContent(kotHtml, "pos-kot-print-frame");
+    return { success: true, mode: "browser" };
+  }
+
+  console.info("[PrintKOT] QZ Tray is offline. Silent KOT skipped (Start QZ Tray for zero-popup direct thermal printing).");
+  return { success: false, mode: "none", message: "QZ Tray offline" };
 };
 
 export const printBillReceipt = async (
@@ -381,15 +393,19 @@ export const printBillReceipt = async (
   settings?: RestaurantSettings | null,
   paperWidth?: "80mm" | "58mm",
   forcePrint: boolean = false
-): Promise<{ success: boolean; mode: "qz-tray" | "browser" }> => {
-  if (!order || !order.id) return { success: false, mode: "browser" };
+): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> => {
+  if (!order || !order.id) return { success: false, mode: "none" };
 
   const qzConfig = qzTrayService.getConfig();
   const effectiveWidth = paperWidth || qzConfig.paperWidth || "80mm";
   const receiptHtml = generateBillReceiptHtml(order, settings, effectiveWidth);
 
-  // Check if QZ Tray is active and configured for silent direct printing
+  // 1. If QZ Tray is connected, execute silent direct thermal printing
   if (qzTrayService.isConnected() && (qzConfig.billPrinter || qzTrayService.getPrinters().length > 0)) {
+    if (!forcePrint && qzConfig.autoPrintBill === false) {
+      return { success: true, mode: "none", message: "Auto-print Bill disabled" };
+    }
+
     try {
       const res = await qzTrayService.printHTML({
         printerName: qzConfig.billPrinter,
@@ -399,15 +415,21 @@ export const printBillReceipt = async (
       });
 
       if (res.success) {
-        return { success: true, mode: "qz-tray" };
+        return { success: true, mode: "qz-tray", message: res.message };
       }
-      console.warn("QZ Tray bill print failed, falling back to browser dialog:", res.message);
+      console.warn("QZ Tray bill print failed:", res.message);
     } catch (qzErr) {
-      console.warn("QZ Tray bill print exception, falling back to browser dialog:", qzErr);
+      console.warn("QZ Tray bill print exception:", qzErr);
     }
   }
 
-  // Fallback to standard browser print iframe
-  printHTMLContent(receiptHtml, "pos-receipt-print-frame");
-  return { success: true, mode: "browser" };
+  // 2. If QZ Tray is NOT connected:
+  // ONLY open browser print dialog if the user MANUALLY requested it (forcePrint === true).
+  if (forcePrint) {
+    printHTMLContent(receiptHtml, "pos-receipt-print-frame");
+    return { success: true, mode: "browser" };
+  }
+
+  console.info("[PrintBill] QZ Tray is offline. Silent Bill skipped (Start QZ Tray for zero-popup direct thermal printing).");
+  return { success: false, mode: "none", message: "QZ Tray offline" };
 };
