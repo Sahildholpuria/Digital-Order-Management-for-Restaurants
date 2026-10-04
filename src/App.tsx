@@ -36,6 +36,7 @@ const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdmin
 const SubscriptionModal = lazyWithRetry(() => import('./components/subscription/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
 import { SAAS_SUBSCRIPTION_PLANS, formatINR } from './config/subscriptionPlans';
 import { PWAInstallButton } from './components/common/PWAInstallButton';
+import { HelpSupportModal } from './components/common/HelpSupportModal';
 
 import { 
   ChevronDown,
@@ -65,7 +66,8 @@ import {
   Megaphone,
   AlertTriangle,
   CheckCircle2,
-  Bell
+  Bell,
+  LifeBuoy
 } from 'lucide-react';
 import { translations, Language } from './translations';
 import { getRoleProfile, isTabAllowedForRole } from './config/rolePermissions';
@@ -215,6 +217,7 @@ export const isAdminPortalRoute = (pathname: string): boolean => {
 export const App: React.FC = () => {
   const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t, orders, qzStatus, connectQZTray } = useRestaurant();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   // Navigation Routing States
@@ -946,7 +949,7 @@ export const App: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Store Settings Option under Profile */}
+                        {/* Store Settings & Help Options under Profile */}
                         <div className="space-y-1 pt-1">
                           {(currentUser.role === "admin" || currentUser.isSuperAdmin) && (
                             <button
@@ -970,6 +973,24 @@ export const App: React.FC = () => {
                               )}
                             </button>
                           )}
+
+                          {/* Help and Support Navigation Item */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserMenuOpen(false);
+                              setIsHelpModalOpen(true);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <LifeBuoy className="w-4 h-4 text-sky-500" />
+                              <span>Help & Support</span>
+                            </div>
+                            <span className="text-[9px] bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-extrabold px-1.5 py-0.5 rounded border border-sky-500/20">
+                              24/7
+                            </span>
+                          </button>
                         </div>
 
                         {/* Station Switchers */}
@@ -1137,6 +1158,23 @@ export const App: React.FC = () => {
                     </div>
                   </button>
                 )}
+
+                <button
+                  key="help_support"
+                  onClick={() => {
+                    setMobileSidebarOpen(false);
+                    setIsHelpModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <LifeBuoy className="w-4 h-4 text-sky-500" />
+                    <span>Help & Support</span>
+                  </div>
+                  <span className="text-[9px] bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-extrabold px-1.5 py-0.5 rounded border border-sky-500/20">
+                    24/7
+                  </span>
+                </button>
               </nav>
 
               {/* Station Consoles */}
