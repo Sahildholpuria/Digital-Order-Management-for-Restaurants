@@ -38,6 +38,7 @@ import { SAAS_SUBSCRIPTION_PLANS, formatINR } from './config/subscriptionPlans';
 import { PWAInstallButton } from './components/common/PWAInstallButton';
 
 import { 
+  ChevronDown,
   Zap,
   TrendingUp, 
   ShoppingBag, 
@@ -212,7 +213,8 @@ export const isAdminPortalRoute = (pathname: string): boolean => {
 };
 
 export const App: React.FC = () => {
-  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t } = useRestaurant();
+  const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t, orders, qzStatus, connectQZTray } = useRestaurant();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   // Navigation Routing States
@@ -786,180 +788,463 @@ export const App: React.FC = () => {
         }
       };
 
+            const activeOrdersCount = orders ? orders.filter(o => o.status === "pending" || o.status === "preparing" || o.status === "ready").length : 0;
+
       return (
-        <div className="h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col xl:flex-row animate-fade-in">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col animate-fade-in text-slate-800 dark:text-slate-100">
           
-          {/* Mobile/Tablet Header Bar */}
-          <header className="xl:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-            <div className="flex items-center gap-2.5">
-              <RestaurantsOSLogo size="sm" showText={false} />
-              <div className="flex flex-col leading-none">
-                <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight">
-                  Restaurants <span className="text-emerald-500">OS</span>
-                </span>
-                <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider mt-0.5">
-                  {currentUser?.isSuperAdmin ? (isImpersonating ? `Portal: ${settings?.name || impersonatedTenantId}` : 'Super Admin') : (settings?.name || 'POS Portal')}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <PWAInstallButton variant="header" />
-              <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
-              </button>
-              <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <Menu className="w-4.5 h-4.5" />
-              </button>
-            </div>
-          </header>
-
-          {/* Mobile Sidebar Backdrop */}
-          {mobileSidebarOpen && (
-            <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 xl:hidden animate-fade-in"
-              onClick={() => setMobileSidebarOpen(false)}
-            />
-          )}
-
-          {/* Sidebar Frame */}
-          <aside className={`fixed xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto top-0 bottom-0 left-0 z-50 w-64 bg-white/85 dark:bg-slate-900/85 border-r border-slate-200/60 dark:border-slate-800 p-6 flex flex-col justify-between transition-transform duration-300 xl:translate-x-0 backdrop-blur-xl ${
-            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}>
-            <div className="space-y-6">
-              {/* Header Logo */}
-              <div className="flex items-center gap-3">
-                <RestaurantsOSLogo size="md" showText={false} />
-                <div>
-                  <div className="flex items-center gap-1 leading-none">
-                    <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight font-sans">
+          {/* ========================================================= */}
+          {/* TOP NAVIGATION HEADER BAR (Clean, Sticky & Glassmorphic)   */}
+          {/* ========================================================= */}
+          <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/75 dark:border-slate-800 transition-colors shadow-2xs">
+            <div className="max-w-[1680px] mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-[70px] flex items-center justify-between gap-3">
+              
+              {/* Left Brand Identity & Restaurant Badge */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div 
+                  onClick={() => handleSelectTab(currentUser?.isSuperAdmin && !isImpersonating ? "superadmin" : "dashboard")}
+                  className="flex items-center gap-2.5 cursor-pointer group"
+                >
+                  <RestaurantsOSLogo size="sm" showText={false} />
+                  <div className="flex flex-col leading-none">
+                    <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight font-sans flex items-center gap-1">
                       Restaurants <span className="text-emerald-500 dark:text-emerald-400">OS</span>
                     </span>
+                    <span 
+                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-wider mt-0.5 truncate max-w-[150px] sm:max-w-[200px]" 
+                      title={currentUser?.isSuperAdmin ? (isImpersonating ? `Tenant: ${settings?.name || impersonatedTenantId}` : "Super Admin") : (settings?.name || "POS Portal")}
+                    >
+                      {currentUser?.isSuperAdmin ? (isImpersonating ? `Tenant: ${settings?.name || impersonatedTenantId}` : "Super Admin") : (settings?.name || "POS Portal")}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-widest leading-none block mt-1 truncate max-w-[140px]" title={currentUser?.isSuperAdmin ? (isImpersonating ? (settings?.name || impersonatedTenantId || 'Tenant') : 'Tenant Central') : (settings?.name || 'POS Portal')}>
-                    {currentUser?.isSuperAdmin ? (isImpersonating ? `Tenant: ${settings?.name || impersonatedTenantId}` : 'Super Admin') : (settings?.name || 'POS Portal')}
-                  </span>
                 </div>
+
+                {/* Quick Station Badges for Large Screens */}
+                {(currentUser.role === "admin" || currentUser.role === "manager" || currentUser.isSuperAdmin) && (
+                  <div className="hidden 2xl:flex items-center gap-1.5 pl-3 border-l border-slate-200 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => navigateTo("/kitchen")}
+                      className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1 transition-all cursor-pointer"
+                      title="Open Kitchen Display Screen (KDS)"
+                    >
+                      <span>👨‍🍳 KDS</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigateTo("/waiter")}
+                      className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1 transition-all cursor-pointer"
+                      title="Open Waiter Console"
+                    >
+                      <span>🛎️ Waiter</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Sidebar Tabs Links */}
-              <nav className="space-y-1.5">
+              {/* Center Navigation Links (Desktop xl Screens) */}
+              <nav className="hidden xl:flex items-center gap-1 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-750/70 shadow-2xs">
                 {sidebarItems.map(item => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
+                  const isOrders = item.id === "orders";
                   return (
                     <button
                       key={item.id}
                       onClick={() => handleSelectTab(item.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                        isActive 
-                          ? 'bg-brand-600 text-white shadow-md shadow-brand-500/15'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-105 dark:hover:bg-slate-800/40 hover:text-slate-800 dark:hover:text-slate-100'
+                      className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/20 font-black"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/60 dark:hover:bg-slate-700/50"
                       }`}
                     >
-                      <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
                       <span>{item.label}</span>
+                      
+                      {/* Real-time Live Orders Count Badge */}
+                      {isOrders && activeOrdersCount > 0 && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full leading-tight ${
+                          isActive 
+                            ? "bg-white text-emerald-700" 
+                            : "bg-emerald-500 text-white animate-pulse"
+                        }`}>
+                          {activeOrdersCount}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </nav>
-            </div>
 
-            {/* Sidebar Bottom Profile Options */}
-            <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800/50">
-              <PWAInstallButton variant="sidebar" />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Interface Theme</span>
+              {/* Right Action Controls & User Profile */}
+              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+                
+                {/* QZ Tray Thermal Status Badge */}
+                <div 
+                  onClick={() => qzStatus !== "connected" && connectQZTray()}
+                  className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    qzStatus === "connected"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                      : qzStatus === "connecting"
+                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 animate-pulse"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-emerald-500/50"
+                  }`}
+                  title={qzStatus === "connected" ? "QZ Tray Thermal Station Online" : "Click to connect QZ Tray"}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      qzStatus === "connected" ? "bg-emerald-500 animate-pulse" : qzStatus === "connecting" ? "bg-amber-500" : "bg-slate-400"
+                    }`}
+                  />
+                  <span>{qzStatus === "connected" ? "QZ Online" : qzStatus === "connecting" ? "Connecting..." : "QZ Offline"}</span>
+                </div>
+
+                {/* PWA Install Button */}
+                <PWAInstallButton variant="header" />
+
+                {/* Theme Switcher */}
                 <button
                   onClick={toggleTheme}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-350 p-2 rounded-xl hover:bg-slate-150 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                  className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-2xs"
+                  title="Toggle Light / Dark Interface Theme"
                 >
-                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+
+                {/* User Profile Dropdown Menu */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200/90 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-2xl transition-all cursor-pointer shadow-2xs"
+                  >
+                    <div className="w-7 h-7 rounded-xl bg-brand-600 text-white flex items-center justify-center text-xs font-black shrink-0">
+                      {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "U"}
+                    </div>
+                    <div className="hidden md:flex flex-col text-left leading-none">
+                      <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate max-w-[100px]">
+                        {currentUser.name}
+                      </span>
+                      <span className="text-[9px] font-extrabold uppercase text-slate-400 mt-0.5">
+                        {currentUser?.isSuperAdmin ? "Super Admin" : roleProfile.badge}
+                      </span>
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
+                  </button>
+
+                  {/* Dropdown Popover */}
+                  {userMenuOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setUserMenuOpen(false)} 
+                      />
+                      <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-2 z-50 animate-scale-in space-y-1.5">
+                        <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                          <p className="font-black text-xs text-slate-900 dark:text-white truncate">{currentUser.name}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+                          <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[9px] font-black border ${roleProfile.badgeBg} ${roleProfile.badgeText} ${roleProfile.badgeBorder}`}>
+                            {currentUser?.isSuperAdmin ? "👑 Super Admin" : roleProfile.badge}
+                          </span>
+                        </div>
+
+                        {/* Station Switchers */}
+                        <div className="space-y-1 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => { setUserMenuOpen(false); navigateTo("/kitchen"); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            <ChefHat className="w-4 h-4 text-rose-500" />
+                            <span>Kitchen KDS Station</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setUserMenuOpen(false); navigateTo("/waiter"); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            <User className="w-4 h-4 text-amber-500" />
+                            <span>Waiter & Captain App</span>
+                          </button>
+                        </div>
+
+                        <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setUserMenuOpen(false);
+                              await logoutUser();
+                              navigateTo("/");
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>{t.logOut}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Mobile / Tablet Hamburger Button */}
+                <button 
+                  onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} 
+                  className="xl:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+                  aria-label="Toggle navigation menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+
+              </div>
+
+            </div>
+
+            {/* Sub-Header Horizontal Tabs for Tablets / Medium Screens (md to xl) */}
+            <div className="hidden md:flex xl:hidden border-t border-slate-200/60 dark:border-slate-800 px-4 py-2 overflow-x-auto no-scrollbar gap-1.5 bg-slate-50/70 dark:bg-slate-900/50">
+              {sidebarItems.map(item => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                const isOrders = item.id === "orders";
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSelectTab(item.id)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-emerald-600 text-white shadow-xs font-black"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{item.label}</span>
+                    {isOrders && activeOrdersCount > 0 && (
+                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                        isActive ? "bg-white text-emerald-700" : "bg-emerald-500 text-white"
+                      }`}>
+                        {activeOrdersCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </header>
+
+          {/* ========================================================= */}
+          {/* MOBILE SLIDE-OUT DRAWER                                    */}
+          {/* ========================================================= */}
+          {mobileSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 xl:hidden animate-fade-in"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+
+          <aside className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between transition-transform duration-300 xl:hidden shadow-2xl ${
+            mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}>
+            <div className="space-y-5 overflow-y-auto">
+              
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <RestaurantsOSLogo size="sm" showText={false} />
+                  <div>
+                    <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight font-sans">
+                      Restaurants <span className="text-emerald-500">OS</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">
+                      {settings?.name || "POS Portal"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
+              {/* Navigation Items List */}
+              <nav className="space-y-1">
+                {sidebarItems.map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  const isOrders = item.id === "orders";
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectTab(item.id)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-emerald-600 text-white shadow-xs font-black"
+                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {isOrders && activeOrdersCount > 0 && (
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                          isActive ? "bg-white text-emerald-700" : "bg-emerald-500 text-white"
+                        }`}>
+                          {activeOrdersCount} Active
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
 
-              {/* Quick Stations Links for Admin / Managers */}
-              {(currentUser.role === 'admin' || currentUser.role === 'manager' || currentUser.isSuperAdmin) && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('/kitchen')}
-                    className="py-2 px-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                    title="Open Kitchen Display Screen"
-                  >
-                    <span>👨‍🍳 KDS Station</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('/waiter')}
-                    className="py-2 px-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                    title="Open Waiter & Captain Console"
-                  >
-                    <span>🛎️ Waiter App</span>
-                  </button>
+              {/* Station Consoles */}
+              {(currentUser.role === "admin" || currentUser.role === "manager" || currentUser.isSuperAdmin) && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Direct Console Stations
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setMobileSidebarOpen(false); navigateTo("/kitchen"); }}
+                      className="py-2.5 px-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 flex items-center justify-center gap-1"
+                    >
+                      <span>👨‍🍳 KDS</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMobileSidebarOpen(false); navigateTo("/waiter"); }}
+                      className="py-2.5 px-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center gap-1"
+                    >
+                      <span>🛎️ Waiter</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* User Role Profile & Details */}
-              <div className="bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 p-3 rounded-2xl text-xs space-y-1.5 shadow-xs">
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-150 dark:border-slate-800 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${roleProfile.badgeBg} ${roleProfile.badgeText} ${roleProfile.badgeBorder}`}>
-                    {currentUser?.isSuperAdmin ? '👑 Super Admin' : roleProfile.badge}
+                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black border ${roleProfile.badgeBg} ${roleProfile.badgeText} ${roleProfile.badgeBorder}`}>
+                    {currentUser?.isSuperAdmin ? "👑 Super Admin" : roleProfile.badge}
                   </span>
+                  <button
+                    onClick={toggleTheme}
+                    className="p-1.5 bg-slate-200/60 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200"
+                  >
+                    {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
-                <div>
-                  <p className="font-bold text-[11px] text-slate-800 dark:text-slate-100 truncate leading-tight">{currentUser.name}</p>
-                  <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate leading-tight">{currentUser.email}</p>
-                </div>
+                <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate mt-1.5">{currentUser.name}</p>
+                <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
               </div>
 
               <button
                 onClick={async () => {
+                  setMobileSidebarOpen(false);
                   await logoutUser();
-                  navigateTo('/');
+                  navigateTo("/");
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 transition-colors cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <LogOut className="w-4 h-4" />
                 <span>{t.logOut}</span>
               </button>
-              <div className="text-center pt-2 mt-1 border-t border-slate-200 dark:border-slate-800">
-                <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold tracking-wider uppercase block">
-                  BUILT BY RESTAURANTSOS PVT. LTD
-                </span>
-              </div>
             </div>
           </aside>
 
-          {/* Content Container */}
-          <main className="flex-1 overflow-y-auto h-full p-3.5 sm:p-6 md:p-10 max-w-7xl mx-auto w-full overflow-x-hidden animate-fade-in pb-32 sm:pb-36">
+          {/* ========================================================= */}
+          {/* BOTTOM MOBILE NAVIGATION DOCK (Phones < 768px)             */}
+          {/* ========================================================= */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 py-1.5 px-3 flex justify-around items-center shadow-lg">
+            <button
+              onClick={() => handleSelectTab("dashboard")}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectTab("orders")}
+              className={`relative flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                activeTab === "orders" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Orders</span>
+              {activeOrdersCount > 0 && (
+                <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleSelectTab("tables")}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                activeTab === "tables" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Tables</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectTab("billing")}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                activeTab === "billing" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              <Receipt className="w-4 h-4" />
+              <span>POS Bill</span>
+            </button>
+
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
+            >
+              <Menu className="w-4 h-4" />
+              <span>More</span>
+            </button>
+          </div>
+
+          {/* ========================================================= */}
+          {/* MAIN PAGE CONTENT CONTAINER (Full-Width Responsive Canvas) */}
+          {/* ========================================================= */}
+          <main className="flex-1 w-full max-w-[1680px] mx-auto p-3.5 sm:p-6 lg:p-8 pb-28 md:pb-16 overflow-x-hidden animate-fade-in">
             
             {/* Platform-Wide Broadcast Announcement Banners */}
             {activeAnnouncements.map(ann => {
               const styleConfig = {
                 info: {
-                  bg: 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200',
-                  iconBg: 'bg-blue-600 text-white',
+                  bg: "bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200",
+                  iconBg: "bg-blue-600 text-white",
                   icon: Info,
                 },
                 warning: {
-                  bg: 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200',
-                  iconBg: 'bg-amber-600 text-white',
+                  bg: "bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200",
+                  iconBg: "bg-amber-600 text-white",
                   icon: AlertTriangle,
                 },
                 success: {
-                  bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200',
-                  iconBg: 'bg-emerald-600 text-white',
+                  bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200",
+                  iconBg: "bg-emerald-600 text-white",
                   icon: CheckCircle2,
                 },
                 urgent: {
-                  bg: 'bg-rose-500/15 border-rose-500/40 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/20',
-                  iconBg: 'bg-rose-600 text-white animate-pulse',
+                  bg: "bg-rose-500/15 border-rose-500/40 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/20",
+                  iconBg: "bg-rose-600 text-white animate-pulse",
                   icon: Megaphone,
                 },
               }[ann.type] || {
-                bg: 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200',
-                iconBg: 'bg-blue-600 text-white',
+                bg: "bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200",
+                iconBg: "bg-blue-600 text-white",
                 icon: Info,
               };
 
@@ -977,7 +1262,7 @@ export const App: React.FC = () => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-black text-xs uppercase tracking-wider">{ann.title}</span>
-                        {ann.type === 'urgent' && (
+                        {ann.type === "urgent" && (
                           <span className="bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest">
                             Urgent
                           </span>
@@ -1013,6 +1298,7 @@ export const App: React.FC = () => {
                 </button>
               </div>
             )}
+
             <Suspense fallback={<LazyLoader />}>
               {renderActiveTabContent()}
             </Suspense>
@@ -1021,6 +1307,7 @@ export const App: React.FC = () => {
         </div>
       );
     }
+
 
     // ==========================================
     // LANDING PAGE SELECTION CHANNELS (Default /)
