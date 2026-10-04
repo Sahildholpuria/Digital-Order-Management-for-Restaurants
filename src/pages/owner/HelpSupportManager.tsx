@@ -1,29 +1,18 @@
 import React, { useState } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
 import {
-  LifeBuoy,
   MessageSquare,
   Mail,
   Phone,
-  Printer,
   FileQuestion,
   ExternalLink,
   Check,
   Copy,
   Sparkles,
   ChevronRight,
-  ShieldCheck,
-  Zap,
-  ShoppingBag,
   Send,
-  HelpCircle,
-  QrCode,
-  Utensils,
-  Receipt,
   Headphones,
-  CheckCircle2,
-  Clock,
-  Laptop
+  CheckCircle2
 } from "lucide-react";
 
 export const HelpSupportManager: React.FC = () => {
@@ -95,32 +84,7 @@ export const HelpSupportManager: React.FC = () => {
     }
   ];
 
-  const quickGuides = [
-    {
-      icon: ShoppingBag,
-      title: "Takeaway & Parcel Workflow",
-      desc: "Punch takeaway orders, auto-generate sequential tokens (TK-01), and dispatch parcel KOTs without table lock.",
-      color: "from-orange-500 to-amber-600"
-    },
-    {
-      icon: Printer,
-      title: "Silent QZ Thermal Station",
-      desc: "Connect 80mm & 58mm ESC/POS thermal printers for zero-click kitchen and cashier printing.",
-      color: "from-emerald-600 to-teal-600"
-    },
-    {
-      icon: QrCode,
-      title: "Table QR Code Standees",
-      desc: "Generate and download branded print-ready high-resolution QR codes for all your dining tables.",
-      color: "from-blue-600 to-indigo-600"
-    },
-    {
-      icon: Receipt,
-      title: "POS Billing & GST Invoicing",
-      desc: "Generate tax-compliant receipts, split payments, and record settlements in real-time.",
-      color: "from-purple-600 to-violet-600"
-    }
-  ];
+
 
   return (
     <div className="space-y-8 animate-fade-in pb-12 max-w-[1400px] mx-auto font-sans">
@@ -301,44 +265,12 @@ export const HelpSupportManager: React.FC = () => {
 
 
 
-      {/* SECTION: SYSTEM GUIDES & DIRECT TICKET DESK */}
+      {/* SECTION: FAQS & DIRECT TICKET DESK */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left 7/12: Quick Feature Guides */}
+        {/* Left 7/12: FAQs Accordion */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-500" />
-              <span>Quick Feature Guides</span>
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {quickGuides.map((guide, idx) => {
-              const Icon = guide.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-3xl space-y-2.5 shadow-2xs hover:shadow-md transition-all"
-                >
-                  <div className={`w-9 h-9 rounded-2xl bg-gradient-to-r ${guide.color} text-white flex items-center justify-center shadow-sm`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">
-                      {guide.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      {guide.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* FAQs Accordion */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl space-y-3 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl space-y-4 shadow-sm">
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
               <FileQuestion className="w-4 h-4 text-sky-500" />
               <span>Frequently Asked Questions (FAQs)</span>
