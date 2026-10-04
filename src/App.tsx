@@ -753,7 +753,6 @@ export const App: React.FC = () => {
           { id: 'menu', label: t.menuList, icon: Utensils, roles: ['admin', 'manager'] },
           { id: 'billing', label: t.posBilling, icon: Receipt, roles: ['admin', 'manager'] },
           { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin', 'manager'] },
-          { id: 'settings', label: t.settings, icon: SettingsIcon, roles: ['admin'] },
         ].filter(item => item.roles.includes(currentUser.role));
       }
 
