@@ -175,32 +175,7 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({ isOpen, onCl
             </div>
           </div>
 
-          {/* Diagnostics Card */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl space-y-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-              Active Store Diagnostics
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 block">Restaurant</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100 truncate block">{settings?.name || "Default"}</span>
-              </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 block">Logged In As</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100 truncate block">{currentUser?.name || "Admin"}</span>
-              </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 block">Silent Print (QZ)</span>
-                <span className={`font-black text-[11px] ${qzStatus === "connected" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                  {qzStatus === "connected" ? "● Connected" : "○ Disconnected"}
-                </span>
-              </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                <span className="text-[10px] text-slate-400 block">Core Build</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">v2.4.0 Live</span>
-              </div>
-            </div>
-          </div>
+
 
           {/* Frequently Asked Questions Accordion */}
           <div className="space-y-2">

@@ -299,61 +299,7 @@ export const HelpSupportManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SECTION: STORE DIAGNOSTICS & SYSTEM STATUS */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-              Live Store Diagnostics & System Status
-            </h3>
-          </div>
-          <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold px-2.5 py-0.5 rounded-full">
-            All Systems Operational
-          </span>
-        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Store Name</span>
-            <span className="font-extrabold text-slate-900 dark:text-white truncate block mt-0.5">
-              {settings?.name || "RestaurantsOS Store"}
-            </span>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">Logged In User</span>
-            <span className="font-extrabold text-slate-900 dark:text-white truncate block mt-0.5">
-              {currentUser?.name || "Admin"} ({currentUser?.role || "Staff"})
-            </span>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">QZ Silent Printing</span>
-            <div className="flex items-center justify-between mt-0.5">
-              <span className={`font-black text-xs ${qzStatus === "connected" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                {qzStatus === "connected" ? "● Connected" : "○ Disconnected"}
-              </span>
-              {qzStatus !== "connected" && (
-                <button
-                  type="button"
-                  onClick={() => connectQZTray()}
-                  className="text-[10px] text-brand-600 font-bold hover:underline cursor-pointer"
-                >
-                  Connect
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">App Release</span>
-            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-extrabold block mt-0.5">
-              v2.4.0 Production
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* SECTION: SYSTEM GUIDES & DIRECT TICKET DESK */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
