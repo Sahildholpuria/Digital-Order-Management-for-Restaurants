@@ -23,7 +23,7 @@ import { printKOTReceipt } from '../../utils/printUtils';
 import { CaptainOrderPunchModal } from '../../components/captain/CaptainOrderPunchModal';
 
 export const OrdersManager: React.FC = () => {
-  const { orders, settings, tables, updateOrderStatus, saveOrder, refreshData, testSoundAlert } = useRestaurant();
+  const { orders, settings, tables, updateOrderStatus, saveOrder, refreshData, testSoundAlert, qzStatus, qzConfig, connectQZTray, showToast } = useRestaurant();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -199,6 +199,24 @@ export const OrdersManager: React.FC = () => {
             <Volume2 className="w-4 h-4 text-brand-600 dark:text-brand-400" />
             <span>Test Sound Alert</span>
           </button>
+
+          {/* QZ Tray Printer Status Badge */}
+          {qzStatus === "connected" ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Silent KOT: {qzConfig.kotPrinter || "Kitchen Printer"}</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => connectQZTray()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              title="Connect QZ Tray for silent direct thermal printing"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Connect QZ Tray</span>
+            </button>
+          )}
         </div>
       </div>
 
