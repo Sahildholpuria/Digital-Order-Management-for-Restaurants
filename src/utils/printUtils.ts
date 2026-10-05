@@ -121,7 +121,7 @@ export const generateKOTHtml = (
         <div class="double-divider"></div>
 
         <div style="font-size: 13px; font-weight: 900; display: flex; justify-content: space-between;">
-          <span>${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "ORDER: " + (order.tokenNumber ? "TOKEN #" + order.tokenNumber : order.tableName.toUpperCase()) : "TABLE: " + order.tableName.toUpperCase()}</span>
+          <span>${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "ORDER: " + (order.tokenNumber ? "TOKEN #" + order.tokenNumber : order.tableName.toUpperCase()) : "TABLE: " + order.tableName.toUpperCase() + (order.tableFloor ? " • " + order.tableFloor.toUpperCase() : "")}</span>
           <span>#${order.orderNumber}</span>
         </div>
         ${order.customerName || order.customerPhone ? `

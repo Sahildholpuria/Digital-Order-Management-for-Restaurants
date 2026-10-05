@@ -1092,6 +1092,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       orderNumber: orderNum,
       tableId: isTakeaway ? "takeaway" : (currentTable ? currentTable.id : "takeaway"),
       tableName: cleanTableName,
+      tableFloor: isTakeaway ? undefined : currentTable?.floor,
       orderType,
       customerName: customerInfo?.name?.trim() || undefined,
       customerPhone: customerInfo?.phone?.trim() || undefined,
@@ -1263,6 +1264,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       orderNumber: orderNum,
       tableId: targetTable ? targetTable.id : tableId,
       tableName: cleanTableName,
+      tableFloor: targetTable?.floor,
+      orderType: "dine_in",
       items: items.map(c => ({
         ...c,
         specialInstructions: c.specialInstructions || specialInstructions || "",

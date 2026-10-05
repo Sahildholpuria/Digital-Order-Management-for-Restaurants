@@ -40,6 +40,7 @@ export type TableStatus = 'available' | 'occupied' | 'reserved';
 export interface RestaurantTable {
   id: string;
   number: string;
+  floor?: string;
   capacity: number;
   status: TableStatus;
   qrCodeUrl: string;
@@ -95,6 +96,7 @@ export interface RestaurantOrder {
   orderNumber: string;
   tableId: string;
   tableName: string;
+  tableFloor?: string;
   orderType?: OrderType;
   customerName?: string;
   customerPhone?: string;

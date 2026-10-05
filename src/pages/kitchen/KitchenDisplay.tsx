@@ -282,9 +282,16 @@ export const KitchenDisplay: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-xl font-black text-white mt-1 capitalize font-sans tracking-tight">
-                      {cleanTableDisplay}
-                    </h3>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <h3 className="text-xl font-black text-white capitalize font-sans tracking-tight">
+                        {cleanTableDisplay}
+                      </h3>
+                      {order.tableFloor && !isTakeaway && (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          📍 {order.tableFloor}
+                        </span>
+                      )}
+                    </div>
                     {(order.customerName || order.customerPhone) && (
                       <p className="text-[11px] text-amber-300 font-bold flex items-center gap-1.5 mt-0.5">
                         <User className="w-3 h-3 text-amber-400" />

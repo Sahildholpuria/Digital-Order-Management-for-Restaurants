@@ -59,7 +59,14 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   const [punchInitialTableId, setPunchInitialTableId] = useState<string | undefined>(undefined);
   const [punchInitialOrderType, setPunchInitialOrderType] = useState<"dine_in" | "takeaway">("dine_in");
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "occupied" | "calling" | "takeaway">("all");
+  const [selectedFloorFilter, setSelectedFloorFilter] = useState<string>("all");
   const [searchTableQuery, setSearchTableQuery] = useState<string>("");
+
+  // Unique floors across all tables
+  const availableFloors = useMemo(() => {
+    const list = tables.map(t => t.floor?.trim()).filter(Boolean) as string[];
+    return Array.from(new Set(list));
+  }, [tables]);
 
   const currency = settings?.currency || "₹";
 
@@ -131,6 +138,12 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
     return tables.filter(t => {
       const isCalling = callingTableIds.has(t.id);
 
+      // Floor filter
+      if (selectedFloorFilter !== "all") {
+        if (selectedFloorFilter === "unassigned" && t.floor?.trim()) return false;
+        if (selectedFloorFilter !== "unassigned" && t.floor?.trim() !== selectedFloorFilter) return false;
+      }
+
       if (filterStatus === "available" && t.status !== "available") return false;
       if (filterStatus === "occupied" && t.status !== "occupied") return false;
       if (filterStatus === "calling" && !isCalling) return false;
@@ -139,11 +152,12 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
         const q = searchTableQuery.toLowerCase().trim();
         const numMatch = String(t.number).toLowerCase().includes(q);
         const capMatch = String(t.capacity).includes(q);
-        if (!numMatch && !capMatch) return false;
+        const floorMatch = (t.floor || "").toLowerCase().includes(q);
+        if (!numMatch && !capMatch && !floorMatch) return false;
       }
       return true;
     });
-  }, [tables, filterStatus, callingTableIds, searchTableQuery]);
+  }, [tables, selectedFloorFilter, filterStatus, callingTableIds, searchTableQuery]);
 
   const availableCount = useMemo(() => tables.filter(t => t.status === "available").length, [tables]);
   const occupiedCount = useMemo(() => tables.filter(t => t.status === "occupied").length, [tables]);
@@ -488,6 +502,44 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
           </div>
 
+          {/* Horizontal Floor Filter Carousel */}
+          {availableFloors.length > 0 && filterStatus !== "takeaway" && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <span className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1 pr-1 shrink-0">
+                <Layers className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Zone:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedFloorFilter("all")}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all shrink-0 cursor-pointer ${
+                  selectedFloorFilter === "all"
+                    ? "bg-emerald-600 text-white shadow-2xs"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                }`}
+              >
+                All Zones ({tables.length})
+              </button>
+              {availableFloors.map(fl => {
+                const count = tables.filter(t => t.floor?.trim() === fl).length;
+                return (
+                  <button
+                    key={fl}
+                    type="button"
+                    onClick={() => setSelectedFloorFilter(fl)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedFloorFilter === fl
+                        ? "bg-emerald-600 text-white shadow-2xs font-black"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                    }`}
+                  >
+                    📍 {fl} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
         </div>
 
         {/* TAKEAWAY ORDERS GRID (WHEN TAKEAWAY TAB SELECTED) */}
@@ -677,9 +729,16 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
                             Table
                           </span>
-                          <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
-                            {table.number}
-                          </h3>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                              {table.number}
+                            </h3>
+                            {table.floor && (
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 truncate">
+                                {table.floor}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Status Pill */}
