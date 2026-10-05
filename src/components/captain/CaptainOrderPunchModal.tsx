@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { FoodItem, MenuCategory, OrderItem, RestaurantOrder, OrderType, RestaurantTable } from "../../types";
 import { parseFoodItemDescription } from "../../services/database";
@@ -24,8 +25,7 @@ import {
   Tag,
   ArrowRight,
   Receipt,
-  ChevronUp,
-  ChevronDown
+  ChevronUp
 } from "lucide-react";
 
 interface CaptainOrderPunchModalProps {
@@ -289,8 +289,8 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
   const currentSelectedTable = tables.find((t: RestaurantTable) => t.id === selectedTableId);
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 backdrop-blur-md sm:p-3 md:p-4 lg:p-6 sm:items-center sm:justify-center animate-fade-in">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-slate-900/90 backdrop-blur-md sm:p-3 md:p-4 lg:p-6 sm:items-center sm:justify-center animate-fade-in text-slate-900 dark:text-slate-100">
       <div 
         className="w-full h-full sm:h-[92vh] sm:max-h-[860px] sm:w-[96vw] sm:max-w-[1300px] bg-white dark:bg-slate-900 sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col relative"
       >
@@ -423,7 +423,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
             <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden min-h-0 relative">
               
               {/* Controls Bar: Order Mode + Table / Customer Details + Search */}
-              <div className="p-2 sm:p-3 bg-slate-50/95 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 space-y-2 shrink-0">
+              <div className="p-2.5 sm:p-3 bg-slate-50/95 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 space-y-2 shrink-0">
                 
                 {/* Row 1: Mode Switcher & Search Bar */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:gap-2">
@@ -896,21 +896,19 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
             </div>
 
-            {/* MOBILE & TABLET FLOATING BOTTOM DISPATCH DOCK (Guaranteed visibility on all mobile screens) */}
-            <div className="lg:hidden absolute bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 p-2 sm:p-3 shadow-2xl z-30 space-y-1.5" style={{ paddingBottom: "max(0.65rem, env(safe-area-inset-bottom))" }}>
+            {/* MOBILE & TABLET FLOATING BOTTOM DISPATCH DOCK */}
+            <div className="lg:hidden absolute bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-3 shadow-2xl z-30 space-y-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
               
-              {/* Optional Quick Parcel Note on mobile if cart has items */}
-              {cartList.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder={orderType === "takeaway" ? "Takeaway parcel note (e.g. Extra chutney)..." : "Kitchen note (e.g. Less spicy)..."}
-                    value={generalNotes}
-                    onChange={(e) => setGeneralNotes(e.target.value)}
-                    className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1 text-[11px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
-              )}
+              {/* Takeaway Parcel Note input directly on mobile dock */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder={orderType === "takeaway" ? "Takeaway parcel note (e.g. Extra chutney)..." : "Kitchen note (e.g. Less spicy)..."}
+                  value={generalNotes}
+                  onChange={(e) => setGeneralNotes(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
 
               {/* Main Action Bar */}
               <div className="flex items-center gap-2">
@@ -920,7 +918,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                   onClick={() => {
                     if (cartList.length > 0) setIsMobileCartDrawerOpen(true);
                   }}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-2.5 rounded-xl border transition-all shrink-0 active:scale-95 ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 py-2.5 rounded-xl border transition-all shrink-0 active:scale-95 ${
                     cartList.length > 0
                       ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white cursor-pointer"
                       : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 opacity-60 cursor-default"
@@ -932,9 +930,9 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                   }`}>
                     {totalItemCount}
                   </div>
-                  <div className="text-left leading-none pr-1 hidden xs:block sm:block">
+                  <div className="text-left leading-none pr-1">
                     <span className="text-[8px] font-bold uppercase text-slate-400 block">Items</span>
-                    <span className="text-[11px] font-black">{currency}{grandTotal.toFixed(0)}</span>
+                    <span className="text-xs font-black">{currency}{grandTotal.toFixed(0)}</span>
                   </div>
                   <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
                 </button>
@@ -1093,7 +1091,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
       {/* DISH SPECIAL INSTRUCTIONS POPUP MODAL */}
       {activeItemNoteId && (
-        <div className="fixed inset-0 z-60 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[10000] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-scale-in">
             <div>
               <div className="flex items-center gap-1.5 text-amber-500 font-bold text-xs">
@@ -1156,6 +1154,8 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default CaptainOrderPunchModal;
