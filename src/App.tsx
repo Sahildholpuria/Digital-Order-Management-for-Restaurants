@@ -1370,101 +1370,111 @@ export const App: React.FC = () => {
           {/* ========================================================= */}
           {/* BOTTOM MOBILE NAVIGATION DOCK (Phones < 768px)             */}
           {/* ========================================================= */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 py-1.5 px-3 flex justify-around items-center shadow-lg">
-            {currentUser?.isSuperAdmin && !isImpersonating ? (
-              <>
-                <button
-                  onClick={() => handleSelectTab("superadmin")}
-                  className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "superadmin" || activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <Building className="w-4 h-4" />
-                  <span>Tenants</span>
-                </button>
+          <div 
+            className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 px-1 py-1 shadow-lg"
+            style={{ paddingBottom: "max(0.4rem, env(safe-area-inset-bottom))" }}
+          >
+            <div className={`grid ${currentUser?.isSuperAdmin && !isImpersonating ? "grid-cols-4" : "grid-cols-5"} items-center w-full`}>
+              {currentUser?.isSuperAdmin && !isImpersonating ? (
+                <>
+                  <button
+                    onClick={() => handleSelectTab("superadmin")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "superadmin" || activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <Building className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Tenants</span>
+                  </button>
 
-                <button
-                  onClick={() => handleSelectTab("saas-subscriptions")}
-                  className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "saas-subscriptions" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Subscriptions</span>
-                </button>
+                  <button
+                    onClick={() => handleSelectTab("saas-subscriptions")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "saas-subscriptions" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Subscriptions</span>
+                  </button>
 
-                <button
-                  onClick={() => handleSelectTab("help")}
-                  className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "help" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <LifeBuoy className="w-4 h-4" />
-                  <span>Support</span>
-                </button>
+                  <button
+                    onClick={() => handleSelectTab("help")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "help" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <LifeBuoy className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Support</span>
+                  </button>
 
-                <button
-                  onClick={() => setMobileSidebarOpen(true)}
-                  className="flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
-                >
-                  <Menu className="w-4 h-4" />
-                  <span>Menu</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => handleSelectTab("dashboard")}
-                  className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Dashboard</span>
-                </button>
+                  <button
+                    onClick={() => setMobileSidebarOpen(true)}
+                    className="flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 cursor-pointer active:scale-95 w-full min-w-0"
+                  >
+                    <Menu className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Menu</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleSelectTab("dashboard")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Dashboard</span>
+                  </button>
 
-                <button
-                  onClick={() => handleSelectTab("orders")}
-                  className={`relative flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "orders" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Orders</span>
-                  {activeOrdersCount > 0 && (
-                    <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                  )}
-                </button>
+                  <button
+                    onClick={() => handleSelectTab("orders")}
+                    className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "orders" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <ShoppingBag className="w-4 h-4 shrink-0" />
+                      {activeOrdersCount > 0 && (
+                        <span className="absolute -top-1 -right-1.5 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                        </span>
+                      )}
+                    </div>
+                    <span className="truncate w-full text-center leading-tight">Orders</span>
+                  </button>
 
-                <button
-                  onClick={() => handleSelectTab("tables")}
-                  className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "tables" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Tables</span>
-                </button>
+                  <button
+                    onClick={() => handleSelectTab("tables")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "tables" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <QrCode className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Tables</span>
+                  </button>
 
-                <button
-                  onClick={() => handleSelectTab("billing")}
-                  className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                    activeTab === "billing" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  <Receipt className="w-4 h-4" />
-                  <span>POS Bill</span>
-                </button>
+                  <button
+                    onClick={() => handleSelectTab("billing")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "billing" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <Receipt className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">POS Bill</span>
+                  </button>
 
-                <button
-                  onClick={() => setMobileSidebarOpen(true)}
-                  className="flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 cursor-pointer"
-                >
-                  <Menu className="w-4 h-4" />
-                  <span>More</span>
-                </button>
-              </>
-            )}
+                  <button
+                    onClick={() => setMobileSidebarOpen(true)}
+                    className="flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 cursor-pointer active:scale-95 w-full min-w-0"
+                  >
+                    <Menu className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">More</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* ========================================================= */}
