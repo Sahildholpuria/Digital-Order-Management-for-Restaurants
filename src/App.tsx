@@ -943,7 +943,7 @@ export const App: React.FC = () => {
 
                         {/* Store Settings & Help Options under Profile */}
                         <div className="space-y-1 pt-1">
-                          {currentUser?.isSuperAdmin && (
+                          {currentUser?.isSuperAdmin ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -966,6 +966,29 @@ export const App: React.FC = () => {
                                   : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                               }`}>
                                 Gateway
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                setIsRenewModalOpen(true);
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                <span>Subscription Plan</span>
+                              </div>
+                              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
+                                settings?.subscriptionStatus === "active"
+                                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                  : settings?.subscriptionStatus === "trial"
+                                  ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                  : "bg-red-50 dark:bg-red-950/40 text-red-500 border-red-500/20"
+                              }`}>
+                                {settings?.subscriptionStatus === "active" ? (settings?.planType ? `${settings.planType.toUpperCase()}` : "Active") : (settings?.subscriptionStatus || "PRO")}
                               </span>
                             </button>
                           )}
@@ -1185,6 +1208,56 @@ export const App: React.FC = () => {
                     </button>
                   );
                 })}
+                {currentUser?.isSuperAdmin ? (
+                  <button
+                    key="saas_subscriptions"
+                    onClick={() => {
+                      setMobileSidebarOpen(false);
+                      handleSelectTab("saas-subscriptions");
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === "saas-subscriptions"
+                        ? "bg-emerald-600 text-white shadow-xs font-black"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <CreditCard className={`w-4 h-4 ${activeTab === "saas-subscriptions" ? "text-white" : "text-emerald-500"}`} />
+                      <span>SaaS Subscriptions & Razorpay</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${
+                      activeTab === "saas-subscriptions"
+                        ? "bg-white/20 text-white border-white/30"
+                        : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    }`}>
+                      Gateway
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    key="subscription_plan"
+                    onClick={() => {
+                      setMobileSidebarOpen(false);
+                      setIsRenewModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-4 h-4 text-emerald-500" />
+                      <span>Subscription Plan</span>
+                    </div>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
+                      settings?.subscriptionStatus === "active"
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                        : settings?.subscriptionStatus === "trial"
+                        ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                        : "bg-red-50 dark:bg-red-950/40 text-red-500 border-red-500/20"
+                    }`}>
+                      {settings?.subscriptionStatus === "active" ? (settings?.planType ? `${settings.planType.toUpperCase()}` : "Active") : (settings?.subscriptionStatus || "PRO")}
+                    </span>
+                  </button>
+                )}
+
                 {(currentUser.role === "admin" || currentUser.isSuperAdmin) && (
                   <button
                     key="settings"
@@ -1481,6 +1554,25 @@ export const App: React.FC = () => {
 
             <Suspense fallback={<LazyLoader />}>
               {renderActiveTabContent()}
+            </Suspense>
+
+            {/* Global Merchant Subscription Plan & Invoices Modal */}
+            <Suspense fallback={null}>
+              <SubscriptionModal
+                isOpen={isRenewModalOpen}
+                onClose={() => setIsRenewModalOpen(false)}
+                restaurantId={settings?.id || ''}
+                restaurantName={settings?.name || ''}
+                restaurantEmail={settings?.email}
+                restaurantPhone={settings?.phone}
+                currentExpiresAt={settings?.subscriptionExpiresAt}
+                currentStatus={settings?.subscriptionStatus}
+                currentPlan={settings?.planType}
+                onSuccess={() => {
+                  setIsRenewModalOpen(false);
+                  window.location.reload();
+                }}
+              />
             </Suspense>
           </main>
 
