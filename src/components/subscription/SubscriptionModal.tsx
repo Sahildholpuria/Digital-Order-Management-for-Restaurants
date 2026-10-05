@@ -530,7 +530,12 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
                       <Calendar className="w-3 h-3 text-emerald-500" />
-                      <span>Valid until: <strong>{formattedNewExpiry}</strong></span>
+                      <span>
+                        {currentStatus === "active" && currentExpiresAt && new Date(currentExpiresAt) > new Date()
+                          ? <>New Expiry after renewal: <strong className="text-emerald-600 dark:text-emerald-400">{formattedNewExpiry}</strong> <span className="text-[9px] text-slate-400">(+{selectedPlan.durationMonths} Mo added)</span></>
+                          : <>Valid until: <strong className="text-emerald-600 dark:text-emerald-400">{formattedNewExpiry}</strong> <span className="text-[9px] text-slate-400">({selectedPlan.durationMonths} Mo from today)</span></>
+                        }
+                      </span>
                     </p>
                   </div>
                   
