@@ -830,10 +830,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 z-10 w-full lg:w-auto shrink-0">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 z-10 w-full lg:w-auto shrink-0">
           <button 
             onClick={fetchAllData}
-            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center"
+            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center col-span-2 sm:col-span-1"
             title="Refresh database records"
           >
             <RefreshCw className="w-4 h-4" />
@@ -841,7 +841,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
           <button
             onClick={handleOpenOnboard}
-            className="flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-black px-4 sm:px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap col-span-2 sm:col-span-1"
           >
             <Plus className="w-4 h-4 text-emerald-600" />
             <span>+ Onboard Restaurant</span>
@@ -856,7 +856,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               setUserRestaurantId(restaurants[0].id);
               setIsUserModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-3 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 sm:px-5 py-3 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap col-span-2 sm:col-span-1"
           >
             <UserPlus className="w-4 h-4" />
             <span>+ Create Staff User</span>
@@ -867,7 +867,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             type="button"
             onClick={handleToggleSubscriptionFeature}
             disabled={isTogglingSubFeature}
-            className={`flex items-center justify-center gap-2 font-black px-4 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap active:scale-95 border backdrop-blur-md ${
+            className={`flex items-center justify-center gap-2 font-black px-4 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap active:scale-95 border backdrop-blur-md col-span-2 sm:col-span-1 ${
               isSubFeatureEnabled
                 ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30"
                 : "bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/30"
@@ -956,7 +956,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           </span>
         </div>
       ) : (
-        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <div className="flex gap-2 sm:gap-3 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto no-scrollbar flex-nowrap">
           <button
             onClick={() => { setActiveTab('restaurants'); setSearchQuery(''); }}
             className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
@@ -1595,8 +1595,211 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <p className="text-xs text-slate-400 mt-1">Try refining your search terms or onboard a new client.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <>
+              {/* Mobile Responsive Cards View (Phones < md screens) */}
+              <div className="md:hidden divide-y divide-slate-150 dark:divide-slate-800/80">
+                {filtered.map(r => {
+                  const statusColors: Record<string, string> = {
+                    trial: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
+                    active: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                    expired: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                    suspended: 'bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                  };
+
+                  const staffUsersCount = users.filter(u => u.restaurantId === r.id).length;
+                  const adminUser = users.find(u => u.restaurantId === r.id && u.role === 'admin') || users.find(u => u.restaurantId === r.id);
+                  const resolvedEmail = (r.email || adminUser?.email || '').trim();
+                  const cleanPhone = (r.phone || '').trim().replace(/[^0-9]/g, '');
+                  const hasEmail = resolvedEmail.includes('@');
+                  const hasPhone = cleanPhone.length >= 7;
+                  const hasAnyContact = hasEmail || hasPhone;
+                  const days = getDaysLeft(r.subscriptionExpiresAt);
+
+                  return (
+                    <div key={r.id} className="p-4 space-y-3.5 bg-white dark:bg-slate-900">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-sm border border-emerald-500/20 shrink-0">
+                            {r.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-black text-sm text-slate-900 dark:text-white truncate">
+                              {r.name}
+                            </h3>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono truncate max-w-[130px]">
+                                ID: {r.id}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(r.id);
+                                  setCopiedSlugId(r.id);
+                                  showToast(`Tenant ID "${r.id}" copied!`, 'info');
+                                  setTimeout(() => setCopiedSlugId(null), 2000);
+                                }}
+                                className="text-slate-400 hover:text-brand-600 dark:hover:text-brand-400"
+                                title="Copy Tenant ID"
+                              >
+                                {copiedSlugId === r.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`inline-flex items-center text-[9px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-full border ${statusColors[r.subscriptionStatus || 'trial']}`}>
+                            {r.subscriptionStatus || 'trial'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {staffUsersCount} Staff
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-150 dark:border-slate-800 text-xs">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Plan & Pricing</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px] flex items-center gap-1 mt-0.5">
+                            <Award className="w-3 h-3 text-brand-500 shrink-0" />
+                            <span className="truncate">{getPlanLabel(r.planType || 'starter')}</span>
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Expiry / Days</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px] block mt-0.5">
+                            {r.subscriptionExpiresAt 
+                              ? new Date(r.subscriptionExpiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                              : 'Lifetime'
+                            }
+                            {days !== null && days <= 5 && (
+                              <span className="ml-1 text-[9px] font-black text-rose-500">({days}d)</span>
+                            )}
+                          </span>
+                        </div>
+
+                        {(r.email || r.phone) && (
+                          <div className="col-span-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                              <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{r.email || 'No email'}</span>
+                            </span>
+                            {r.phone && (
+                              <a href={`tel:${r.phone}`} className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 shrink-0 ml-2">
+                                <Phone className="w-3 h-3" />
+                                <span>{r.phone}</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleAccessPortal(r.id)}
+                          className="col-span-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open Live POS Portal</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSubModal(r)}
+                          className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Billing Plan</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!hasAnyContact}
+                          onClick={() => handleOpenWelcomePackage(r)}
+                          className={`border text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                            hasAnyContact
+                              ? 'bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border-slate-300 dark:border-slate-700 cursor-pointer'
+                              : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Share Access</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!hasAnyContact}
+                          onClick={() => handleOpenRenewalModal(r)}
+                          className={`border text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                            hasAnyContact
+                              ? 'bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white dark:text-amber-300 border-amber-200 dark:border-amber-800 cursor-pointer'
+                              : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <Bell className="w-3.5 h-3.5" />
+                          <span>Remind</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRestSubscription(r)}
+                          className={`border text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            r.hideSubscriptionPlan
+                              ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
+                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
+                          }`}
+                        >
+                          {r.hideSubscriptionPlan ? (
+                            <>
+                              <EyeOff className="w-3.5 h-3.5 text-rose-500" />
+                              <span>Sub: Hidden</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Sub: Visible</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAddStaffForRest(r.id)}
+                          className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>+ Staff</span>
+                        </button>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditClick(r)}
+                            className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRestaurant(r.id, r.name)}
+                            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 dark:text-rose-400 rounded-xl border border-rose-200 dark:border-rose-900/30 transition-all cursor-pointer flex items-center justify-center"
+                            title="Delete Restaurant"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop/Tablet Table View (>= md screens) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
                     <th className="px-6 py-4">Name & Slug</th>
@@ -1805,6 +2008,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 </tbody>
               </table>
             </div>
+            </>
           )
         ) : activeTab === 'users' ? (
           filteredUsers.length === 0 ? (
@@ -1814,8 +2018,80 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <p className="text-xs text-slate-400 mt-1">Try refining your search terms or create a new user profile.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <>
+              {/* Mobile Responsive Cards View for Staff (< md screens) */}
+              <div className="md:hidden divide-y divide-slate-150 dark:divide-slate-800/80">
+                {filteredUsers.map(u => {
+                  const roleLabels: Record<string, string> = {
+                    admin: 'Administrator',
+                    manager: 'Store Manager',
+                    cashier: 'Cashier Staff',
+                    kitchen: 'Kitchen Chef',
+                    waiter: 'Waiter Staff'
+                  };
+
+                  const roleColors: Record<string, string> = {
+                    admin: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30',
+                    manager: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/30',
+                    cashier: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30',
+                    kitchen: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
+                    waiter: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                  };
+
+                  const matchedRestaurant = restaurants.find(r => r.id === u.restaurantId);
+
+                  return (
+                    <div key={u.id} className="p-4 space-y-3 bg-white dark:bg-slate-900">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <span>{u.name}</span>
+                            {u.isSuperAdmin && (
+                              <span className="text-[9px] font-black uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 dark:bg-purple-950/30 dark:text-purple-400">Owner</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{u.email}</div>
+                        </div>
+                        <span className={`inline-flex items-center text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${roleColors[u.role] || 'bg-slate-100 text-slate-800'}`}>
+                          {roleLabels[u.role] || u.role}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Restaurant</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{matchedRestaurant ? matchedRestaurant.name : 'Unknown'}</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-slate-400 uppercase bg-slate-200/60 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                          {u.restaurantId || 'No Tenant'}
+                        </span>
+                      </div>
+
+                      {!u.isSuperAdmin && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleEditUserClick(u)}
+                            className="flex-1 bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/30 dark:text-brand-400 text-xs font-bold py-2 rounded-xl transition-all cursor-pointer text-center"
+                          >
+                            Edit Profile
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u.id, u.name)}
+                            className="p-2 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 rounded-xl transition-all cursor-pointer flex items-center justify-center border border-red-200 dark:border-red-900/30"
+                            title="Delete Staff"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop/Tablet Table View for Staff (>= md screens) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 dark:bg-slate-800/20 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
                     <th className="px-6 py-4">Staff Member</th>
@@ -1902,6 +2178,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 </tbody>
               </table>
             </div>
+            </>
           )
         ) : (
           filteredAnnouncements.length === 0 ? (
