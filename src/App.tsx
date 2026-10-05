@@ -1024,25 +1024,27 @@ export const App: React.FC = () => {
                           />
                         </div>
 
-                        {/* Station Switchers */}
-                        <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                          <button
-                            type="button"
-                            onClick={() => { setUserMenuOpen(false); navigateTo("/kitchen"); }}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                          >
-                            <ChefHat className="w-4 h-4 text-rose-500" />
-                            <span>Kitchen KDS Station</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setUserMenuOpen(false); navigateTo("/waiter"); }}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                          >
-                            <User className="w-4 h-4 text-amber-500" />
-                            <span>Waiter & Captain App</span>
-                          </button>
-                        </div>
+                        {/* Station Switchers (Merchant Staff Only, Hidden for Super Admin) */}
+                        {!currentUser?.isSuperAdmin && (
+                          <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                            <button
+                              type="button"
+                              onClick={() => { setUserMenuOpen(false); navigateTo("/kitchen"); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            >
+                              <ChefHat className="w-4 h-4 text-rose-500" />
+                              <span>Kitchen KDS Station</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setUserMenuOpen(false); navigateTo("/waiter"); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            >
+                              <User className="w-4 h-4 text-amber-500" />
+                              <span>Waiter & Captain App</span>
+                            </button>
+                          </div>
+                        )}
 
                         <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
                           <button
@@ -1224,8 +1226,8 @@ export const App: React.FC = () => {
                 </button>
               </nav>
 
-              {/* Station Consoles */}
-              {(currentUser.role === "admin" || currentUser.role === "manager" || currentUser.isSuperAdmin) && (
+              {/* Station Consoles (Merchant Staff Only, Hidden for Super Admin) */}
+              {!currentUser?.isSuperAdmin && (currentUser.role === "admin" || currentUser.role === "manager") && (
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     Direct Console Stations
