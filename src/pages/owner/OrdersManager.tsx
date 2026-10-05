@@ -168,90 +168,97 @@ export const OrdersManager: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in">
       
-      {/* Page Title */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+      {/* Page Title & Action CTAs */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-1 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
             Live Order Manager
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
             Monitor and update kitchen orders in real-time for Dine-In & Takeaway.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Punch Table Order CTA */}
-          <button
-            type="button"
-            onClick={() => {
-              setPunchModalOrderType("dine_in");
-              setIsPunchModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
-          >
-            <Zap className="w-4 h-4 fill-current text-amber-300" />
-            <span>+ Punch Table KOT</span>
-          </button>
-
-          {/* Punch Takeaway Order CTA */}
-          <button
-            type="button"
-            onClick={() => {
-              setPunchModalOrderType("takeaway");
-              setIsPunchModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white shadow-md shadow-orange-500/20 transition-all cursor-pointer active:scale-95"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>+ Takeaway Parcel</span>
-          </button>
-
-          {/* Refresh Button */}
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-sm cursor-pointer active:scale-95"
-            title="Refresh Live Orders & Details"
-          >
-            <RotateCw className={`w-4 h-4 text-brand-600 dark:text-brand-400 ${isRefreshing ? "animate-spin" : ""}`} />
-            <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-          </button>
-
-          {/* Audio speech notification controls & Test Chime */}
-          <button
-            onClick={() => testSoundAlert()}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/40 cursor-pointer active:scale-95 shadow-sm"
-            title="Click to Test Sound Chime & Voice Alert"
-          >
-            <Volume2 className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            <span>Test Sound</span>
-          </button>
-
-          {/* QZ Tray Printer Status Badge */}
-          {qzStatus === "connected" ? (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Silent KOT: {qzConfig.kotPrinter || "Kitchen Printer"}</span>
-            </div>
-          ) : (
+        {/* Action Buttons Toolbar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+          {/* Primary Action Buttons Grid */}
+          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+            {/* Punch Table Order CTA */}
             <button
               type="button"
-              onClick={() => connectQZTray()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-              title="Connect QZ Tray for silent direct thermal printing"
+              onClick={() => {
+                setPunchModalOrderType("dine_in");
+                setIsPunchModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95 text-center truncate"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Connect QZ Tray</span>
+              <Zap className="w-4 h-4 fill-current text-amber-300 shrink-0" />
+              <span className="truncate">+ Table KOT</span>
             </button>
-          )}
+
+            {/* Punch Takeaway Order CTA */}
+            <button
+              type="button"
+              onClick={() => {
+                setPunchModalOrderType("takeaway");
+                setIsPunchModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white shadow-md shadow-orange-500/20 transition-all cursor-pointer active:scale-95 text-center truncate"
+            >
+              <ShoppingBag className="w-4 h-4 shrink-0" />
+              <span className="truncate">+ Takeaway</span>
+            </button>
+          </div>
+
+          {/* Secondary Utilities Row */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto">
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs cursor-pointer active:scale-95 shrink-0"
+              title="Refresh Live Orders & Details"
+            >
+              <RotateCw className={`w-3.5 h-3.5 text-brand-600 dark:text-brand-400 ${isRefreshing ? "animate-spin" : ""}`} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+
+            {/* Audio speech notification controls & Test Chime */}
+            <button
+              onClick={() => testSoundAlert()}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all border bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/40 cursor-pointer active:scale-95 shadow-2xs shrink-0"
+              title="Click to Test Sound Chime & Voice Alert"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+              <span>Test Sound</span>
+            </button>
+
+            {/* QZ Tray Printer Status Badge */}
+            {qzStatus === "connected" ? (
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-2xs shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="truncate max-w-[140px]">KOT: {qzConfig.kotPrinter || "Kitchen"}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => connectQZTray()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+                title="Connect QZ Tray for silent direct thermal printing"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>QZ Printer</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Filter and search panel */}
-      <div className="card-premium flex flex-col md:flex-row gap-4 items-center justify-between p-4">
+      {/* Filter and search panel - Perfectly Arranged & Responsive */}
+      <div className="card-premium flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between p-3.5 sm:p-4">
         
-        {/* Search */}
-        <div className="relative w-full md:w-80 shadow-sm rounded-2xl">
+        {/* Search Input */}
+        <div className="relative w-full lg:w-72 xl:w-80 shadow-2xs rounded-2xl">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
             <Search className="w-4 h-4" />
           </span>
@@ -260,90 +267,108 @@ export const OrdersManager: React.FC = () => {
             placeholder="Search order ID, table, or token..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl py-2.5 pl-10 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium"
+            className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl py-2 pl-9.5 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-900 dark:text-white"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2.5 w-full md:w-auto justify-end">
+        {/* Filter Controls: Cleanly Structured Rows on Mobile, Inline on Desktop */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
           
-          {/* Order Type Toggle */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
+          {/* Order Type Toggle (Dine-In / Takeaway / All) */}
+          <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 sm:w-auto">
             <button
               onClick={() => setOrderTypeFilter("all")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                 orderTypeFilter === "all" 
-                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
               }`}
             >
               All Types
             </button>
             <button
               onClick={() => setOrderTypeFilter("dine_in")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
                 orderTypeFilter === "dine_in" 
-                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
               }`}
             >
-              🍽️ Dine-In
+              <span>🍽️</span>
+              <span>Dine-In</span>
             </button>
             <button
               onClick={() => setOrderTypeFilter("takeaway")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
                 orderTypeFilter === "takeaway" 
-                  ? "bg-orange-600 text-white shadow-sm"
+                  ? "bg-orange-600 text-white shadow-xs font-black"
                   : "text-orange-600/80 hover:text-orange-600"
               }`}
             >
-              🛍️ Takeaway
+              <span>🛍️</span>
+              <span>Takeaway</span>
             </button>
           </div>
 
-          <select
-            value={selectedTableFilter}
-            onChange={(e) => setSelectedTableFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2 text-xs text-slate-600 dark:text-slate-300 focus:outline-none font-bold cursor-pointer"
-          >
-            <option value="all">All Tables</option>
-            {activeTables.map((t, idx) => (
-              <option key={idx} value={t}>{t}</option>
-            ))}
-          </select>
+          {/* Table Selector & Status Filter */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Table Dropdown */}
+            <div className="flex-1 sm:flex-none">
+              <select
+                value={selectedTableFilter}
+                onChange={(e) => setSelectedTableFilter(e.target.value)}
+                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-bold cursor-pointer shadow-2xs"
+              >
+                <option value="all">All Tables</option>
+                {activeTables.map((t, idx) => (
+                  <option key={idx} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <button
-              onClick={() => setStatusFilter("active")}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === "active" 
-                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Active
-            </button>
-            <button
-              onClick={() => setStatusFilter("completed")}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === "completed" 
-                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Completed
-            </button>
-            <button
-              onClick={() => setStatusFilter("all")}
-              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === "all" 
-                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              All
-            </button>
+            {/* Status Filter Tabs (Active / Completed / All) */}
+            <div className="flex-1 sm:flex-none grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setStatusFilter("active")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                  statusFilter === "active" 
+                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setStatusFilter("completed")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                  statusFilter === "completed" 
+                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                Completed
+              </button>
+              <button
+                onClick={() => setStatusFilter("all")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                  statusFilter === "all" 
+                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                All
+              </button>
+            </div>
           </div>
+
         </div>
 
       </div>
