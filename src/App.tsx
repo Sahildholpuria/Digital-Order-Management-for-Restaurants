@@ -35,7 +35,8 @@ const KitchenDisplay = lazyWithRetry(() => import('./pages/kitchen/KitchenDispla
 const WaiterDashboard = lazyWithRetry(() => import('./pages/waiter/WaiterDashboard').then(m => ({ default: m.WaiterDashboard })));
 const SuperAdminDashboard = lazyWithRetry(() => import('./pages/owner/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
 const SubscriptionModal = lazyWithRetry(() => import('./components/subscription/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
-import { SAAS_SUBSCRIPTION_PLANS, formatINR } from './config/subscriptionPlans';
+import { SAAS_SUBSCRIPTION_PLANS, getSubscriptionPlans, SubscriptionPlan, formatINR } from './config/subscriptionPlans';
+import subscriptionService from './services/subscriptionService';
 import { PWAInstallButton } from './components/common/PWAInstallButton';
 import { APP_VERSION } from './config/appVersion';
 import { HelpSupportModal } from './components/common/HelpSupportModal';
@@ -298,11 +299,22 @@ export const App: React.FC = () => {
     }
   });
 
+  const [saasPlans, setSaasPlans] = useState<SubscriptionPlan[]>(() => getSubscriptionPlans());
+
   useEffect(() => {
     const unsub = dbService.subscribeAnnouncements((list) => {
       setAnnouncements(list);
     });
-    return () => unsub();
+    const unsubPricing = subscriptionService.subscribeCustomPricing(() => {
+      setSaasPlans(getSubscriptionPlans());
+    });
+    subscriptionService.getCustomPricing(true).then(() => {
+      setSaasPlans(getSubscriptionPlans());
+    }).catch(() => {});
+    return () => {
+      unsub();
+      unsubPricing();
+    };
   }, []);
 
   const handleDismissAnnouncement = (id: string) => {
@@ -603,7 +615,7 @@ export const App: React.FC = () => {
 
               {/* Plans Selection Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                {SAAS_SUBSCRIPTION_PLANS.map(plan => (
+                {saasPlans.map(plan => (
                   <div 
                     key={plan.id}
                     onClick={() => setIsRenewModalOpen(true)}
@@ -625,7 +637,7 @@ export const App: React.FC = () => {
                       
                       <div className="my-2.5">
                         <span className="text-2xl font-black text-slate-900 dark:text-white">{formatINR(plan.price)}</span>
-                        <span className="text-[10px] text-slate-400 font-bold ml-1">/ 6 Mo</span>
+                        <span className="text-[10px] text-slate-400 font-bold ml-1">/ {plan.durationText}</span>
                       </div>
 
                       <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 mb-4">

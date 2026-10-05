@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -54,7 +54,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   currentPlan = "pro",
   onSuccess
 }) => {
-  const plans = getSubscriptionPlans();
+  const [plans, setPlans] = useState<SubscriptionPlan[]>(() => getSubscriptionPlans());
   const [selectedPlanId, setSelectedPlanId] = useState<string>(
     currentPlan === "starter" ? "starter" : "pro"
   );
@@ -67,6 +67,29 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     plan: SubscriptionPlan;
   } | null>(null);
   const [copiedPayId, setCopiedPayId] = useState(false);
+
+  // Sync real-time pricing whenever Super Admin updates pricing in the database
+  useEffect(() => {
+    const unsub = subscriptionService.subscribeCustomPricing(() => {
+      setPlans(getSubscriptionPlans());
+    });
+    subscriptionService.getCustomPricing(true).then(() => {
+      setPlans(getSubscriptionPlans());
+    }).catch(() => {});
+    return () => {
+      unsub();
+    };
+  }, []);
+
+  // Proactively fetch latest pricing from Supabase whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPlans(getSubscriptionPlans());
+      subscriptionService.getCustomPricing(true).then(() => {
+        setPlans(getSubscriptionPlans());
+      }).catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
