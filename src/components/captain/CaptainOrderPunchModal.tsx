@@ -23,7 +23,8 @@ import {
   Phone,
   Tag,
   ArrowRight,
-  Receipt
+  Receipt,
+  ChevronUp
 } from "lucide-react";
 
 interface CaptainOrderPunchModalProps {
@@ -290,7 +291,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-0 sm:p-3 md:p-4 lg:p-6 animate-fade-in">
       <div 
-        className="w-full h-[100dvh] sm:h-[92vh] sm:max-h-[820px] sm:w-[96vw] sm:max-w-[1240px] bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col relative"
+        className="w-full h-[100dvh] sm:h-[92vh] sm:max-h-[840px] sm:w-[96vw] sm:max-w-[1280px] bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col relative"
       >
         
         {/* MODAL HEADER */}
@@ -318,7 +319,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-300 truncate">
                 {orderType === "takeaway"
-                  ? `Token #${tokenNumber || "TK-01"} • Instant Silent KOT`
+                  ? `Token #${tokenNumber || "TK-01"} • Instant Kitchen KOT Dispatch`
                   : (currentSelectedTable ? `Table ${currentSelectedTable.number} (${currentSelectedTable.capacity} Seats)` : "Select table & add dishes")}
               </p>
             </div>
@@ -348,12 +349,14 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
                 Order #{punchedOrder.orderNumber} Generated!
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-                Successfully assigned to <strong>{punchedOrder.tableName}</strong>. Dishes are queued in Live Kitchen Display (KDS).
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                {punchedOrder.orderType === "takeaway"
+                  ? `Takeaway parcel token #${punchedOrder.tokenNumber || "TK-01"} sent straight to Kitchen Display.`
+                  : `Table order for ${punchedOrder.tableName} sent straight to Kitchen Display.`}
               </p>
             </div>
 
-            {/* KOT Summary Box */}
+            {/* Summary Box */}
             <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 w-full max-w-md text-left space-y-3 shadow-sm">
               <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500">
                 <span>{punchedOrder.tableName}</span>
@@ -416,13 +419,13 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
           <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative min-h-0">
             
             {/* LEFT 7/12: MENU BROWSING & SEARCH */}
-            <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden min-h-0">
+            <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden min-h-0 relative">
               
               {/* Controls Bar: Order Mode + Table / Customer Details + Search */}
-              <div className="p-2.5 sm:p-3.5 bg-slate-50/95 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 space-y-2 sm:space-y-2.5 shrink-0">
+              <div className="p-2 sm:p-3 bg-slate-50/95 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 space-y-2 shrink-0">
                 
                 {/* Row 1: Mode Switcher & Search Bar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:gap-2">
                   {/* Mode Segmented Toggle */}
                   <div className="grid grid-cols-2 gap-1 p-1 bg-slate-200/80 dark:bg-slate-800 rounded-2xl shrink-0">
                     <button
@@ -494,9 +497,9 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     </select>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row items-stretch gap-1.5 sm:gap-2 bg-orange-50/70 dark:bg-orange-950/20 p-2 rounded-xl border border-orange-200/80 dark:border-orange-900/40 shadow-2xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5 sm:gap-2 bg-orange-50/80 dark:bg-orange-950/20 p-2 rounded-xl border border-orange-200/80 dark:border-orange-900/40 shadow-2xs">
                     {/* Token Number */}
-                    <div className="flex items-center gap-1.5 sm:w-28 shrink-0 bg-white dark:bg-slate-800 border border-orange-200 dark:border-orange-900/60 rounded-lg px-2 py-1 shadow-2xs">
+                    <div className="sm:col-span-3 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-orange-200 dark:border-orange-900/60 rounded-lg px-2 py-1 shadow-2xs">
                       <Tag className="w-3 h-3 text-orange-500 shrink-0" />
                       <input
                         type="text"
@@ -508,7 +511,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     </div>
 
                     {/* Customer Name */}
-                    <div className="flex-1 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 shadow-2xs">
+                    <div className="sm:col-span-5 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 shadow-2xs">
                       <User className="w-3 h-3 text-slate-400 shrink-0" />
                       <input
                         type="text"
@@ -520,7 +523,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     </div>
 
                     {/* Customer Phone */}
-                    <div className="flex-1 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 shadow-2xs">
+                    <div className="sm:col-span-4 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 shadow-2xs">
                       <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                       <input
                         type="tel"
@@ -534,7 +537,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                 )}
 
                 {/* Dietary Filter & Categories Horizontal Carousel */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 pb-0.5">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 pb-0.5 touch-pan-x overscroll-x-contain">
                   {/* Dietary Quick Toggles */}
                   <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-0.5 shrink-0 shadow-2xs">
                     <button
@@ -574,32 +577,30 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     </button>
                   </div>
 
-                  <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 shrink-0" />
-
-                  {/* Categories Pills */}
+                  {/* Category Pills */}
                   <button
                     type="button"
                     onClick={() => setSelectedCategoryId("all")}
-                    className={`px-3 py-1 rounded-xl text-[10px] font-bold shrink-0 transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       selectedCategoryId === "all"
-                        ? "bg-amber-500 text-white shadow-sm font-black"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60"
+                        ? "bg-emerald-600 text-white shadow-xs font-black"
+                        : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
                     }`}
                   >
-                    All Items ({foodItems.length})
+                    All Items ({foodItems.filter((f: FoodItem) => f.isAvailable).length})
                   </button>
 
                   {categories.map((cat: MenuCategory) => {
-                    const count = foodItems.filter((f: FoodItem) => f.categoryId === cat.id).length;
+                    const count = foodItems.filter((f: FoodItem) => f.categoryId === cat.id && f.isAvailable).length;
                     return (
                       <button
                         key={cat.id}
                         type="button"
                         onClick={() => setSelectedCategoryId(cat.id)}
-                        className={`px-3 py-1 rounded-xl text-[10px] font-bold shrink-0 transition-all cursor-pointer ${
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           selectedCategoryId === cat.id
-                            ? "bg-amber-500 text-white shadow-sm font-black"
-                            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60"
+                            ? "bg-emerald-600 text-white shadow-xs font-black"
+                            : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100"
                         }`}
                       >
                         {cat.name} ({count})
@@ -607,15 +608,16 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     );
                   })}
                 </div>
+
               </div>
 
-              {/* Food Items Grid */}
-              <div className="flex-1 overflow-y-auto p-2.5 sm:p-4 pb-24 lg:pb-4 min-h-0">
+              {/* Food Items Grid (with safe bottom padding so items are not covered on mobile) */}
+              <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 min-h-0 pb-28 sm:pb-32 lg:pb-4">
                 {filteredItems.length === 0 ? (
-                  <div className="h-48 flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-                    <UtensilsCrossed className="w-10 h-10 stroke-1 opacity-40 text-slate-300" />
-                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No matching dishes found</p>
-                    <p className="text-[10px] text-slate-400">Try changing the category filter or search query.</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
+                    <Search className="w-8 h-8 mb-2 stroke-1" />
+                    <p className="font-bold text-xs">No matching dishes found</p>
+                    <p className="text-[10px]">Try clearing search or changing category</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
@@ -624,7 +626,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                       return (
                         <div
                           key={item.id}
-                          className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex flex-col justify-between shadow-2xs hover:shadow-sm ${
+                          className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex flex-col justify-between ${
                             inCart
                               ? "bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/60 shadow-xs"
                               : "bg-white dark:bg-slate-800/70 border-slate-200/80 dark:border-slate-700/60 hover:border-slate-300"
@@ -659,7 +661,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
                             
                             {/* Note Button */}
                             {inCart ? (
@@ -755,40 +757,43 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
               {/* Cart Items List */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
                 {cartList.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                      <ShoppingBag className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                      <ShoppingBag className="w-6 h-6 stroke-1 text-slate-400" />
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No dishes added yet</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Click + Add on items from the menu to build the KOT ticket.</p>
-                    </div>
+                    <p className="font-bold text-xs text-slate-700 dark:text-slate-300">
+                      Cart is Empty
+                    </p>
+                    <p className="text-[10px] mt-0.5">
+                      Click "+ Add" on any menu dish to assemble the KOT ticket
+                    </p>
                   </div>
                 ) : (
-                  cartList.map(item => (
+                  cartList.map((item: OrderItem) => (
                     <div
                       key={item.itemId}
-                      className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-1.5 shadow-2xs"
+                      className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-2.5 shadow-2xs space-y-2"
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex justify-between items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                          <h5 className="font-bold text-xs text-slate-900 dark:text-white truncate">
                             {item.name}
-                          </h4>
-                          <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">
-                            {currency}{(item.price * item.quantity).toFixed(0)}
+                          </h5>
+                          <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                            {currency}{item.price * item.quantity}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-0.5">
+                        {/* Stepper */}
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
                           <button
                             type="button"
                             onClick={() => handleDecrementItem(item.itemId)}
-                            className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 active:scale-90 transition-all cursor-pointer"
+                            className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 active:scale-90 transition-all cursor-pointer"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
-                          <span className="text-xs font-black px-1.5 min-w-[18px] text-center">
+                          <span className="text-xs font-black px-1 min-w-[16px] text-center">
                             {item.quantity}
                           </span>
                           <button
@@ -797,22 +802,24 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                               const food = foodItems.find((f: FoodItem) => f.id === item.itemId);
                               if (food) handleAddItem(food);
                             }}
-                            className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 active:scale-90 transition-all cursor-pointer"
+                            className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 active:scale-90 transition-all cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
 
-                      {/* Special instructions badge or trigger */}
+                      {/* Instructions / Delete */}
                       <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]">
                         <button
                           type="button"
                           onClick={() => handleOpenItemNote(item.itemId)}
-                          className="text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-amber-600 dark:text-amber-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <MessageSquare className="w-2.5 h-2.5" />
-                          <span>{item.specialInstructions ? item.specialInstructions : "+ Add Cooking Instruction"}</span>
+                          <span className="truncate max-w-[180px]">
+                            {item.specialInstructions ? item.specialInstructions : "+ Add Cooking Note"}
+                          </span>
                         </button>
                         <button
                           type="button"
@@ -861,7 +868,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                   </div>
                 </div>
 
-                {/* Dispatch Button */}
+                {/* Desktop Dispatch Button */}
                 <button
                   type="button"
                   onClick={handlePunchOrder}
@@ -888,54 +895,72 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
             </div>
 
-            {/* MOBILE & TABLET FLOATING CART BAR (Inside modal view) */}
-            <div className="lg:hidden absolute bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 flex items-center justify-between gap-3 shadow-2xl z-30">
-              <div
-                onClick={() => setIsMobileCartDrawerOpen(true)}
-                className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0"
-              >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-black text-xs shadow-md shrink-0">
-                  {totalItemCount}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-slate-400 uppercase font-black truncate">
-                    {orderType === "takeaway" ? `Takeaway ${tokenNumber || "Token"}` : (currentSelectedTable ? `Table ${currentSelectedTable.number}` : "Table Order")}
-                  </p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white truncate">
-                    {currency}{grandTotal.toFixed(0)}
-                  </p>
-                </div>
-              </div>
+            {/* MOBILE & TABLET FLOATING BOTTOM DISPATCH BAR (Always visible & accessible) */}
+            <div className="lg:hidden absolute bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-3 shadow-2xl z-30">
+              {cartList.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  {/* Cart Summary / Review Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileCartDrawerOpen(true)}
+                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shrink-0 active:scale-95"
+                    title="Review items & notes"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-xs shadow-xs">
+                      {totalItemCount}
+                    </div>
+                    <div className="text-left hidden xs:block sm:block pr-0.5">
+                      <span className="text-[9px] text-slate-400 font-bold block uppercase leading-none">Items</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white leading-none">
+                        {currency}{grandTotal.toFixed(0)}
+                      </span>
+                    </div>
+                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (cartList.length === 0) {
-                    showToast("Please add dishes to order first", "info");
-                  } else {
-                    setIsMobileCartDrawerOpen(true);
-                  }
-                }}
-                className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all active:scale-95 text-white shadow-md cursor-pointer shrink-0 ${
-                  orderType === "takeaway" ? "bg-orange-600 hover:bg-orange-500 shadow-orange-600/30" : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30"
-                }`}
-              >
-                <span>Review & Dispatch</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                  {/* PROMINENT DIRECT DISPATCH BUTTON ON MOBILE */}
+                  <button
+                    type="button"
+                    onClick={handlePunchOrder}
+                    disabled={isSubmitting || cartList.length === 0}
+                    className={`flex-1 text-white font-black py-3 px-3.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg transition-all cursor-pointer active:scale-95 min-w-0 ${
+                      orderType === "takeaway"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 shadow-orange-500/30"
+                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/30"
+                    }`}
+                  >
+                    <Zap className="w-4 h-4 fill-current text-amber-300 shrink-0 animate-pulse" />
+                    <span className="truncate">
+                      {isSubmitting
+                        ? "DISPATCHING KOT..."
+                        : orderType === "takeaway"
+                          ? `DISPATCH TAKEAWAY KOT (${currency}${grandTotal.toFixed(0)}) ⚡`
+                          : `DISPATCH KOT (${currency}${grandTotal.toFixed(0)}) ⚡`}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-400 dark:text-slate-500">
+                  <span className="flex items-center gap-1.5 font-medium text-[11px]">
+                    <ShoppingBag className="w-3.5 h-3.5 text-orange-500" />
+                    <span>Select dishes above to build Takeaway KOT</span>
+                  </span>
+                  <span className="font-bold text-[10px] uppercase text-slate-400">0 items</span>
+                </div>
+              )}
             </div>
 
             {/* MOBILE CART BOTTOM DRAWER */}
             {isMobileCartDrawerOpen && (
               <div className="lg:hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end justify-center animate-fade-in">
-                <div className="bg-white dark:bg-slate-900 rounded-t-3xl w-full max-h-[90%] flex flex-col shadow-2xl border-t border-slate-200 dark:border-slate-800 animate-slide-up overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-t-3xl w-full max-h-[85%] flex flex-col shadow-2xl border-t border-slate-200 dark:border-slate-800 animate-slide-up overflow-hidden">
                   
                   {/* Drawer Handle & Header */}
                   <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-900">
                     <div className="flex items-center gap-2">
                       <ChefHat className="w-5 h-5 text-emerald-500" />
                       <h3 className="font-black text-sm text-slate-900 dark:text-white">
-                        Review KOT ({totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"})
+                        Review Takeaway KOT ({totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"})
                       </h3>
                     </div>
                     <button
@@ -948,23 +973,24 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                   </div>
 
                   {/* Drawer Items List */}
-                  <div className="p-3 sm:p-4 overflow-y-auto space-y-2.5 flex-1 min-h-0">
-                    {cartList.map(item => (
+                  <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 min-h-0">
+                    {cartList.map((item: OrderItem) => (
                       <div
                         key={item.itemId}
-                        className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-1.5"
+                        className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-3 shadow-2xs space-y-2"
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0 flex-1">
-                            <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                            <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                               {item.name}
-                            </h4>
-                            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">
-                              {currency}{(item.price * item.quantity).toFixed(0)}
+                            </h5>
+                            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                              {currency}{item.price * item.quantity}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-0.5">
+                          {/* Stepper */}
+                          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-xl p-0.5 border border-slate-200 dark:border-slate-700">
                             <button
                               type="button"
                               onClick={() => handleDecrementItem(item.itemId)}
@@ -1030,7 +1056,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                       type="button"
                       onClick={handlePunchOrder}
                       disabled={isSubmitting || cartList.length === 0}
-                      className={`w-full text-white font-black py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-95 ${
+                      className={`w-full text-white font-black py-3.5 px-4 rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-95 ${
                         orderType === "takeaway"
                           ? "bg-gradient-to-r from-orange-500 to-amber-600 shadow-orange-600/30"
                           : "bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/30"
@@ -1116,3 +1142,5 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
     </div>
   );
 };
+
+export default CaptainOrderPunchModal;
