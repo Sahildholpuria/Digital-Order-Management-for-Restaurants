@@ -8,6 +8,7 @@ import {
   getPlanById,
   getCustomPlanPricing,
   calculateNextExpiry,
+  addMonthsToDate,
   formatINR,
   getRazorpayKeyId,
   setRazorpayKeyId,
@@ -142,6 +143,13 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const [planType, setPlanType] = useState<'starter' | 'pro' | 'pro_6m' | 'pro_1y'>('starter');
   const [status, setStatus] = useState<'trial' | 'active' | 'expired'>('trial');
   const [expiresAt, setExpiresAt] = useState('');
+  const [onboardStartDate, setOnboardStartDate] = useState(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
 
   // Edit subscription/details states
   const [editName, setEditName] = useState('');
@@ -374,18 +382,41 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     setEmail('');
     setPhone('');
     setPlanType('starter');
-    setStatus('trial');
+    setStatus('active');
     setCreateAdminAccount(true);
     setAdminFullName('');
     setAdminEmail('');
     setAdminPassword(generateRandomPassword());
     
-    // Auto-calculate default initial expiry: +1 Month
-    const defaultExpiry = new Date();
-    defaultExpiry.setMonth(defaultExpiry.getMonth() + 1);
-    setExpiresAt(formatLocalDate(defaultExpiry));
+    // Set Start Date to Today (current date)
+    const today = new Date();
+    setOnboardStartDate(formatLocalDate(today));
+    
+    // Auto-calculate Expiry Date based on selected plan's duration months
+    const dynamicPlans = getSubscriptionPlans();
+    const starterPlan = dynamicPlans.find(p => p.id === 'starter') || dynamicPlans[0];
+    const initialExpiry = addMonthsToDate(today, starterPlan.durationMonths);
+    setExpiresAt(formatLocalDate(initialExpiry));
     
     setIsModalOpen(true);
+  };
+
+  const handleOnboardPlanChange = (newPlanId: 'starter' | 'pro') => {
+    setPlanType(newPlanId);
+    const dynamicPlans = getSubscriptionPlans();
+    const plan = dynamicPlans.find(p => p.id === newPlanId) || dynamicPlans[0];
+    const baseDate = onboardStartDate ? new Date(onboardStartDate) : new Date();
+    const newExpiry = addMonthsToDate(baseDate, plan.durationMonths);
+    setExpiresAt(formatLocalDate(newExpiry));
+  };
+
+  const handleOnboardStartDateChange = (newStartDateStr: string) => {
+    setOnboardStartDate(newStartDateStr);
+    const dynamicPlans = getSubscriptionPlans();
+    const plan = dynamicPlans.find(p => p.id === (planType === 'starter' ? 'starter' : 'pro')) || dynamicPlans[0];
+    const baseDate = newStartDateStr ? new Date(newStartDateStr) : new Date();
+    const newExpiry = addMonthsToDate(baseDate, plan.durationMonths);
+    setExpiresAt(formatLocalDate(newExpiry));
   };
 
   const handleOpenAddStaffForRest = (targetRestId: string) => {
@@ -449,15 +480,19 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
     const cleanSlug = restId.trim().toLowerCase().replace(/\s+/g, '-');
 
+    const startDateTime = onboardStartDate ? new Date(onboardStartDate).toISOString() : new Date().toISOString();
+    const expiryDateTime = expiresAt ? new Date(expiresAt).toISOString() : addMonthsToDate(new Date(startDateTime), 6).toISOString();
+
     try {
       const newRest: Partial<RestaurantSettings> = {
         id: cleanSlug,
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        planType,
+        planType: planType === 'starter' ? 'starter' : 'pro',
         subscriptionStatus: status,
-        subscriptionExpiresAt: expiresAt ? new Date(expiresAt).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        subscriptionExpiresAt: expiryDateTime,
+        createdAt: startDateTime,
       };
 
       await dbService.createRestaurant(newRest);
@@ -2363,20 +2398,15 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Subscription Plan</label>
                     <select
-                      value={planType}
-                      onChange={(e) => {
-                        const val = e.target.value as 'starter' | 'pro_6m' | 'pro_1y';
-                        setPlanType(val);
-                        const now = new Date();
-                        if (val === 'starter') now.setMonth(now.getMonth() + 1);
-                        else if (val === 'pro_6m') now.setMonth(now.getMonth() + 6);
-                        else if (val === 'pro_1y') now.setFullYear(now.getFullYear() + 1);
-                        setExpiresAt(formatLocalDate(now));
-                      }}
-                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer"
+                      value={planType === 'starter' ? 'starter' : 'pro'}
+                      onChange={(e) => handleOnboardPlanChange(e.target.value as 'starter' | 'pro')}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 cursor-pointer font-bold"
                     >
-                      <option value="starter">{getPlanLabel("starter")}</option>
-                      <option value="pro_6m">{getPlanLabel("pro")}</option>
+                      {getSubscriptionPlans().map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.durationText} • {formatINR(p.price)})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -2384,12 +2414,37 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer font-bold"
                     >
-                      <option value="trial">Free Trial</option>
                       <option value="active">Active Plan</option>
+                      <option value="trial">Free Trial</option>
                       <option value="expired">Expired</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Plan Start Date (Today)
+                    </label>
+                    <input
+                      type="date"
+                      value={onboardStartDate}
+                      onChange={(e) => handleOnboardStartDateChange(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-850 dark:text-slate-100 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Auto-Calculated Expiry Date
+                    </label>
+                    <input
+                      type="date"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-2.5 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-emerald-600 dark:text-emerald-400 font-bold"
+                    />
                   </div>
                 </div>
               </div>
@@ -2702,24 +2757,22 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Selected Plan</label>
                   <select
-                    value={editPlan}
+                    value={editPlan === 'starter' ? 'starter' : 'pro'}
                     onChange={(e) => {
-                      const val = e.target.value as 'starter' | 'pro_6m' | 'pro_1y';
+                      const val = e.target.value as 'starter' | 'pro';
                       setEditPlan(val);
-                      const now = new Date();
-                      if (val === 'starter') {
-                        now.setMonth(now.getMonth() + 1);
-                      } else if (val === 'pro_6m') {
-                        now.setMonth(now.getMonth() + 6);
-                      } else if (val === 'pro_1y') {
-                        now.setFullYear(now.getFullYear() + 1);
-                      }
-                      setEditExpiresAt(formatLocalDate(now));
+                      const dynamicPlans = getSubscriptionPlans();
+                      const plan = dynamicPlans.find(p => p.id === val) || dynamicPlans[0];
+                      const newExpiry = calculateNextExpiry(editExpiresAt, editStatus, plan.durationMonths);
+                      setEditExpiresAt(formatLocalDate(newExpiry));
                     }}
-                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer"
+                    className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-855 dark:text-slate-100 cursor-pointer font-bold"
                   >
-                    <option value="starter">{getPlanLabel("starter")}</option>
-                    <option value="pro_6m">{getPlanLabel("pro")}</option>
+                    {getSubscriptionPlans().map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.durationText} • {formatINR(p.price)})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
