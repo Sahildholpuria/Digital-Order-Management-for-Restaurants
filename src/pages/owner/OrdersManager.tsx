@@ -255,7 +255,7 @@ export const OrdersManager: React.FC = () => {
       </div>
 
       {/* Filter and search panel - Perfectly Arranged & Responsive */}
-      <div className="card-premium flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between p-3.5 sm:p-4">
+      <div className="card-premium flex flex-col lg:flex-row gap-2.5 sm:gap-3.5 items-stretch lg:items-center justify-between p-3.5 sm:p-4">
         
         {/* Search Input */}
         <div className="relative w-full lg:w-72 xl:w-80 shadow-2xs rounded-2xl">
@@ -279,14 +279,14 @@ export const OrdersManager: React.FC = () => {
           )}
         </div>
 
-        {/* Filter Controls: Cleanly Structured Rows on Mobile, Inline on Desktop */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+        {/* Filter Controls: Structured Rows on Mobile, Responsive Wrap on Desktop */}
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
           
           {/* Order Type Toggle (Dine-In / Takeaway / All) */}
-          <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 sm:w-auto">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
             <button
               onClick={() => setOrderTypeFilter("all")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                 orderTypeFilter === "all" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -296,7 +296,7 @@ export const OrdersManager: React.FC = () => {
             </button>
             <button
               onClick={() => setOrderTypeFilter("dine_in")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
+              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 orderTypeFilter === "dine_in" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -307,7 +307,7 @@ export const OrdersManager: React.FC = () => {
             </button>
             <button
               onClick={() => setOrderTypeFilter("takeaway")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
+              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 orderTypeFilter === "takeaway" 
                   ? "bg-orange-600 text-white shadow-xs font-black"
                   : "text-orange-600/80 hover:text-orange-600"
@@ -318,55 +318,52 @@ export const OrdersManager: React.FC = () => {
             </button>
           </div>
 
-          {/* Table Selector & Status Filter */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* Table Dropdown */}
-            <div className="flex-1 sm:flex-none">
-              <select
-                value={selectedTableFilter}
-                onChange={(e) => setSelectedTableFilter(e.target.value)}
-                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-bold cursor-pointer shadow-2xs"
-              >
-                <option value="all">All Tables</option>
-                {activeTables.map((t, idx) => (
-                  <option key={idx} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
+          {/* Status Filter Tabs (Active / Completed / All) */}
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
+            <button
+              onClick={() => setStatusFilter("active")}
+              className={`flex-1 sm:flex-initial min-w-[72px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+                statusFilter === "active" 
+                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40"
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setStatusFilter("completed")}
+              className={`flex-1 sm:flex-initial min-w-[85px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+                statusFilter === "completed" 
+                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40"
+              }`}
+            >
+              Completed
+            </button>
+            <button
+              onClick={() => setStatusFilter("all")}
+              className={`flex-1 sm:flex-initial min-w-[55px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+                statusFilter === "all" 
+                  ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40"
+              }`}
+            >
+              All
+            </button>
+          </div>
 
-            {/* Status Filter Tabs (Active / Completed / All) */}
-            <div className="flex-1 sm:flex-none grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <button
-                onClick={() => setStatusFilter("active")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
-                  statusFilter === "active" 
-                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setStatusFilter("completed")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
-                  statusFilter === "completed" 
-                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                Completed
-              </button>
-              <button
-                onClick={() => setStatusFilter("all")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
-                  statusFilter === "all" 
-                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                All
-              </button>
-            </div>
+          {/* Table Selector Dropdown */}
+          <div className="w-full sm:w-auto">
+            <select
+              value={selectedTableFilter}
+              onChange={(e) => setSelectedTableFilter(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-bold cursor-pointer shadow-2xs"
+            >
+              <option value="all">All Dining Tables</option>
+              {activeTables.map((t, idx) => (
+                <option key={idx} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
 
         </div>
