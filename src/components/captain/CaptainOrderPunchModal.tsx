@@ -24,7 +24,8 @@ import {
   Tag,
   ArrowRight,
   Receipt,
-  ChevronUp
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 
 interface CaptainOrderPunchModalProps {
@@ -221,7 +222,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
   // Submit Order Action
   const handlePunchOrder = async () => {
     if (cartList.length === 0) {
-      showToast("Please add at least one dish item", "error");
+      showToast("Please add at least one dish to the order first", "error");
       return;
     }
 
@@ -260,7 +261,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
       setCustomerName("");
       setCustomerPhone("");
       setIsMobileCartDrawerOpen(false);
-      showToast(`${orderType === "takeaway" ? "Takeaway" : "Table"} Order #${createdOrder.orderNumber} punched & KOT queued!`, "success");
+      showToast(`${orderType === "takeaway" ? "Takeaway Parcel" : "Table"} Order #${createdOrder.orderNumber} dispatched to kitchen!`, "success");
       
       // Auto-trigger kitchen KOT print
       try {
@@ -289,9 +290,9 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
   const currentSelectedTable = tables.find((t: RestaurantTable) => t.id === selectedTableId);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-0 sm:p-3 md:p-4 lg:p-6 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 backdrop-blur-md sm:p-3 md:p-4 lg:p-6 sm:items-center sm:justify-center animate-fade-in">
       <div 
-        className="w-full h-[100dvh] sm:h-[92vh] sm:max-h-[840px] sm:w-[96vw] sm:max-w-[1280px] bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col relative"
+        className="w-full h-full sm:h-[92vh] sm:max-h-[860px] sm:w-[96vw] sm:max-w-[1300px] bg-white dark:bg-slate-900 sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col relative"
       >
         
         {/* MODAL HEADER */}
@@ -611,8 +612,8 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
               </div>
 
-              {/* Food Items Grid (with safe bottom padding so items are not covered on mobile) */}
-              <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 min-h-0 pb-28 sm:pb-32 lg:pb-4">
+              {/* Food Items Grid (with safe bottom padding so items are not covered on mobile by the floating dock) */}
+              <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 min-h-0 pb-36 sm:pb-40 lg:pb-4">
                 {filteredItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
                     <Search className="w-8 h-8 mb-2 stroke-1" />
@@ -895,62 +896,76 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
             </div>
 
-            {/* MOBILE & TABLET FLOATING BOTTOM DISPATCH BAR (Always visible & accessible) */}
-            <div className="lg:hidden absolute bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-3 shadow-2xl z-30">
-              {cartList.length > 0 ? (
+            {/* MOBILE & TABLET FLOATING BOTTOM DISPATCH DOCK (Guaranteed visibility on all mobile screens) */}
+            <div className="lg:hidden absolute bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 p-2 sm:p-3 shadow-2xl z-30 space-y-1.5" style={{ paddingBottom: "max(0.65rem, env(safe-area-inset-bottom))" }}>
+              
+              {/* Optional Quick Parcel Note on mobile if cart has items */}
+              {cartList.length > 0 && (
                 <div className="flex items-center gap-2">
-                  {/* Cart Summary / Review Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setIsMobileCartDrawerOpen(true)}
-                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shrink-0 active:scale-95"
-                    title="Review items & notes"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-xs shadow-xs">
-                      {totalItemCount}
-                    </div>
-                    <div className="text-left hidden xs:block sm:block pr-0.5">
-                      <span className="text-[9px] text-slate-400 font-bold block uppercase leading-none">Items</span>
-                      <span className="text-xs font-black text-slate-900 dark:text-white leading-none">
-                        {currency}{grandTotal.toFixed(0)}
-                      </span>
-                    </div>
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                  </button>
-
-                  {/* PROMINENT DIRECT DISPATCH BUTTON ON MOBILE */}
-                  <button
-                    type="button"
-                    onClick={handlePunchOrder}
-                    disabled={isSubmitting || cartList.length === 0}
-                    className={`flex-1 text-white font-black py-3 px-3.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg transition-all cursor-pointer active:scale-95 min-w-0 ${
-                      orderType === "takeaway"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 shadow-orange-500/30"
-                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/30"
-                    }`}
-                  >
-                    <Zap className="w-4 h-4 fill-current text-amber-300 shrink-0 animate-pulse" />
-                    <span className="truncate">
-                      {isSubmitting
-                        ? "DISPATCHING KOT..."
-                        : orderType === "takeaway"
-                          ? `DISPATCH TAKEAWAY KOT (${currency}${grandTotal.toFixed(0)}) ⚡`
-                          : `DISPATCH KOT (${currency}${grandTotal.toFixed(0)}) ⚡`}
-                    </span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-400 dark:text-slate-500">
-                  <span className="flex items-center gap-1.5 font-medium text-[11px]">
-                    <ShoppingBag className="w-3.5 h-3.5 text-orange-500" />
-                    <span>Select dishes above to build Takeaway KOT</span>
-                  </span>
-                  <span className="font-bold text-[10px] uppercase text-slate-400">0 items</span>
+                  <input
+                    type="text"
+                    placeholder={orderType === "takeaway" ? "Takeaway parcel note (e.g. Extra chutney)..." : "Kitchen note (e.g. Less spicy)..."}
+                    value={generalNotes}
+                    onChange={(e) => setGeneralNotes(e.target.value)}
+                    className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1 text-[11px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
                 </div>
               )}
+
+              {/* Main Action Bar */}
+              <div className="flex items-center gap-2">
+                {/* Cart Summary / Review Drawer Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (cartList.length > 0) setIsMobileCartDrawerOpen(true);
+                  }}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-2.5 rounded-xl border transition-all shrink-0 active:scale-95 ${
+                    cartList.length > 0
+                      ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white cursor-pointer"
+                      : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 opacity-60 cursor-default"
+                  }`}
+                  title="Review items"
+                >
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${
+                    cartList.length > 0 ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900" : "bg-slate-300 dark:bg-slate-700 text-slate-600"
+                  }`}>
+                    {totalItemCount}
+                  </div>
+                  <div className="text-left leading-none pr-1 hidden xs:block sm:block">
+                    <span className="text-[8px] font-bold uppercase text-slate-400 block">Items</span>
+                    <span className="text-[11px] font-black">{currency}{grandTotal.toFixed(0)}</span>
+                  </div>
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                {/* THE PROMINENT DISPATCH TAKEAWAY KOT BUTTON */}
+                <button
+                  type="button"
+                  onClick={handlePunchOrder}
+                  disabled={isSubmitting || cartList.length === 0}
+                  className={`flex-1 text-white font-black py-3 px-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg transition-all min-w-0 ${
+                    cartList.length === 0
+                      ? "bg-slate-300 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none"
+                      : orderType === "takeaway"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 shadow-orange-500/30 cursor-pointer active:scale-95 animate-pulse"
+                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/30 cursor-pointer active:scale-95 animate-pulse"
+                  }`}
+                >
+                  <Zap className="w-4 h-4 fill-current text-amber-300 shrink-0" />
+                  <span className="truncate font-black tracking-wide">
+                    {isSubmitting
+                      ? "DISPATCHING KOT..."
+                      : orderType === "takeaway"
+                        ? (cartList.length === 0 ? "DISPATCH TAKEAWAY KOT" : `DISPATCH TAKEAWAY KOT (${currency}${grandTotal.toFixed(0)})`)
+                        : (cartList.length === 0 ? "DISPATCH KOT TO KITCHEN" : `DISPATCH KOT (${currency}${grandTotal.toFixed(0)})`)}
+                  </span>
+                </button>
+              </div>
+
             </div>
 
-            {/* MOBILE CART BOTTOM DRAWER */}
+            {/* MOBILE CART BOTTOM DRAWER (Review & Edit instructions) */}
             {isMobileCartDrawerOpen && (
               <div className="lg:hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end justify-center animate-fade-in">
                 <div className="bg-white dark:bg-slate-900 rounded-t-3xl w-full max-h-[85%] flex flex-col shadow-2xl border-t border-slate-200 dark:border-slate-800 animate-slide-up overflow-hidden">
@@ -1036,7 +1051,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                   </div>
 
                   {/* Drawer Footer */}
-                  <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 space-y-2.5 shrink-0">
+                  <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 space-y-2.5 shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
                     <input
                       type="text"
                       placeholder={orderType === "takeaway" ? "Takeaway Parcel Note (e.g. Extra chutney)..." : "Special Table Instructions (e.g. Less spicy)..."}
