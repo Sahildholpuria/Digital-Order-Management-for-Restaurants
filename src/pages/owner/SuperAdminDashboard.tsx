@@ -14,8 +14,11 @@ import {
   setRazorpayKeySecret
 } from '../../config/subscriptionPlans';
 import subscriptionService, { SubscriptionPaymentRecord } from '../../services/subscriptionService';
+import supportConfigService, { SupportChannelsConfig } from '../../services/supportConfigService';
 import { 
   Building,
+  Phone,
+  LifeBuoy,
   ArrowLeft, 
   Plus, 
   CheckCircle, 
@@ -91,6 +94,38 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const [proDurationInput, setProDurationInput] = useState<number | string>(() => getCustomPlanPricing().proDurationMonths || 6);
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [rzpKeyInput, setRzpKeyInput] = useState(() => getRazorpayKeyId());
+  
+  // Support Channels Management States
+  const [supportEmailInput, setSupportEmailInput] = useState(() => supportConfigService.getSupportConfig().email);
+  const [supportPhoneInput, setSupportPhoneInput] = useState(() => supportConfigService.getSupportConfig().phone);
+  const [supportWhatsappInput, setSupportWhatsappInput] = useState(() => supportConfigService.getSupportConfig().whatsapp);
+  const [isSavingSupportConfig, setIsSavingSupportConfig] = useState(false);
+
+  useEffect(() => {
+    const unsub = supportConfigService.subscribeSupportConfig((cfg: SupportChannelsConfig) => {
+      setSupportEmailInput(cfg.email);
+      setSupportPhoneInput(cfg.phone);
+      setSupportWhatsappInput(cfg.whatsapp);
+    });
+    return unsub;
+  }, []);
+
+  const handleSaveSupportConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSupportConfig(true);
+    try {
+      await supportConfigService.saveSupportConfig({
+        email: supportEmailInput,
+        phone: supportPhoneInput,
+        whatsapp: supportWhatsappInput,
+      });
+      showToast('Help & Support contact channels updated successfully across all restaurants!', 'success');
+    } catch (err: any) {
+      showToast('Failed to save support channels: ' + (err.message || err), 'error');
+    } finally {
+      setIsSavingSupportConfig(false);
+    }
+  };
   const [rzpSecretInput, setRzpSecretInput] = useState(() => getRazorpayKeySecret());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1047,6 +1082,94 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               </div>
               <p className="text-[11px] text-slate-400 mt-1 font-mono truncate">{rzpKeyInput || "No key set"}</p>
             </div>
+          </div>
+
+          {/* Direct Help & Support Channels Configuration Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                  <LifeBuoy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    Help & Support Contact Channels
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Set official support email, WhatsApp number, and helpline call number displayed on the Help & Support page and modals.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">
+                Real-Time Sync
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveSupportConfig} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Support Desk Email</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. support@restaurantsos.in"
+                    value={supportEmailInput}
+                    onChange={(e) => setSupportEmailInput(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>WhatsApp Live Support Number</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 919772209200 or +91 97722 09200"
+                    value={supportWhatsappInput}
+                    onChange={(e) => setSupportWhatsappInput(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Country code + digits (used for direct wa.me chat click)
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-violet-500" />
+                    <span>Helpline Phone Number</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. +91 97722 09200"
+                    value={supportPhoneInput}
+                    onChange={(e) => setSupportPhoneInput(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Displayed for direct phone calling and click-to-copy
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={isSavingSupportConfig}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-6 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 active:scale-95 cursor-pointer flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isSavingSupportConfig ? "Saving Channels..." : "Save Support Channels"}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
           {/* Razorpay Gateway API Credentials Card */}

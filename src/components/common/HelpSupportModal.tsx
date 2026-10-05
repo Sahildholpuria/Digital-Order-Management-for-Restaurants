@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
+import supportConfigService, { SupportChannelsConfig } from "../../services/supportConfigService";
 import {
   X,
   LifeBuoy,
@@ -27,12 +28,20 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({ isOpen, onCl
   const { settings, currentUser, qzStatus, connectQZTray, showToast } = useRestaurant();
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [supportConfig, setSupportConfig] = useState<SupportChannelsConfig>(() => supportConfigService.getSupportConfig());
+
+  React.useEffect(() => {
+    const unsub = supportConfigService.subscribeSupportConfig((cfg) => {
+      setSupportConfig(cfg);
+    });
+    return unsub;
+  }, []);
 
   if (!isOpen) return null;
 
-  const supportEmail = "support@restaurantsos.in";
-  const supportPhone = "+91 98765 43210";
-  const whatsappNumber = "919876543210";
+  const supportEmail = supportConfig.email;
+  const supportPhone = supportConfig.phone;
+  const whatsappNumber = supportConfig.whatsapp;
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText(supportEmail);

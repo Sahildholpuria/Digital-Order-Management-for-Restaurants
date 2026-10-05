@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { APP_VERSION } from "../../config/appVersion";
+import supportConfigService, { SupportChannelsConfig } from "../../services/supportConfigService";
 import {
   MessageSquare,
   Mail,
@@ -18,10 +19,18 @@ export const HelpSupportManager: React.FC = () => {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0);
+  const [supportConfig, setSupportConfig] = useState<SupportChannelsConfig>(() => supportConfigService.getSupportConfig());
 
-  const supportEmail = "support@restaurantsos.in";
-  const supportPhone = "+91 97722 09200";
-  const whatsappNumber = "919772209200";
+  React.useEffect(() => {
+    const unsub = supportConfigService.subscribeSupportConfig((cfg) => {
+      setSupportConfig(cfg);
+    });
+    return unsub;
+  }, []);
+
+  const supportEmail = supportConfig.email;
+  const supportPhone = supportConfig.phone;
+  const whatsappNumber = supportConfig.whatsapp;
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText(supportEmail);
