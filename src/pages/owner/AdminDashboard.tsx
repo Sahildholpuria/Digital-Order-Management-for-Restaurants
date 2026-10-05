@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { CaptainOrderPunchModal } from '../../components/captain/CaptainOrderPunchModal';
 import { 
   TrendingUp, 
   ShoppingBag, 
@@ -11,8 +10,7 @@ import {
   Calendar, 
   AlertCircle,
   Filter,
-  Sparkles,
-  Zap
+  Sparkles
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -21,7 +19,6 @@ export type DateRange = 'today' | 'yesterday' | 'week' | 'month' | 'all';
 export const AdminDashboard: React.FC = () => {
   const { orders, tables, payments, settings } = useRestaurant();
   const [dateRange, setDateRange] = useState<DateRange>('today');
-  const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
 
   const currency = settings?.currency || '₹';
 
@@ -299,15 +296,7 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Date Filter & Calendar Badge Controls */}
         <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-          {/* Punch Order Button */}
-          <button
-            type="button"
-            onClick={() => setIsPunchModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
-          >
-            <Zap className="w-4 h-4 fill-current text-amber-300" />
-            <span>Punch Order (KOT)</span>
-          </button>
+
           {/* Segmented Date Range Picker */}
           <div className="flex items-center p-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar max-w-full w-full lg:w-auto">
             <div className="flex items-center gap-1 px-2 text-slate-400">
