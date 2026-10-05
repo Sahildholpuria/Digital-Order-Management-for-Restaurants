@@ -509,8 +509,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       setExpiresAt('');
 
       await fetchAllData();
-    } catch (err) {
-      showToast('Error creating restaurant: ' + err, 'error');
+    } catch (err: any) {
+      const errMsg = err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "Failed to onboard restaurant";
+      showToast("Error creating restaurant: " + errMsg, "error");
     }
   };
 

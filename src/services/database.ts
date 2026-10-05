@@ -969,31 +969,67 @@ export const dbService = {
   },
 
   async createRestaurant(restaurant: Partial<RestaurantSettings>): Promise<void> {
-    if (isSupabaseConfigured) {
-      const dbRow = mapSettingsToDb(restaurant);
-      dbRow.created_at = new Date().toISOString();
-      dbRow.subscription_status = restaurant.subscriptionStatus || 'trial';
-      dbRow.subscription_expires_at = restaurant.subscriptionExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      dbRow.plan_type = restaurant.planType || 'starter';
-      const { error } = await supabase
-        .from('restaurants')
-        .insert(dbRow);
-      if (error) throw error;
+    const startDateTime = restaurant.createdAt || new Date().toISOString();
+    const expiryDateTime = restaurant.subscriptionExpiresAt || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
+    const status = restaurant.subscriptionStatus || 'active';
+    const plan = restaurant.planType || 'starter';
+
+    // 1. Record in local cache for immediate UI responsiveness
+    const data = localStorage.getItem('super_admin_restaurants');
+    const list = data ? JSON.parse(data) : [];
+    const newRest = {
+      ...DEFAULT_SETTINGS,
+      ...restaurant,
+      id: restaurant.id || `rest-${Date.now()}`,
+      subscriptionStatus: status,
+      planType: plan,
+      subscriptionExpiresAt: expiryDateTime,
+      createdAt: startDateTime
+    };
+    const existingIdx = list.findIndex((r: any) => r.id === newRest.id);
+    if (existingIdx > -1) {
+      list[existingIdx] = newRest;
     } else {
-      const data = localStorage.getItem('super_admin_restaurants');
-      const list = data ? JSON.parse(data) : [];
-      const newRest = {
-        ...DEFAULT_SETTINGS,
-        ...restaurant,
-        id: restaurant.id || `rest-${Date.now()}`,
-        subscriptionStatus: restaurant.subscriptionStatus || 'trial',
-        planType: restaurant.planType || 'starter',
-        subscriptionExpiresAt: restaurant.subscriptionExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date().toISOString()
-      };
-      list.push(newRest);
-      localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
-      notifyLocalSubscribers();
+      list.unshift(newRest);
+    }
+    localStorage.setItem('super_admin_restaurants', JSON.stringify(list));
+    notifyLocalSubscribers();
+
+    // 2. Remote Supabase Database Persistence
+    if (isSupabaseConfigured) {
+      // First attempt secure RPC to bypass RLS safely
+      const { data: rpcData, error: rpcError } = await supabase.rpc('onboard_new_restaurant', {
+        p_id: restaurant.id,
+        p_name: restaurant.name,
+        p_email: restaurant.email || null,
+        p_phone: restaurant.phone || null,
+        p_plan_type: plan,
+        p_subscription_status: status,
+        p_subscription_expires_at: expiryDateTime,
+        p_created_at: startDateTime
+      });
+
+      if (rpcData && rpcData.success === false && rpcData.error) {
+        throw new Error(`Restaurant ID / Slug "${restaurant.id}" already exists. Please choose a different slug.`);
+      }
+
+      if (rpcError) {
+        console.warn('RPC onboard_new_restaurant notice, falling back to table insert:', rpcError);
+        const dbRow = mapSettingsToDb(restaurant);
+        dbRow.created_at = startDateTime;
+        dbRow.subscription_status = status;
+        dbRow.subscription_expires_at = expiryDateTime;
+        dbRow.plan_type = plan;
+        const { error } = await supabase
+          .from('restaurants')
+          .insert(dbRow);
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error(`A restaurant with slug "${restaurant.id}" already exists.`);
+          }
+          throw new Error(error.message || 'Database error creating restaurant.');
+        }
+      }
     }
   },
 
