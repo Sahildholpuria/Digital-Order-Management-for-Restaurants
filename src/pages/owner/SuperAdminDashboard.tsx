@@ -7,6 +7,7 @@ import {
   getSubscriptionPlans,
   getPlanById,
   getCustomPlanPricing,
+  calculateNextExpiry,
   formatINR,
   getRazorpayKeyId,
   setRazorpayKeyId,
@@ -2450,9 +2451,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         ];
 
         const applyPlan = (plan: typeof plans[0]) => {
-          setSubPlan(plan.id);
-          const newDate = new Date();
-          newDate.setMonth(newDate.getMonth() + plan.months);
+          setSubPlan(plan.id === "starter" ? "starter" : "pro");
+          const newDate = calculateNextExpiry(subExpiresAt, subStatus, plan.months);
           setSubExpiresAt(newDate.toISOString().split('T')[0]);
           setSubStatus('active');
         };
@@ -2755,21 +2755,19 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const newDate = new Date();
-                      newDate.setDate(newDate.getDate() + 30);
+                      const newDate = calculateNextExpiry(editExpiresAt, editStatus, 1);
                       setEditExpiresAt(newDate.toISOString().split('T')[0]);
                       setEditStatus('active');
-                      showToast('Set to Active and extended +30 Days.', 'info');
+                      showToast('Set to Active and extended +1 Month.', 'info');
                     }}
                     className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-750 dark:text-slate-250 py-2 rounded-xl text-[10px] font-bold transition-all"
                   >
-                    +30 Days
+                    +1 Month
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      const newDate = new Date();
-                      newDate.setMonth(newDate.getMonth() + 6);
+                      const newDate = calculateNextExpiry(editExpiresAt, editStatus, 6);
                       setEditExpiresAt(newDate.toISOString().split('T')[0]);
                       setEditStatus('active');
                       showToast('Set to Active and extended +6 Months.', 'info');
@@ -2781,8 +2779,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const newDate = new Date();
-                      newDate.setFullYear(newDate.getFullYear() + 1);
+                      const newDate = calculateNextExpiry(editExpiresAt, editStatus, 12);
                       setEditExpiresAt(newDate.toISOString().split('T')[0]);
                       setEditStatus('active');
                       showToast('Set to Active and extended +1 Year.', 'info');

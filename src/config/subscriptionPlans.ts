@@ -179,6 +179,30 @@ export const formatINR = (amount: number): string => {
   }).format(amount);
 };
 
+/**
+ * Adds exact calendar months to a given date without month-overflow bugs (e.g. Jan 31 -> Feb 28)
+ */
+export const addMonthsToDate = (startDate: Date, months: number): Date => {
+  const date = new Date(startDate.getTime());
+  const originalDay = date.getDate();
+  
+  // Set date to first of month to prevent intermediate overflow
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  
+  // Find the last valid day of the target month
+  const lastDayOfTargetMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  
+  // Restore original day clamped to maximum day in target month
+  date.setDate(Math.min(originalDay, lastDayOfTargetMonth));
+  return date;
+};
+
+/**
+ * Calculates new expiry date with calendar precision:
+ * - If currently Active and expiry is in the future: adds duration on top of existing expiry (no lost days).
+ * - If Expired, Suspended, or Trial: starts duration from today.
+ */
 export const calculateNextExpiry = (
   currentExpiresAt?: string,
   currentStatus?: string,
@@ -194,9 +218,8 @@ export const calculateNextExpiry = (
     }
   }
 
-  const next = new Date(base);
-  next.setMonth(next.getMonth() + monthsToAdd);
-  return next;
+  const months = Math.max(1, Math.round(Number(monthsToAdd) || 6));
+  return addMonthsToDate(base, months);
 };
 
 export const getDaysLeft = (expiryDate?: string): number | null => {
