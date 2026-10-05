@@ -763,34 +763,44 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
   const activeAnnouncementsCount = announcements.filter(a => a.isActive).length;
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
+    <div className="w-full max-w-[1600px] mx-auto space-y-8 animate-fade-in font-sans">
       {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 p-6 sm:p-8 rounded-3xl text-white shadow-xl shadow-emerald-900/15 border border-emerald-500/30">
-        <div>
-          <div className="flex items-center gap-2 bg-white/20 px-3.5 py-1 rounded-full text-xs font-black w-fit mb-2 backdrop-blur-md border border-white/20">
-            <ShieldCheck className="w-4 h-4 text-emerald-300" />
-            <span>Super Admin Central Portal</span>
+      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl shadow-emerald-950/20 border border-emerald-500/20 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="space-y-2 max-w-2xl z-10">
+          <div className="flex items-center gap-2">
+            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>SaaS Owner Control Center</span>
+            </span>
+            <span className="text-xs text-slate-400 font-mono">
+              Live Production
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-sans">SaaS Tenant Manager</h1>
-          <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-xl font-medium">Onboard restaurant client accounts, manage subscription billing lifecycles, and monitor system metrics.</p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
+            SaaS Tenant & Infrastructure Manager
+          </h1>
+          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+            Onboard restaurant client accounts, manage subscription lifecycles, configure Razorpay payment gateways, and monitor real-time merchant operations.
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto">
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button 
-              onClick={fetchAllData}
-              className="bg-white/20 hover:bg-white/30 p-3 rounded-2xl transition-all cursor-pointer backdrop-blur-md flex items-center justify-center flex-1 sm:flex-none text-white border border-white/30 active:scale-95"
-              title="Refresh database"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleOpenOnboard}
-              className="flex items-center justify-center gap-2 bg-white text-emerald-950 hover:bg-emerald-50 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer flex-[3] sm:flex-none whitespace-nowrap active:scale-95"
-            >
-              <Plus className="w-4 h-4 text-emerald-700" />
-              <span>+ Onboard Restaurant</span>
-            </button>
-          </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 z-10 w-full lg:w-auto shrink-0">
+          <button 
+            onClick={fetchAllData}
+            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center"
+            title="Refresh database records"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleOpenOnboard}
+            className="flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4 text-emerald-600" />
+            <span>+ Onboard Restaurant</span>
+          </button>
+
           <button
             onClick={() => {
               if (restaurants.length === 0) {
@@ -800,9 +810,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
               setUserRestaurantId(restaurants[0].id);
               setIsUserModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white border border-white/30 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer backdrop-blur-md w-full sm:w-auto whitespace-nowrap active:scale-95"
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-3 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4 text-emerald-300" />
+            <UserPlus className="w-4 h-4" />
             <span>+ Create Staff User</span>
           </button>
 
@@ -813,20 +823,20 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
             disabled={isTogglingSubFeature}
             className={`flex items-center justify-center gap-2 font-black px-4 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap active:scale-95 border backdrop-blur-md ${
               isSubFeatureEnabled
-                ? "bg-emerald-500/30 hover:bg-emerald-500/40 text-white border-emerald-300/40"
-                : "bg-rose-500/30 hover:bg-rose-500/40 text-rose-100 border-rose-300/40"
+                ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30"
+                : "bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/30"
             }`}
-            title="Single-click button to toggle Subscription Plan section visibility in restaurant settings"
+            title="Toggle Subscription Plan section visibility in restaurant store settings"
           >
             {isSubFeatureEnabled ? (
               <>
-                <Eye className="w-4 h-4 text-emerald-300" />
+                <Eye className="w-4 h-4 text-emerald-400" />
                 <span>Subscriptions: Visible</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
               </>
             ) : (
               <>
-                <EyeOff className="w-4 h-4 text-rose-300" />
+                <EyeOff className="w-4 h-4 text-rose-400" />
                 <span>Subscriptions: Hidden</span>
                 <span className="w-2 h-2 rounded-full bg-rose-400 ml-0.5" />
               </>
@@ -836,44 +846,44 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
       </div>
 
       {/* Grid Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
             <Building className="w-6 h-6" />
           </div>
           <div>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total Onboarded</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{totalCount}</p>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{totalCount}</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center border border-green-500/20">
-            <CheckCircle className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20 shrink-0">
+            <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Active Paid Pro</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{activeCount}</p>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{activeCount}</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
-            <Calendar className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
+            <Clock className="w-6 h-6" />
           </div>
           <div>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Free Trials</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{trialCount}</p>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{trialCount}</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-500/20">
-            <AlertCircle className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+            <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Expired / Suspended</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{expiredCount}</p>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{expiredCount}</p>
           </div>
         </div>
       </div>
@@ -1520,7 +1530,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">
                           {r.subscriptionExpiresAt ? (
                             <div>
-                              <div>{new Date(r.subscriptionExpiresAt).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                              <div className="font-bold text-xs text-slate-800 dark:text-slate-200">{new Date(r.subscriptionExpiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                               {(() => {
                                 const days = getDaysLeft(r.subscriptionExpiresAt);
                                 if (days === null) return null;
@@ -1541,49 +1551,61 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => handleAccessPortal(r.id)}
-                              className="bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-600 dark:hover:text-white dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black px-3 py-1.5 rounded-xl transition-all shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1.5"
                               title="Access Live POS Portal"
                             >
-                              <ExternalLink className="w-3 h-3" />
+                              <ExternalLink className="w-3.5 h-3.5" />
                               <span>Portal</span>
                             </button>
+
                             <button
                               type="button"
-                              disabled={!hasAnyContact}
-                              onClick={() => handleOpenRenewalModal(r)}
-                              className={`border text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 inline-flex items-center gap-1 shadow-sm ${
-                                hasAnyContact
-                                  ? 'bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:-translate-y-0.5 active:scale-95 cursor-pointer'
-                                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
-                              }`}
-                              title={hasAnyContact ? "Send WhatsApp / Email Renewal Notice" : "No phone or email registered. Click Edit to add contact details."}
+                              onClick={() => handleOpenSubModal(r)}
+                              className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-[11px] font-black px-3 py-1.5 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1.5"
+                              title="Manage Subscription & Expiry"
                             >
-                              <Bell className={`w-3 h-3 ${hasAnyContact ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-600'}`} />
-                              <span>Remind</span>
+                              <CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Billing</span>
                             </button>
+
                             <button
                               type="button"
                               disabled={!hasAnyContact}
                               onClick={() => handleOpenWelcomePackage(r)}
-                              className={`border text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 inline-flex items-center gap-1 shadow-sm ${
+                              className={`border text-[11px] font-black px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1.5 shadow-2xs ${
                                 hasAnyContact
-                                  ? 'bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border-slate-300 dark:border-slate-700 hover:-translate-y-0.5 active:scale-95 cursor-pointer'
+                                  ? 'bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-800 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:-translate-y-0.5 active:scale-95 cursor-pointer'
                                   : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
                               }`}
-                              title={hasAnyContact ? "Share Credentials & Welcome Package (WhatsApp / Email)" : "No phone or email registered. Click Edit to add contact details."}
+                              title={hasAnyContact ? "Share Credentials & Access Kit" : "No phone or email registered."}
                             >
-                              <Share2 className={`w-3 h-3 ${hasAnyContact ? 'text-slate-500' : 'text-slate-400 dark:text-slate-600'}`} />
+                              <Share2 className="w-3.5 h-3.5" />
                               <span>Share</span>
                             </button>
-                            {/* 1-Click Toggle for Restaurant Subscription Section */}
+
+                            <button
+                              type="button"
+                              disabled={!hasAnyContact}
+                              onClick={() => handleOpenRenewalModal(r)}
+                              className={`border text-[11px] font-black px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 shadow-2xs ${
+                                hasAnyContact
+                                  ? 'bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:-translate-y-0.5 active:scale-95 cursor-pointer'
+                                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50'
+                              }`}
+                              title={hasAnyContact ? "Send Renewal Notice (WhatsApp / Email)" : "No contact details"}
+                            >
+                              <Bell className="w-3.5 h-3.5" />
+                              <span>Remind</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => handleToggleRestSubscription(r)}
-                              className={`border text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 inline-flex items-center gap-1 shadow-sm cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
+                              className={`border text-[10px] font-black px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 shadow-2xs cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
                                 r.hideSubscriptionPlan
                                   ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
                                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
@@ -1592,12 +1614,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
                             >
                               {r.hideSubscriptionPlan ? (
                                 <>
-                                  <EyeOff className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                                  <EyeOff className="w-3 h-3 text-rose-500" />
                                   <span>Sub: Hidden</span>
                                 </>
                               ) : (
                                 <>
-                                  <Eye className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                  <Eye className="w-3 h-3 text-emerald-500" />
                                   <span>Sub: Visible</span>
                                 </>
                               )}
@@ -1605,34 +1627,27 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onImpe
 
                             <button
                               type="button"
-                              onClick={() => handleOpenSubModal(r)}
-                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                              title="Manage Subscription"
-                            >
-                              <CreditCard className="w-3 h-3 text-slate-500" />
-                              <span>Billing</span>
-                            </button>
-                            <button
-                              type="button"
                               onClick={() => handleOpenAddStaffForRest(r.id)}
-                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-sm"
-                              title="Add Staff User to this Restaurant"
+                              className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-black px-2.5 py-1.5 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              title="Add Staff User"
                             >
-                              <UserPlus className="w-3 h-3 text-slate-500" />
+                              <UserPlus className="w-3.5 h-3.5" />
                               <span>+ Staff</span>
                             </button>
+
                             <button
                               type="button"
                               onClick={() => handleEditClick(r)}
-                              className="bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 dark:bg-slate-800 dark:hover:bg-white dark:hover:text-black dark:text-slate-100 border border-slate-300 dark:border-slate-700 text-[10px] font-extrabold px-2.5 py-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer shadow-sm"
+                              className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px] font-black px-2.5 py-1.5 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer shadow-2xs"
                               title="Edit Restaurant Info"
                             >
                               Edit
                             </button>
+
                             <button
                               type="button"
                               onClick={() => handleDeleteRestaurant(r.id, r.name)}
-                              className="bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:text-red-400 p-1.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center justify-center"
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-950/30 dark:text-rose-400 rounded-xl border border-rose-200 dark:border-rose-900/30 transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer inline-flex items-center justify-center"
                               title="Delete Restaurant"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
