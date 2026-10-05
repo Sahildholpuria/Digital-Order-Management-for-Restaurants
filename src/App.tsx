@@ -42,6 +42,7 @@ import { HelpSupportModal } from './components/common/HelpSupportModal';
 
 import { 
   ChevronDown,
+  CreditCard,
   Zap,
   TrendingUp, 
   ShoppingBag, 
@@ -764,8 +765,13 @@ export const App: React.FC = () => {
 
       // Render active tab body with role permissions enforcement
       const renderActiveTabContent = () => {
-        if (currentUser?.isSuperAdmin && (!isImpersonating || activeTab === 'superadmin')) {
-          return <SuperAdminDashboard onImpersonate={handleImpersonate} />;
+        if (currentUser?.isSuperAdmin && (!isImpersonating || activeTab === 'superadmin' || activeTab === 'saas-subscriptions')) {
+          return (
+            <SuperAdminDashboard 
+              onImpersonate={handleImpersonate} 
+              initialTab={activeTab === 'saas-subscriptions' ? 'subscriptions' : 'restaurants'} 
+            />
+          );
         }
 
         // Role authorization check for current active tab
@@ -778,7 +784,8 @@ export const App: React.FC = () => {
         }
 
         switch (activeTab) {
-          case 'superadmin': return <SuperAdminDashboard onImpersonate={handleImpersonate} />;
+          case 'superadmin': return <SuperAdminDashboard onImpersonate={handleImpersonate} initialTab="restaurants" />;
+          case 'saas-subscriptions': return <SuperAdminDashboard onImpersonate={handleImpersonate} initialTab="subscriptions" />;
           case 'dashboard': return <AdminDashboard />;
           case 'orders': return <OrdersManager />;
           case 'tables': return <TablesManager />;
@@ -934,6 +941,33 @@ export const App: React.FC = () => {
 
                         {/* Store Settings & Help Options under Profile */}
                         <div className="space-y-1 pt-1">
+                          {currentUser?.isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                handleSelectTab("saas-subscriptions");
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                activeTab === "saas-subscriptions"
+                                  ? "bg-emerald-600 text-white shadow-xs font-black"
+                                  : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <CreditCard className={`w-4 h-4 ${activeTab === "saas-subscriptions" ? "text-white" : "text-emerald-600 dark:text-emerald-400"}`} />
+                                <span>SaaS Subscriptions & Razorpay</span>
+                              </div>
+                              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${
+                                activeTab === "saas-subscriptions"
+                                  ? "bg-white/20 text-white border-white/30"
+                                  : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              }`}>
+                                Gateway
+                              </span>
+                            </button>
+                          )}
+
                           {(currentUser.role === "admin" || currentUser.isSuperAdmin) && (
                             <button
                               type="button"
