@@ -1347,11 +1347,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       await dbService.addNotification(restaurantId, notification);
     } catch (_) {}
 
-    // Auto-generate and print KOT ticket
-    try {
-      printKOTReceipt(newOrder, settings?.name || "Kitchen", "80mm", true);
-    } catch (printErr) {
-      console.warn("Auto KOT printing notice:", printErr);
+    // Auto-dispatch silent KOT print if this machine is connected to QZ Tray hardware printer
+    if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
+      try {
+        await printKOTReceipt(newOrder, settings?.name || "Kitchen", qzConfig.paperWidth, false);
+      } catch (err) {
+        console.warn("Auto QZ KOT table print notice:", err);
+      }
     }
 
     return newOrder;

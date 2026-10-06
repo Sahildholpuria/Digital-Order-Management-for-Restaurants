@@ -3,11 +3,12 @@ import { qzTrayService } from "../services/qzTrayService";
 
 export const isMobileDevice = (): boolean => {
   if (typeof window === "undefined") return false;
-  const ua = navigator.userAgent.toLowerCase();
-  const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua);
-  const isTouchScreen = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
-  const isNarrowScreen = window.innerWidth <= 768;
-  return isMobileUA || (Boolean(isTouchScreen) && isNarrowScreen);
+  const ua = (navigator.userAgent || navigator.vendor || (window as any).opera || '').toLowerCase();
+  const isMobileUA = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i.test(ua);
+  const isIOS = /ipad|iphone|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isTouchScreen = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  const isNarrowScreen = window.innerWidth <= 1024;
+  return isMobileUA || isIOS || (Boolean(isTouchScreen) && isNarrowScreen);
 };
 
 export const printHTMLContent = (

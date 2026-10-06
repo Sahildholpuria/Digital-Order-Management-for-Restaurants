@@ -269,11 +269,6 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
       setIsMobileCartDrawerOpen(false);
       showToast(`${orderType === "takeaway" ? "Takeaway Parcel" : "Table"} Order #${createdOrder.orderNumber} dispatched to kitchen!`, "success");
       
-      // Auto-trigger kitchen KOT print
-      try {
-        printKOTReceipt(createdOrder, settings?.name || "Kitchen", "80mm", false);
-      } catch (_) {}
-
       if (onOrderPunched) {
         onOrderPunched(createdOrder);
       }
