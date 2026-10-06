@@ -809,6 +809,17 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
                 if (!isFirstLoad.current || isLiveCreatedDuringSession) {
                   triggerNotificationSoundAndSpeech(n);
+
+                  // Auto-dispatch silent KOT print if this machine is connected to QZ Tray hardware printer
+                  if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false && n.orderId) {
+                    dbService.getOrder(restaurantId, n.orderId).then(orderObj => {
+                      if (orderObj) {
+                        printKOTReceipt(orderObj, settings?.name || "Kitchen", qzConfig.paperWidth, false);
+                      }
+                    }).catch(err => {
+                      console.warn('[AutoPrintKOT] Direct fetch error:', err);
+                    });
+                  }
                 }
               }
             });

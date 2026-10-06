@@ -859,6 +859,23 @@ export const dbService = {
     }
   },
 
+  async getOrder(restaurantId: string, orderId: string): Promise<RestaurantOrder | null> {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return mapOrderToFrontend(data);
+    } else {
+      const data = localStorage.getItem('restaurant_orders');
+      const parsed: any[] = data ? JSON.parse(data) : [];
+      const found = parsed.find((o: any) => o.id === orderId);
+      return found ? mapOrderToFrontend(found) : null;
+    }
+  },
+
   async getOrders(restaurantId: string): Promise<RestaurantOrder[]> {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
