@@ -125,8 +125,10 @@ export const BillingManager: React.FC = () => {
       // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
       if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
         try {
-          await printBillReceipt({ ...settledOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, "80mm", false);
-        } catch (_) {}
+          await printBillReceipt({ ...settledOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, "80mm", true);
+        } catch (err) {
+          console.warn("Settlement receipt auto-print notice:", err);
+        }
       }
 
       // Reset POS terminal selection

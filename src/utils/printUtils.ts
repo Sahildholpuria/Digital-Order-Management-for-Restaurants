@@ -190,28 +190,18 @@ export const generateBillReceiptHtml = (
   paperWidth: "80mm" | "58mm" = "80mm"
 ): string => {
   const currency = settings?.currency || "₹";
-  const restName = settings?.name || "RestaurantsOS POS";
+  const restName = (settings?.name || "DEMO RESTAURANT").toUpperCase();
   const restAddress = settings?.address || "";
-  const restPhone = settings?.phone ? `Tel: ${settings.phone}` : "";
   const gstNo = settings?.gstNumber ? `GSTIN: ${settings.gstNumber}` : "";
   const websiteStr = settings?.websiteUrl || "";
   const bodyWidth = paperWidth === "58mm" ? "58mm" : "80mm";
 
-  const itemsHtml = order.items
-    .map(
-      (item) => `
-      <tr>
-        <td style="padding: 3px 0; vertical-align: top;">
-          <div style="font-weight: bold;">${item.name}</div>
-          ${item.specialInstructions ? `<div style="font-size: 9px; color: #444;">(${item.specialInstructions})</div>` : ""}
-        </td>
-        <td style="text-align: center; vertical-align: top; padding: 3px 0;">${item.quantity}</td>
-        <td style="text-align: right; vertical-align: top; padding: 3px 0;">${currency}${item.price.toFixed(2)}</td>
-        <td style="text-align: right; vertical-align: top; font-weight: bold; padding: 3px 0;">${currency}${(item.price * item.quantity).toFixed(2)}</td>
-      </tr>
-    `
-    )
-    .join("");
+  const isTakeaway = order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") || !!order.tokenNumber;
+  const cleanTable = order.tableName.replace(/^table[\s\-_]*/gi, "Table ");
+  const paymentMethodStr = (order.paymentMethod || "CASH").toUpperCase();
+
+  const taxPercentage = settings?.taxPercentage ?? 0;
+  const discountAmount = order.discount || 0;
 
   return `
     <!DOCTYPE html>
@@ -233,127 +223,194 @@ export const generateBillReceiptHtml = (
             .no-print { display: none !important; }
           }
           body {
-            font-family: monospace, sans-serif;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             width: ${bodyWidth};
             margin: 0 auto;
-            padding: 8px;
+            padding: 10px 8px;
             box-sizing: border-box;
             font-size: 11px;
-            line-height: 1.35;
-            color: #000;
-            background: #fff;
+            line-height: 1.4;
+            color: #0f172a;
+            background: #ffffff;
           }
-          .text-center { text-align: center; }
-          .text-right { text-align: right; }
-          .text-left { text-align: left; }
-          .font-bold { font-weight: bold; }
+          .receipt-icon-wrap {
+            text-align: center;
+            margin-bottom: 6px;
+          }
+          .rest-name {
+            font-size: 15px;
+            font-weight: 900;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+            color: #0f172a;
+          }
+          .rest-sub {
+            font-size: 10px;
+            color: #475569;
+            text-align: center;
+            line-height: 1.3;
+            margin-top: 3px;
+          }
           .dashed-divider {
-            border-top: 1px dashed #000;
-            margin: 6px 0;
+            border-top: 1px dashed #94a3b8;
+            margin: 7px 0;
+            width: 100%;
           }
-          .double-divider {
-            border-top: 2px double #000;
-            margin: 6px 0;
+          .meta-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #334155;
+            line-height: 1.5;
           }
-          table {
+          .meta-row.bold {
+            font-weight: bold;
+            color: #0f172a;
+          }
+          table.items-table {
             width: 100%;
             border-collapse: collapse;
-          }
-          th {
-            border-bottom: 1px dashed #000;
-            padding: 4px 0;
             font-size: 10px;
+            color: #1e293b;
           }
-          .total-row {
-            font-size: 13px;
+          table.items-table th {
+            border-bottom: 1px dashed #94a3b8;
+            padding-bottom: 3px;
             font-weight: bold;
+          }
+          table.items-table td {
+            padding: 3px 0;
+            vertical-align: top;
+          }
+          .text-left { text-align: left; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .financial-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #1e293b;
+            line-height: 1.5;
+          }
+          .grand-total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 900;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            margin: 3px 0;
+          }
+          .footer-section {
+            text-align: center;
+            font-size: 9.5px;
+            color: #475569;
+            line-height: 1.45;
+            margin-top: 6px;
           }
         </style>
       </head>
       <body>
-        <div class="text-center">
-          <h2 style="margin: 0; font-size: 16px; font-weight: 900;">${restName}</h2>
-          ${restAddress ? `<div style="font-size: 10px; margin-top: 2px;">${restAddress}</div>` : ""}
-          ${restPhone ? `<div style="font-size: 10px;">${restPhone}</div>` : ""}
-          ${gstNo ? `<div style="font-size: 10px; font-weight: bold; margin-top: 2px;">${gstNo}</div>` : ""}
+        <!-- Header Green Receipt Icon -->
+        <div class="receipt-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto;">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+            <path d="M12 6v12"/>
+          </svg>
         </div>
 
-        <div class="double-divider"></div>
+        <!-- Restaurant Name & Info -->
+        <h4 class="rest-name">${restName}</h4>
+        ${restAddress ? `<div class="rest-sub">${restAddress}</div>` : ""}
+        ${gstNo ? `<div class="rest-sub" style="font-weight: bold;">${gstNo}</div>` : ""}
 
-        <div style="font-size: 11px; font-weight: 900; text-align: center; margin-bottom: 4px;">
-          ${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "*** TAKEAWAY / PARCEL INVOICE ***" : "TAX INVOICE"}
+        ${isTakeaway ? `
+        <div style="margin-top: 4px; padding: 3px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
+          <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">*** TAKEAWAY / PARCEL INVOICE ***</div>
+          ${order.tokenNumber ? `<div style="font-weight: 900; font-size: 13px; margin-top: 2px;">TOKEN NUMBER: #${order.tokenNumber}</div>` : ""}
         </div>
-
-        <div style="font-size: 10px; display: flex; justify-content: space-between;">
-          <span>INV: #${order.orderNumber}</span>
-          <span>${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? (order.tokenNumber ? "TOKEN: #" + order.tokenNumber : order.tableName.toUpperCase()) : "TBL: " + order.tableName.toUpperCase()}</span>
-        </div>
-        ${order.customerName || order.customerPhone ? `
-        <div style="font-size: 10px; margin-top: 2px;">
-          <span>Customer: ${order.customerName || "Guest"} ${order.customerPhone ? "(" + order.customerPhone + ")" : ""}</span>
-        </div>` : ""}
-        <div style="font-size: 10px; display: flex; justify-content: space-between;">
-          <span>Date: ${new Date(order.createdAt).toLocaleDateString()}</span>
-          <span>Time: ${new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-        </div>
+        ` : ""}
 
         <div class="dashed-divider"></div>
 
-        <table>
+        <!-- Order Metadata Grid -->
+        <div class="meta-row">
+          <span>Receipt No: ${order.orderNumber}</span>
+          <span>Date: ${new Date(order.createdAt).toLocaleDateString("en-GB")}</span>
+        </div>
+        <div class="meta-row">
+          <span>${isTakeaway ? "Order Type:" : "Table:"} ${isTakeaway ? "TAKEAWAY / PARCEL" : cleanTable}</span>
+          <span>Time: ${new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}</span>
+        </div>
+        ${order.customerName ? `
+        <div class="meta-row bold" style="margin-top: 2px;">
+          <span>Customer: ${order.customerName}</span>
+          ${order.customerPhone ? `<span>${order.customerPhone}</span>` : ""}
+        </div>` : ""}
+
+        <div class="dashed-divider"></div>
+
+        <!-- Items Table -->
+        <table class="items-table">
           <thead>
             <tr>
-              <th class="text-left" style="width: 45%;">Item</th>
-              <th class="text-center" style="width: 15%;">Qty</th>
-              <th class="text-right" style="width: 20%;">Price</th>
-              <th class="text-right" style="width: 20%;">Amt</th>
+              <th class="text-left" style="width: 50%;">Item</th>
+              <th class="text-center" style="width: 20%;">Qty</th>
+              <th class="text-right" style="width: 30%;">Price</th>
             </tr>
           </thead>
           <tbody>
-            ${itemsHtml}
+            ${order.items.map(i => `
+              <tr>
+                <td class="text-left">
+                  <div style="font-weight: 500;">${i.name}</div>
+                  ${i.specialInstructions ? `<div style="font-size: 8.5px; color: #64748b;">(${i.specialInstructions})</div>` : ""}
+                </td>
+                <td class="text-center">${i.quantity}</td>
+                <td class="text-right">${currency}${(i.price * i.quantity).toFixed(0)}</td>
+              </tr>
+            `).join("")}
           </tbody>
         </table>
 
         <div class="dashed-divider"></div>
 
-        <table style="font-size: 11px;">
-          <tr>
-            <td class="text-left">Subtotal:</td>
-            <td class="text-right">${currency}${order.subtotal.toFixed(2)}</td>
-          </tr>
-          ${
-            order.discount > 0
-              ? `
-            <tr style="color: #000;">
-              <td class="text-left">Discount:</td>
-              <td class="text-right">-${currency}${order.discount.toFixed(2)}</td>
-            </tr>
-          `
-              : ""
-          }
-          ${
-            order.tax > 0
-              ? `
-            <tr>
-              <td class="text-left">GST / Taxes:</td>
-              <td class="text-right">${currency}${order.tax.toFixed(2)}</td>
-            </tr>
-          `
-              : ""
-          }
-          <tr class="total-row" style="border-top: 1px solid #000; border-bottom: 1px solid #000;">
-            <td class="text-left" style="padding: 4px 0;">GRAND TOTAL:</td>
-            <td class="text-right" style="padding: 4px 0;">${currency}${order.grandTotal.toFixed(2)}</td>
-          </tr>
-        </table>
+        <!-- Financial Summary -->
+        <div class="financial-row">
+          <span>Subtotal</span>
+          <span>${currency}${order.subtotal.toFixed(2)}</span>
+        </div>
+        ${discountAmount > 0 ? `
+        <div class="financial-row" style="color: #dc2626; font-weight: bold;">
+          <span>Discount</span>
+          <span>-${currency}${discountAmount.toFixed(2)}</span>
+        </div>` : ""}
+        <div class="financial-row">
+          <span>Taxes & GST (${taxPercentage}%)</span>
+          <span>${currency}${order.tax.toFixed(2)}</span>
+        </div>
 
         <div class="dashed-divider"></div>
 
-        <div class="text-center" style="font-size: 10px; margin-top: 6px;">
-          <div style="font-weight: bold;">THANK YOU FOR DINING WITH US!</div>
-          <div style="margin-top: 2px;">Please visit again</div>
-          ${websiteStr ? `<div style="font-size: 9px; margin-top: 3px;">${websiteStr}</div>` : ""}
+        <!-- Grand Total -->
+        <div class="grand-total-row">
+          <span>GRAND TOTAL</span>
+          <span>${currency}${order.grandTotal.toFixed(2)}</span>
         </div>
-        <div style="height: 30px;"></div>
+
+        <div class="dashed-divider"></div>
+
+        <!-- Footer Section -->
+        <div class="footer-section">
+          <p style="margin: 2px 0;">Settled via ${paymentMethodStr}</p>
+          <p style="margin: 2px 0;">${isTakeaway ? "Thank you for picking up with us!" : "Thank you for dining with us!"}</p>
+          ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 600; color: #334155;">${websiteStr}</p>` : `<p style="margin: 2px 0; color: #94a3b8;">Please visit again</p>`}
+        </div>
+
+        <div style="height: 25px;"></div>
       </body>
     </html>
   `;
