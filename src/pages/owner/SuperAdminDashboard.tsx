@@ -33,6 +33,7 @@ import {
   TrendingUp,
   RefreshCw,
   Users,
+  Settings as SettingsIcon,
   Trash2,
   ExternalLink,
   CreditCard,
@@ -911,66 +912,58 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       </div>
 
       {/* Tab Switcher */}
-      {activeTab === 'subscriptions' ? (
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { setActiveTab('restaurants'); setSearchQuery(''); }}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer flex items-center gap-2 text-xs font-bold shadow-2xs"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Tenant Directory</span>
-            </button>
-            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
-            <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
-              <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>SaaS Subscriptions & Razorpay Gateway</span>
-            </div>
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            {subPayments.length} Payments Recorded
-          </span>
-        </div>
-      ) : (
-        <div className="flex gap-2 sm:gap-3 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto no-scrollbar flex-nowrap">
-          <button
-            onClick={() => { setActiveTab('restaurants'); setSearchQuery(''); }}
-            className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
-              activeTab === 'restaurants'
-                ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
-          >
-            <Building className="w-4 h-4" />
-            <span>Restaurants Directory ({restaurants.length})</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('users'); setSearchQuery(''); }}
-            className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
-              activeTab === 'users'
-                ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Staff Accounts ({users.length})</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('announcements'); setSearchQuery(''); }}
-            className={`flex items-center gap-2 pb-3 px-2 text-sm font-extrabold transition-all cursor-pointer relative ${
-              activeTab === 'announcements'
-                ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-500'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
-          >
-            <Megaphone className="w-4 h-4" />
-            <span>Broadcasts ({announcements.length})</span>
-            {activeAnnouncementsCount > 0 && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            )}
-          </button>
-        </div>
-      )}
+      <div className="flex gap-2 sm:gap-4 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto no-scrollbar flex-nowrap">
+        <button
+          onClick={() => { setActiveTab('restaurants'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer relative whitespace-nowrap ${
+            activeTab === 'restaurants'
+              ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 font-black'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Building className="w-4 h-4" />
+          <span>Restaurants Directory ({restaurants.length})</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('users'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer relative whitespace-nowrap ${
+            activeTab === 'users'
+              ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 font-black'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Staff Accounts ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('subscriptions'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer relative whitespace-nowrap ${
+            activeTab === 'subscriptions'
+              ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 font-black'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <SettingsIcon className="w-4 h-4" />
+          <span>Settings & Gateway</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('announcements'); setSearchQuery(''); }}
+          className={`flex items-center gap-2 pb-3 px-2 text-xs sm:text-sm font-extrabold transition-all cursor-pointer relative whitespace-nowrap ${
+            activeTab === 'announcements'
+              ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500 font-black'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Megaphone className="w-4 h-4" />
+          <span>Broadcasts ({announcements.length})</span>
+          {activeAnnouncementsCount > 0 && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          )}
+        </button>
+      </div>
 
             {/* ===== SAAS SUBSCRIPTIONS & RAZORPAY TAB VIEW ===== */}
       {activeTab === "subscriptions" && (

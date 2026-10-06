@@ -55,7 +55,8 @@ import {
   Settings as SettingsIcon, 
   LogOut, 
   ChefHat, 
-  User, 
+  User,
+  Users, 
   Sun, 
   Moon, 
   Menu, 
@@ -752,10 +753,11 @@ export const App: React.FC = () => {
             { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
           ];
         } else {
-          // Pure Super Admin SaaS Mode: Show Central Portal and Subscriptions
+          // Pure Super Admin SaaS Mode: Separate nav items for Restaurants Directory, Staff Accounts, and Settings
           sidebarItems = [
-            { id: 'superadmin', label: 'Tenants Directory', icon: Building, roles: ['admin'] },
-            { id: 'saas-subscriptions', label: 'SaaS Subscriptions', icon: CreditCard, roles: ['admin'] }
+            { id: 'superadmin', label: 'Restaurants Directory', icon: Building, roles: ['admin'] },
+            { id: 'superadmin-staff', label: 'Staff Accounts', icon: Users, roles: ['admin'] },
+            { id: 'superadmin-settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] }
           ];
         }
       } else if (currentUser.role === 'cashier') {
@@ -779,11 +781,21 @@ export const App: React.FC = () => {
 
       // Render active tab body with role permissions enforcement
       const renderActiveTabContent = () => {
-        if (currentUser?.isSuperAdmin && (!isImpersonating || activeTab === 'superadmin' || activeTab === 'saas-subscriptions')) {
+        if (currentUser?.isSuperAdmin && (!isImpersonating || activeTab.startsWith('superadmin') || activeTab === 'saas-subscriptions' || activeTab === 'settings')) {
+          let superTab: 'restaurants' | 'users' | 'subscriptions' | 'announcements' = 'restaurants';
+          if (activeTab === 'superadmin-staff') {
+            superTab = 'users';
+          } else if (activeTab === 'superadmin-settings' || activeTab === 'saas-subscriptions' || activeTab === 'settings') {
+            superTab = 'subscriptions';
+          } else {
+            superTab = 'restaurants';
+          }
+
           return (
             <SuperAdminDashboard 
+              key={superTab}
               onImpersonate={handleImpersonate} 
-              initialTab={activeTab === 'saas-subscriptions' ? 'subscriptions' : 'restaurants'} 
+              initialTab={superTab} 
             />
           );
         }
@@ -960,7 +972,7 @@ export const App: React.FC = () => {
                               type="button"
                               onClick={() => {
                                 setUserMenuOpen(false);
-                                handleSelectTab("saas-subscriptions");
+                                handleSelectTab("superadmin-settings");
                               }}
                               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                 activeTab === "saas-subscriptions"
@@ -1225,7 +1237,7 @@ export const App: React.FC = () => {
                     key="saas_subscriptions"
                     onClick={() => {
                       setMobileSidebarOpen(false);
-                      handleSelectTab("saas-subscriptions");
+                      handleSelectTab("superadmin-settings");
                     }}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "saas-subscriptions"
@@ -1386,7 +1398,7 @@ export const App: React.FC = () => {
             className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 px-1 py-1 shadow-lg"
             style={{ paddingBottom: "max(0.4rem, env(safe-area-inset-bottom))" }}
           >
-            <div className={`grid ${currentUser?.isSuperAdmin && !isImpersonating ? "grid-cols-4" : "grid-cols-5"} items-center w-full`}>
+            <div className="grid grid-cols-5 items-center w-full">
               {currentUser?.isSuperAdmin && !isImpersonating ? (
                 <>
                   <button
@@ -1396,17 +1408,27 @@ export const App: React.FC = () => {
                     }`}
                   >
                     <Building className="w-4 h-4 shrink-0" />
-                    <span className="truncate w-full text-center leading-tight">Tenants</span>
+                    <span className="truncate w-full text-center leading-tight">Directory</span>
                   </button>
 
                   <button
-                    onClick={() => handleSelectTab("saas-subscriptions")}
+                    onClick={() => handleSelectTab("superadmin-staff")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "saas-subscriptions" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "superadmin-staff" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
                     }`}
                   >
-                    <CreditCard className="w-4 h-4 shrink-0" />
-                    <span className="truncate w-full text-center leading-tight">Subscriptions</span>
+                    <Users className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Staff</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleSelectTab("superadmin-settings")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "superadmin-settings" || activeTab === "saas-subscriptions" || activeTab === "settings" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <SettingsIcon className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Settings</span>
                   </button>
 
                   <button
