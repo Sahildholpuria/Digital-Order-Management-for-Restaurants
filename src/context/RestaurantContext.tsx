@@ -1423,6 +1423,30 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
     const orderNum = `KOT-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // Resolve effective restaurant ID safely with multi-layer fallback
+    let effectiveRestaurantId = restaurantId;
+    if (!effectiveRestaurantId && currentUser?.restaurantId) {
+      effectiveRestaurantId = currentUser.restaurantId;
+    }
+    if (!effectiveRestaurantId && targetTable?.id) {
+      effectiveRestaurantId = (await dbService.getRestaurantIdByTableId(targetTable.id)) || '';
+    }
+    if (!effectiveRestaurantId && typeof window !== 'undefined') {
+      effectiveRestaurantId = localStorage.getItem('last_active_staff_restaurant_id') || localStorage.getItem('last_active_customer_restaurant_id') || '';
+    }
+    if (!effectiveRestaurantId) {
+      const storedUser = localStorage.getItem('restaurant_current_user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          if (parsed?.restaurantId) effectiveRestaurantId = parsed.restaurantId;
+        } catch (_) {}
+      }
+    }
+    if (!effectiveRestaurantId) {
+      effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
+    }
+
     const newOrder: RestaurantOrder = {
       id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       orderNumber: orderNum,
@@ -1448,16 +1472,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           : undefined,
     };
 
-    // Save order to database
-    await dbService.saveOrder(restaurantId, newOrder);
-
-    // Optimistically update orders list
+    // Optimistically update orders list immediately so UI updates instantly
     setOrders(prev => [newOrder, ...prev]);
+
+    // Save order to database (persists locally & syncs to Supabase)
+    try {
+      await dbService.saveOrder(effectiveRestaurantId, newOrder);
+    } catch (err) {
+      console.warn("Table DB save notice (persisted locally):", err);
+    }
 
     // Update table status to occupied automatically in DB and state
     if (targetTable) {
       try {
-        await dbService.updateTableStatus(restaurantId, targetTable.id, "occupied");
+        await dbService.updateTableStatus(effectiveRestaurantId, targetTable.id, "occupied");
       } catch (err) {
         console.warn("Table status auto-update notice:", err);
       }
@@ -1482,10 +1510,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isRead: false,
         createdAt: new Date().toISOString(),
       };
-      await dbService.addNotification(restaurantId, notification);
+      await dbService.addNotification(effectiveRestaurantId, notification);
     } catch (_) {}
 
-    // Auto-dispatch silent KOT print if this machine is connected to QZ Tray hardware printer
+    // Auto silent thermal KOT printing via QZ Tray if online
     if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
       try {
         await printKOTReceipt(newOrder, settings?.name || "Kitchen", qzConfig.paperWidth, false);
