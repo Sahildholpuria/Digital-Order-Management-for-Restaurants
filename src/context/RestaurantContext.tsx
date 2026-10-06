@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import dbService from '../services/database';
+import dbService, { parseFoodItemDescription } from '../services/database';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import {
   RestaurantSettings,
@@ -1070,24 +1070,62 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       let finalName = item.name;
       let finalPrice = item.price;
       let uniqueId = item.id;
-      let portionName = selectedPortion?.name;
+      let portionName = selectedPortion?.name || selectedVariantName;
 
-      if (selectedPortion) {
+      if (selectedPortion && selectedPortion.price > 0) {
         finalName = `${item.name} (${selectedPortion.name})`;
         finalPrice = selectedPortion.price;
-        uniqueId = `${item.id}-${selectedPortion.name.toLowerCase()}`;
-      } else if (selectedVariantName && item.description && item.description.includes('||variants:')) {
-        const [, variantsStr] = item.description.split('||variants:');
-        const variants = variantsStr.split(';').map(v => {
-          const [name, price] = v.split('=');
-          return { name, price: Number(price) };
-        });
-        const matched = variants.find(v => v.name === selectedVariantName);
-        if (matched) {
-          finalName = `${item.name} (${matched.name})`;
-          finalPrice = matched.price;
-          uniqueId = `${item.id}-${matched.name.toLowerCase()}`;
-          portionName = matched.name;
+        uniqueId = `${item.id}-${selectedPortion.name.toLowerCase().trim()}`;
+        portionName = selectedPortion.name;
+      } else if (selectedVariantName) {
+        const vNameLower = selectedVariantName.toLowerCase().trim();
+        let foundPrice: number | null = null;
+        let matchedName = selectedVariantName;
+
+        // 1. Check item.portions
+        if (item.portions && item.portions.length > 0) {
+          const match = item.portions.find(p => p.name.toLowerCase().trim() === vNameLower || p.id.toLowerCase().trim() === vNameLower);
+          if (match && match.price > 0) {
+            foundPrice = match.price;
+            matchedName = match.name;
+          }
+        }
+
+        // 2. Check item.halfPrice and item.fullPrice
+        if (foundPrice === null) {
+          if (vNameLower === 'half' && item.halfPrice && item.halfPrice > 0) {
+            foundPrice = item.halfPrice;
+            matchedName = 'Half';
+          } else if (vNameLower === 'full' && item.fullPrice && item.fullPrice > 0) {
+            foundPrice = item.fullPrice;
+            matchedName = 'Full';
+          }
+        }
+
+        // 3. Parse from description
+        if (foundPrice === null && item.description) {
+          const parsed = parseFoodItemDescription(item.description);
+          if (parsed.portions && parsed.portions.length > 0) {
+            const match = parsed.portions.find((p: any) => p.name.toLowerCase().trim() === vNameLower || (p.id && p.id.toLowerCase().trim() === vNameLower));
+            if (match && match.price > 0) {
+              foundPrice = match.price;
+              matchedName = match.name;
+            }
+          }
+          if (foundPrice === null && parsed.variants && parsed.variants.length > 0) {
+            const match = parsed.variants.find((v: any) => v.name.toLowerCase().trim() === vNameLower);
+            if (match && match.price > 0) {
+              foundPrice = match.price;
+              matchedName = match.name;
+            }
+          }
+        }
+
+        if (foundPrice !== null) {
+          finalName = `${item.name} (${matchedName})`;
+          finalPrice = foundPrice;
+          uniqueId = `${item.id}-${matchedName.toLowerCase().trim()}`;
+          portionName = matchedName;
         }
       }
 

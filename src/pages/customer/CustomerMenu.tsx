@@ -396,7 +396,31 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const handleAddToCart = () => {
     if (selectedItem) {
       const cleanInstructions = sanitizeInput(specialInstructions, 200);
-      addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined);
+
+      // Resolve portion pricing
+      let portionObj: { name: string; price: number } | undefined;
+      if (selectedVariantName) {
+        const vNameLower = selectedVariantName.toLowerCase().trim();
+        const parsed = parseFoodItemDescription(selectedItem.description || '');
+        let portionsList: { name: string; price: number }[] = [];
+        if (selectedItem.portions && selectedItem.portions.length > 0) portionsList = selectedItem.portions;
+        else if (selectedItem.hasPortions) {
+          if (selectedItem.halfPrice) portionsList.push({ name: 'Half', price: selectedItem.halfPrice });
+          if (selectedItem.fullPrice) portionsList.push({ name: 'Full', price: selectedItem.fullPrice });
+        } else if (parsed.portions && parsed.portions.length > 0) portionsList = parsed.portions;
+        else if (parsed.variants && parsed.variants.length > 0) portionsList = parsed.variants;
+
+        const matched = portionsList.find(p => p.name.toLowerCase().trim() === vNameLower);
+        if (matched) {
+          portionObj = { name: matched.name, price: matched.price };
+        } else if (vNameLower === 'half' && selectedItem.halfPrice) {
+          portionObj = { name: 'Half', price: selectedItem.halfPrice };
+        } else if (vNameLower === 'full' && (selectedItem.fullPrice || selectedItem.price)) {
+          portionObj = { name: 'Full', price: selectedItem.fullPrice || selectedItem.price };
+        }
+      }
+
+      addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined, portionObj);
       const added = selectedItem;
       setSelectedItem(null);
       setSpecialInstructions('');
