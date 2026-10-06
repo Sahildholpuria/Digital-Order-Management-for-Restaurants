@@ -921,7 +921,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                             #{order.orderNumber}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400">
-                            {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                           </span>
                         </div>
                         <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">

@@ -334,7 +334,7 @@ export const generateKOTHtml = (
 
         <div class="meta-row">
           <span>KOT #: <strong>${order.orderNumber}</strong></span>
-          <span>${new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <span>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
         </div>
         <div class="meta-row">
           <span>Date: ${new Date(order.createdAt).toLocaleDateString()}</span>
@@ -476,7 +476,7 @@ export const generateBillReceiptHtml = (
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span>${isTakeaway ? `Takeaway ${order.tokenNumber ? '#' + order.tokenNumber : ''}` : order.tableName}</span>
-            <span>${new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
           </div>
           ${order.customerName ? `<div>Customer: <strong>${order.customerName}</strong>${order.customerPhone ? ` (${order.customerPhone})` : ''}</div>` : ''}
         </div>

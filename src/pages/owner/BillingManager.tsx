@@ -371,7 +371,7 @@ export const BillingManager: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>{isSelectedTakeaway ? "Order Type:" : "Table:"} {isSelectedTakeaway ? "TAKEAWAY / PARCEL" : selectedOrder.tableName.replace(/table\s*-\s*/gi, "")}</span>
-                    <span>Time: {new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span>Time: {new Date(selectedOrder.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}</span>
                   </div>
                   {selectedOrder.customerName && (
                     <div className="flex justify-between font-bold">

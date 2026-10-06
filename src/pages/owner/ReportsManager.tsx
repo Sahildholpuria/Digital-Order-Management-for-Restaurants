@@ -395,7 +395,7 @@ export const ReportsManager: React.FC = () => {
 
     const headers = 'Transaction ID,Order Number,Table,Subtotal,Discount,Tax / GST,Grand Total,Payment Method,Date & Time\n';
     const rows = sixMonthPayments.map(p => {
-      return `"${p.id}","${p.orderNumber}","${p.tableName}",${p.subtotal.toFixed(2)},${p.discount.toFixed(2)},${p.tax.toFixed(2)},${p.grandTotal.toFixed(2)},"${p.paymentMethod.toUpperCase()}","${new Date(p.createdAt).toLocaleString()}"`;
+      return `"${p.id}","${p.orderNumber}","${p.tableName}",${p.subtotal.toFixed(2)},${p.discount.toFixed(2)},${p.tax.toFixed(2)},${p.grandTotal.toFixed(2)},"${p.paymentMethod.toUpperCase()}","${new Date(p.createdAt).toLocaleDateString("en-US") + " " + new Date(p.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}"`;
     });
 
     const csvBlob = new Blob([headers + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -493,7 +493,7 @@ export const ReportsManager: React.FC = () => {
         yPos = 30;
       }
 
-      const dStr = new Date(p.createdAt).toLocaleString();
+      const dStr = new Date(p.createdAt).toLocaleDateString("en-US") + " " + new Date(p.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
       doc.text(dStr, 18, yPos);
       doc.text(p.orderNumber, 65, yPos);
       doc.text(p.tableName, 105, yPos);

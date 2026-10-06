@@ -601,13 +601,18 @@ const OrderCard: React.FC<OrderCardProps> = ({
           )}
         </div>
 
-        {/* Live Elapsed Timer */}
-        {["pending", "accepted", "preparing", "ready"].includes(order.status) && (
-          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${timerColor}`}>
-            <Clock className="w-3 h-3" />
-            <span>{elapsed}m ago</span>
-          </div>
-        )}
+        {/* Live Elapsed Timer & 12h Time */}
+        <div className="flex flex-col items-end gap-1">
+          {["pending", "accepted", "preparing", "ready"].includes(order.status) && (
+            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${timerColor}`}>
+              <Clock className="w-3 h-3" />
+              <span>{elapsed}m ago</span>
+            </div>
+          )}
+          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+            {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+          </span>
+        </div>
       </div>
 
       {/* Items List */}

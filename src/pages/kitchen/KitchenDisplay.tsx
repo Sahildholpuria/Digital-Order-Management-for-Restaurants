@@ -313,7 +313,7 @@ export const KitchenDisplay: React.FC = () => {
                       isUrgent ? "bg-red-600 text-white border-red-400" : isWarning ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                     }`}>
                       <Clock className="w-3.5 h-3.5" />
-                      <span>{elapsed}m</span>
+                      <span>{elapsed}m ({new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })})</span>
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-1">
                       {order.status === "pending" || order.status === "accepted" ? "NEW" : order.status}

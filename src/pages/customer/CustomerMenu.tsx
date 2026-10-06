@@ -1063,7 +1063,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                           <p className="font-black text-slate-900 dark:text-slate-100 text-sm font-mono">{order.orderNumber}</p>
                           <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-0.5">
                             <Clock className="w-3 h-3 text-emerald-500" />
-                            {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                           </p>
                         </div>
                         <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusColors[order.status] || statusColors.pending}`}>
