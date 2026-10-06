@@ -227,8 +227,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [notifications, setNotifications] = useState<RestaurantNotification[]>([]);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [currentTable, setCurrentTable] = useState<RestaurantTable | null>(null);
-  const [currentUser, setCurrentUserState] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUserState] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('restaurant_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('restaurant_current_user');
+      return !saved && isSupabaseConfigured;
+    } catch {
+      return false;
+    }
+  });
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [tableNotFound, setTableNotFound] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
@@ -493,6 +507,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           isSuperAdmin: isSuper,
           createdAt: data.created_at || new Date().toISOString(),
         };
+        try { localStorage.setItem('restaurant_current_user', JSON.stringify(profile)); } catch (_) {}
         setCurrentUserState(profile);
       } else {
         // Profile genuinely missing (e.g. legacy account) — only insert then

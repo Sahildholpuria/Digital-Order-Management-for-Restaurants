@@ -287,7 +287,6 @@ export const App: React.FC = () => {
   };
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
 
   // Platform-Wide Broadcast Announcements State
   const [announcements, setAnnouncements] = useState<SaaSAnnouncement[]>([]);
@@ -333,14 +332,7 @@ export const App: React.FC = () => {
     return true;
   });
 
-  // Trigger brief page transition loader on path or tab change
-  useEffect(() => {
-    setIsNavigating(true);
-    const timer = setTimeout(() => {
-      setIsNavigating(false);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [activeTab, currentPath, currentHash, currentSearch]);
+
 
   // Sync route on browser navigation (back/forward)
   useEffect(() => {
@@ -431,7 +423,8 @@ export const App: React.FC = () => {
   };
 
   const renderAppContent = () => {
-    if (loading || isNavigating) {
+    // Only show full-screen bootstrap loader on cold initial boot without cached user
+    if (loading && !currentUser && currentPath !== '/login' && currentHash !== '#login' && !currentPath.startsWith('/menu')) {
       return (
         <PageLoader
           fullScreen={true}

@@ -65,7 +65,35 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
         localStorage.removeItem('login_remember_me');
       }
 
-      onSuccess();
+      // Fast resolve user profile immediately without waiting for background subscription
+      let profile: any = null;
+      if (data?.user) {
+        const { data: profileData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        const isSuper = !!profileData?.is_super_admin || data.user.email === 'superadmin@restaurant.com';
+        profile = {
+          id: data.user.id,
+          restaurantId: isSuper ? undefined : (profileData?.restaurant_id || undefined),
+          name: profileData?.name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Staff',
+          email: data.user.email || '',
+          role: profileData?.role || 'admin',
+          isSuperAdmin: isSuper,
+          createdAt: profileData?.created_at || new Date().toISOString(),
+        };
+
+        try {
+          localStorage.setItem('restaurant_current_user', JSON.stringify(profile));
+          if (profile.restaurantId) {
+            localStorage.setItem('last_active_staff_restaurant_id', profile.restaurantId);
+          }
+        } catch (_) {}
+      }
+
+      onSuccess(profile);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Authentication failed. Please check your credentials.');
