@@ -40,6 +40,7 @@ import subscriptionService from './services/subscriptionService';
 import { PWAInstallButton } from './components/common/PWAInstallButton';
 import { APP_VERSION } from './config/appVersion';
 import { HelpSupportModal } from './components/common/HelpSupportModal';
+import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
 
 import { 
   ChevronDown,
@@ -1694,6 +1695,7 @@ export const App: React.FC = () => {
 
   return (
     <>
+      <NetworkStatusBanner />
       {renderAppContent()}
       <ToastContainer />
       <CustomConfirmModal />
