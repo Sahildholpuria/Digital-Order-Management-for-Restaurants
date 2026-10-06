@@ -842,32 +842,6 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               data.forEach(p => {
                 if (!seenPaymentIds.current.has(p.id)) {
                   seenPaymentIds.current.add(p.id);
-                  const payTime = p.createdAt ? new Date(p.createdAt).getTime() : 0;
-                  const isLiveSettled = payTime >= (sessionStartTime.current - 5000);
-
-                  if (!isFirstPaymentsLoad.current || isLiveSettled) {
-                    // Auto-dispatch silent Bill Receipt print if manager/cashier PC is connected to QZ Tray hardware printer
-                    if (qzTrayService.isConnected() && qzConfig.autoPrintBill !== false && p.orderId) {
-                      dbService.getOrder(restaurantId, p.orderId).then(orderObj => {
-                        if (orderObj) {
-                          const receiptOrder: RestaurantOrder = {
-                            ...orderObj,
-                            tableName: p.tableName,
-                            customerName: p.customerName || orderObj.customerName,
-                            customerPhone: p.customerPhone || orderObj.customerPhone,
-                            subtotal: p.subtotal,
-                            discount: p.discount,
-                            tax: p.tax,
-                            grandTotal: p.grandTotal,
-                            status: "completed",
-                          };
-                          printBillReceipt(receiptOrder, settings, qzConfig.paperWidth, false);
-                        }
-                      }).catch(err => {
-                        console.warn('[AutoPrintBill] Direct fetch error:', err);
-                      });
-                    }
-                  }
                 }
               });
 
