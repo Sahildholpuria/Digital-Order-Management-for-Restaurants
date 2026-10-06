@@ -59,6 +59,12 @@ export interface MenuCategory {
 
 export type DietaryType = 'veg' | 'non_veg' | 'egg';
 
+export interface FoodPortion {
+  id: string; // 'half' | 'full' | 'quarter' | custom
+  name: string; // 'Half' | 'Full' | custom
+  price: number;
+}
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -75,6 +81,12 @@ export interface FoodItem {
   discountPercentage: number; // 0 to 100
   updatedAt: any;
 
+  // Portion Variations (e.g. Half / Full)
+  hasPortions?: boolean;
+  portions?: FoodPortion[];
+  halfPrice?: number;
+  fullPrice?: number;
+
   // Dish Attributes
   dietaryType?: DietaryType;
   serves?: string;
@@ -87,6 +99,8 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  portion?: string; // e.g. 'Half', 'Full'
+  portionId?: string;
   specialInstructions?: string;
 }
 

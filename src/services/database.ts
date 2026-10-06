@@ -5,6 +5,7 @@ import {
   RestaurantTable,
   MenuCategory,
   FoodItem,
+  FoodPortion,
   RestaurantOrder,
   PaymentRecord,
   RestaurantNotification,
@@ -147,7 +148,7 @@ const mapCategoryToDb = (model: MenuCategory, restaurantId: string) => ({
 
 export const parseFoodItemDescription = (desc: string) => {
   const rawDesc = desc || '';
-  let cleanDesc = rawDesc.split('||attrs:')[0].split('||variants:')[0].trim();
+  let cleanDesc = rawDesc.split('||attrs:')[0].split('||variants:')[0].split('||portions:')[0].trim();
   let attrs: {
     dietaryType?: 'veg' | 'non_veg' | 'egg';
     serves?: string;
@@ -155,10 +156,16 @@ export const parseFoodItemDescription = (desc: string) => {
     calories?: number;
   } = {};
   let variants: { name: string; price: number }[] = [];
+  let portions: FoodPortion[] = [];
+  let hasPortions = false;
+  let halfPrice: number | undefined;
+  let fullPrice: number | undefined;
 
   if (rawDesc.includes('||attrs:')) {
     const [, rest] = rawDesc.split('||attrs:');
-    const attrsStr = rest.includes('||variants:') ? rest.split('||variants:')[0] : rest;
+    const attrsStr = rest.includes('||variants:') 
+      ? rest.split('||variants:')[0] 
+      : (rest.includes('||portions:') ? rest.split('||portions:')[0] : rest);
     
     attrsStr.split(';').forEach(pair => {
       const [key, val] = pair.split('=');
@@ -177,12 +184,35 @@ export const parseFoodItemDescription = (desc: string) => {
     });
   }
 
+  if (rawDesc.includes('||portions:')) {
+    const [, portionsStr] = rawDesc.split('||portions:');
+    const cleanPortionsStr = portionsStr.split('||')[0];
+    portions = cleanPortionsStr.split(';').map(p => {
+      const [name, price] = p.split('=');
+      const numPrice = Number(price);
+      return { id: (name || '').toLowerCase().trim(), name: (name || '').trim(), price: isNaN(numPrice) ? 0 : numPrice };
+    }).filter(p => p.name && p.price > 0);
+  }
+
   if (rawDesc.includes('||variants:')) {
     const [, variantsStr] = rawDesc.split('||variants:');
-    variants = variantsStr.split(';').map(v => {
+    const cleanVarStr = variantsStr.split('||')[0];
+    variants = cleanVarStr.split(';').map(v => {
       const [name, price] = v.split('=');
       return { name, price: Number(price) };
     }).filter(v => v.name && !isNaN(v.price));
+  }
+
+  if (portions.length === 0 && variants.length > 0) {
+    portions = variants.map(v => ({ id: v.name.toLowerCase().trim(), name: v.name.trim(), price: v.price }));
+  }
+
+  if (portions.length > 0) {
+    hasPortions = true;
+    const half = portions.find(p => p.name.toLowerCase().includes('half'));
+    const full = portions.find(p => p.name.toLowerCase().includes('full'));
+    if (half) halfPrice = half.price;
+    if (full) fullPrice = full.price;
   }
 
   return {
@@ -190,6 +220,10 @@ export const parseFoodItemDescription = (desc: string) => {
     cleanDescription: cleanDesc,
     attrs,
     variants,
+    portions,
+    hasPortions,
+    halfPrice,
+    fullPrice,
     dietaryType: attrs.dietaryType,
     serves: attrs.serves,
     allergens: attrs.allergens,
@@ -205,11 +239,14 @@ export const serializeFoodItemDescription = (
     allergens?: string[];
     calories?: number;
     variants?: { name: string; price: number }[];
+    portions?: FoodPortion[];
   },
-  variants?: { name: string; price: number }[]
+  variants?: { name: string; price: number }[],
+  portions?: FoodPortion[]
 ) => {
-  let result = (cleanDesc || '').split('||attrs:')[0].split('||variants:')[0].trim();
+  let result = (cleanDesc || '').split('||attrs:')[0].split('||variants:')[0].split('||portions:')[0].trim();
   const effectiveVariants = variants || attrs?.variants;
+  const effectivePortions = portions || attrs?.portions;
   
   if (attrs) {
     const pairs: string[] = [];
@@ -223,7 +260,9 @@ export const serializeFoodItemDescription = (
     }
   }
 
-  if (effectiveVariants && effectiveVariants.length > 0) {
+  if (effectivePortions && effectivePortions.length > 0) {
+    result += `||portions:${effectivePortions.map(p => `${p.name}=${p.price}`).join(';')}`;
+  } else if (effectiveVariants && effectiveVariants.length > 0) {
     result += `||variants:${effectiveVariants.map(v => `${v.name}=${v.price}`).join(';')}`;
   }
 
@@ -231,7 +270,8 @@ export const serializeFoodItemDescription = (
 };
 
 const mapFoodItemToFrontend = (row: any): FoodItem => {
-  const { attrs } = parseFoodItemDescription(row.description || '');
+  const parsed = parseFoodItemDescription(row.description || '');
+  const attrs = parsed.attrs;
   const isVeg = row.is_veg ?? (attrs.dietaryType !== 'non_veg' && attrs.dietaryType !== 'egg');
 
   return {
@@ -249,6 +289,10 @@ const mapFoodItemToFrontend = (row: any): FoodItem => {
     spicyLevel: row.spicy_level as any,
     discountPercentage: Number(row.discount_percentage),
     updatedAt: row.updated_at,
+    hasPortions: parsed.hasPortions,
+    portions: parsed.portions,
+    halfPrice: parsed.halfPrice,
+    fullPrice: parsed.fullPrice,
     dietaryType: attrs.dietaryType || (isVeg ? 'veg' : 'non_veg'),
     serves: attrs.serves || '',
     allergens: attrs.allergens || [],
@@ -257,13 +301,23 @@ const mapFoodItemToFrontend = (row: any): FoodItem => {
 };
 
 const mapFoodItemToDb = (model: FoodItem, restaurantId: string) => {
-  const { cleanDesc, variants } = parseFoodItemDescription(model.description || '');
-  const serializedDesc = serializeFoodItemDescription(cleanDesc, {
+  const parsed = parseFoodItemDescription(model.description || '');
+  let portionsToSerialize = model.portions;
+  if ((!portionsToSerialize || portionsToSerialize.length === 0) && model.hasPortions && (model.halfPrice || model.fullPrice)) {
+    portionsToSerialize = [];
+    if (model.halfPrice) portionsToSerialize.push({ id: 'half', name: 'Half', price: Number(model.halfPrice) });
+    if (model.fullPrice) portionsToSerialize.push({ id: 'full', name: 'Full', price: Number(model.fullPrice) });
+  }
+
+  const serializedDesc = serializeFoodItemDescription(parsed.cleanDesc, {
     dietaryType: model.dietaryType,
     serves: model.serves,
     allergens: model.allergens,
-    calories: model.calories
-  }, variants);
+    calories: model.calories,
+    portions: portionsToSerialize
+  }, parsed.variants, portionsToSerialize);
+
+  const basePrice = (model.hasPortions && model.fullPrice) ? model.fullPrice : (model.hasPortions && model.halfPrice ? model.halfPrice : model.price);
 
   return {
     id: model.id,
@@ -272,7 +326,7 @@ const mapFoodItemToDb = (model: FoodItem, restaurantId: string) => {
     name: model.name,
     image: model.image,
     description: serializedDesc,
-    price: model.price,
+    price: basePrice,
     is_veg: model.dietaryType ? (model.dietaryType !== 'non_veg' && model.dietaryType !== 'egg') : model.isVeg,
     preparation_time: model.preparationTime,
     is_available: model.isAvailable,

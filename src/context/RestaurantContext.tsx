@@ -47,7 +47,7 @@ interface RestaurantContextType {
   setCurrentUser: (user: UserProfile | null) => void;
   
   // Cart Actions
-  addToCart: (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string) => void;
+  addToCart: (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string, selectedPortion?: { name: string; price: number }) => void;
   removeFromCart: (itemId: string) => void;
   updateCartQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -1059,13 +1059,24 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // CART LOGIC
-  const addToCart = (item: FoodItem, quantity: number, instructions?: string, selectedVariantName?: string) => {
+  const addToCart = (
+    item: FoodItem,
+    quantity: number,
+    instructions?: string,
+    selectedVariantName?: string,
+    selectedPortion?: { name: string; price: number }
+  ) => {
     setCart(prev => {
       let finalName = item.name;
       let finalPrice = item.price;
       let uniqueId = item.id;
+      let portionName = selectedPortion?.name;
 
-      if (selectedVariantName && item.description && item.description.includes('||variants:')) {
+      if (selectedPortion) {
+        finalName = `${item.name} (${selectedPortion.name})`;
+        finalPrice = selectedPortion.price;
+        uniqueId = `${item.id}-${selectedPortion.name.toLowerCase()}`;
+      } else if (selectedVariantName && item.description && item.description.includes('||variants:')) {
         const [, variantsStr] = item.description.split('||variants:');
         const variants = variantsStr.split(';').map(v => {
           const [name, price] = v.split('=');
@@ -1075,7 +1086,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (matched) {
           finalName = `${item.name} (${matched.name})`;
           finalPrice = matched.price;
-          uniqueId = `${item.id}-${matched.name}`;
+          uniqueId = `${item.id}-${matched.name.toLowerCase()}`;
+          portionName = matched.name;
         }
       }
 
@@ -1094,6 +1106,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         name: finalName,
         price: discountedPrice,
         quantity,
+        portion: portionName,
         specialInstructions: instructions,
       }];
     });

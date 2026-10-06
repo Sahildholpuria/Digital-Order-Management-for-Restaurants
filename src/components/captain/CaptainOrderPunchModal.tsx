@@ -84,6 +84,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
   // Note Modal state for specific dish
   const [activeItemNoteId, setActiveItemNoteId] = useState<string | null>(null);
+  const [portionPickerItem, setPortionPickerItem] = useState<FoodItem | null>(null);
   const [itemNoteText, setItemNoteText] = useState<string>("");
 
   // Submitting & success states
@@ -153,6 +154,20 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
   // Cart operations
   const handleAddItem = (item: FoodItem) => {
+    const parsed = parseFoodItemDescription(item.description || "");
+    const hasPortionOptions = !!(
+      item.hasPortions ||
+      (item.halfPrice && item.fullPrice) ||
+      (item.portions && item.portions.length > 0) ||
+      (parsed.portions && parsed.portions.length > 0) ||
+      (parsed.variants && parsed.variants.length > 0)
+    );
+
+    if (hasPortionOptions) {
+      setPortionPickerItem(item);
+      return;
+    }
+
     setCartItems(prev => {
       const existing = prev[item.id];
       const newQty = existing ? existing.quantity + 1 : 1;
@@ -167,6 +182,26 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
         }
       };
     });
+  };
+
+  const handleAddPortionItem = (item: FoodItem, portionName: string, portionPrice: number) => {
+    const key = `${item.id}-${portionName.toLowerCase()}`;
+    setCartItems(prev => {
+      const existing = prev[key];
+      const newQty = existing ? existing.quantity + 1 : 1;
+      return {
+        ...prev,
+        [key]: {
+          itemId: key,
+          name: `${item.name} (${portionName})`,
+          price: portionPrice,
+          quantity: newQty,
+          portion: portionName,
+          specialInstructions: existing?.specialInstructions || ""
+        }
+      };
+    });
+    setPortionPickerItem(null);
   };
 
   const handleDecrementItem = (itemId: string) => {

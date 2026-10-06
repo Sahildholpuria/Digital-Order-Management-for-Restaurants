@@ -52,6 +52,9 @@ export const MenuManager: React.FC = () => {
   const [isItemOpen, setIsItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
   const [variants, setVariants] = useState<{ name: string; price: number }[]>([]);
+  const [hasPortions, setHasPortions] = useState(false);
+  const [halfPrice, setHalfPrice] = useState<number>(0);
+  const [fullPrice, setFullPrice] = useState<number>(0);
   
   // Food Item Form States
   const [itemName, setItemName] = useState('');
@@ -151,6 +154,9 @@ export const MenuManager: React.FC = () => {
     setItemImage('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60'); // healthy plate placeholder
     setItemDesc('');
     setVariants([]);
+    setHasPortions(false);
+    setHalfPrice(0);
+    setFullPrice(0);
     setItemCat(categories[0]?.id || '');
     setItemVeg(true);
     setItemDietaryType('veg');
@@ -187,6 +193,9 @@ export const MenuManager: React.FC = () => {
     const parsed = parseFoodItemDescription(item.description || '');
     setItemDesc(parsed.cleanDescription);
     setVariants(parsed.variants);
+    setHasPortions(!!item.hasPortions || parsed.hasPortions);
+    setHalfPrice(item.halfPrice || parsed.halfPrice || 0);
+    setFullPrice(item.fullPrice || parsed.fullPrice || item.price || 0);
     const resolvedDietary: DietaryType = item.dietaryType || parsed.dietaryType || (item.isVeg ? 'veg' : 'non_veg');
     setItemDietaryType(resolvedDietary);
     setItemVeg(resolvedDietary !== 'non_veg' && resolvedDietary !== 'egg');
@@ -276,6 +285,12 @@ export const MenuManager: React.FC = () => {
       deleteSupabaseStorageImage(editingItem.image);
     }
 
+    const portionsList = [];
+    if (hasPortions) {
+      if (halfPrice > 0) portionsList.push({ id: 'half', name: 'Half', price: Number(halfPrice) });
+      if (fullPrice > 0) portionsList.push({ id: 'full', name: 'Full', price: Number(fullPrice) });
+    }
+
     // Serialize variants and attributes to description string
     const finalDesc = serializeFoodItemDescription(itemDesc, {
       variants,
@@ -283,14 +298,16 @@ export const MenuManager: React.FC = () => {
       serves: itemServes.trim() || undefined,
       allergens: itemAllergens.length > 0 ? itemAllergens : undefined,
       calories: itemCalories ? Number(itemCalories) : undefined,
-    });
+      portions: portionsList
+    }, variants, portionsList);
 
     const isVegCalculated = itemDietaryType !== 'non_veg' && itemDietaryType !== 'egg';
+    const effectiveBasePrice = hasPortions ? (fullPrice || halfPrice || itemPrice) : Number(itemPrice);
 
     const newItem: FoodItem = {
       id: editingItem ? editingItem.id : `item-${Date.now()}`,
       name: itemName,
-      price: Number(itemPrice),
+      price: effectiveBasePrice,
       image: itemImage,
       description: finalDesc,
       categoryId: itemCat,
@@ -305,6 +322,10 @@ export const MenuManager: React.FC = () => {
       isRecommended: itemRecommended,
       spicyLevel: itemSpicy as any,
       discountPercentage: Number(itemDiscount),
+      hasPortions: hasPortions && portionsList.length > 0,
+      portions: portionsList,
+      halfPrice: hasPortions && halfPrice > 0 ? Number(halfPrice) : undefined,
+      fullPrice: hasPortions && fullPrice > 0 ? Number(fullPrice) : undefined,
       updatedAt: new Date().toISOString()
     };
 
@@ -705,16 +726,80 @@ export const MenuManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Price ({currency})</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{hasPortions ? 'Full / Base Price' : 'Price'} ({currency})</label>
                   <input
                     type="number"
                     required
                     min={0}
-                    value={itemPrice}
-                    onChange={(e) => setItemPrice(Number(e.target.value))}
+                    value={hasPortions ? (fullPrice || itemPrice) : itemPrice}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setItemPrice(val);
+                      if (hasPortions) setFullPrice(val);
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800 rounded-2xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
+              </div>
+
+              {/* Portion / Size Pricing Section (Half & Full) */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-2.5">
+                <label className="flex items-center justify-between cursor-pointer select-none">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-100">Half & Full Quantity</span>
+                    <span className="text-[9px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">Portions</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={hasPortions}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setHasPortions(checked);
+                      if (checked && fullPrice === 0) setFullPrice(itemPrice || 0);
+                    }}
+                    className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                  Enable if customers should choose between <strong>Half</strong> and <strong>Full</strong> portion sizes.
+                </p>
+
+                {hasPortions && (
+                  <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-slate-200 dark:border-slate-700 animate-fade-in">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        Half Price ({currency})
+                      </label>
+                      <input
+                        type="number"
+                        required={hasPortions}
+                        min={1}
+                        placeholder="e.g. 140"
+                        value={halfPrice || ''}
+                        onChange={(e) => setHalfPrice(Number(e.target.value))}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        Full Price ({currency})
+                      </label>
+                      <input
+                        type="number"
+                        required={hasPortions}
+                        min={1}
+                        placeholder="e.g. 260"
+                        value={fullPrice || ''}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setFullPrice(val);
+                          setItemPrice(val);
+                        }}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Category selector & Preparation Time */}
