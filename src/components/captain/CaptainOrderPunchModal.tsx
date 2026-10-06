@@ -185,7 +185,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
   };
 
   const handleAddPortionItem = (item: FoodItem, portionName: string, portionPrice: number) => {
-    const key = `${item.id}-${portionName.toLowerCase()}`;
+    const key = `${item.id}-${portionName.toLowerCase().trim()}`;
     setCartItems(prev => {
       const existing = prev[key];
       const newQty = existing ? existing.quantity + 1 : 1;
@@ -202,6 +202,20 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
       };
     });
     setPortionPickerItem(null);
+  };
+
+  const handleIncrementItem = (itemId: string) => {
+    setCartItems(prev => {
+      const existing = prev[itemId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [itemId]: {
+          ...existing,
+          quantity: existing.quantity + 1
+        }
+      };
+    });
   };
 
   const handleDecrementItem = (itemId: string) => {
@@ -666,12 +680,24 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                     {filteredItems.map((item: FoodItem) => {
+                      const parsed = parseFoodItemDescription(item.description || "");
+                      const hasPortions = !!(
+                        item.hasPortions ||
+                        (item.halfPrice && item.fullPrice) ||
+                        (item.portions && item.portions.length > 0) ||
+                        (parsed.portions && parsed.portions.length > 0)
+                      );
+                      const halfP = item.halfPrice || parsed.halfPrice;
+                      const fullP = item.fullPrice || parsed.fullPrice || item.price;
+                      
                       const inCart = cartItems[item.id];
+                      const inCartItems = Object.values(cartItems).filter(c => c.itemId === item.id || c.itemId.startsWith(`${item.id}-`));
+
                       return (
                         <div
                           key={item.id}
                           className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex flex-col justify-between ${
-                            inCart
+                            inCartItems.length > 0
                               ? "bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/60 shadow-xs"
                               : "bg-white dark:bg-slate-800/70 border-slate-200/80 dark:border-slate-700/60 hover:border-slate-300"
                           }`}
@@ -685,7 +711,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                                 </h4>
                               </div>
                               {(() => {
-                                const clean = parseFoodItemDescription(item.description || "").cleanDescription;
+                                const clean = parsed.cleanDescription;
                                 return clean ? (
                                   <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
                                     {clean}
@@ -693,39 +719,40 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                                 ) : null;
                               })()}
                             </div>
-                            <span className="font-black text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 shrink-0">
-                              {currency}{item.price}
-                            </span>
+
+                            {hasPortions ? (
+                              <div className="text-right shrink-0">
+                                {halfP && <span className="font-black text-[10px] text-amber-600 dark:text-amber-400 block leading-tight">Half: {currency}{halfP}</span>}
+                                <span className="font-black text-xs text-emerald-600 dark:text-emerald-400 block leading-tight">Full: {currency}{fullP}</span>
+                              </div>
+                            ) : (
+                              <span className="font-black text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 shrink-0">
+                                {currency}{item.price}
+                              </span>
+                            )}
                           </div>
 
-                          {/* Item Note preview if added */}
-                          {inCart?.specialInstructions && (
-                            <div className="mt-1.5 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-md font-medium truncate">
-                              Note: {inCart.specialInstructions}
+                          {/* In-cart portions preview */}
+                          {inCartItems.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {inCartItems.map(p => (
+                                <span key={p.itemId} className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                                  <span>{p.portion || "Item"}: x{p.quantity} ({currency}{p.price * p.quantity})</span>
+                                </span>
+                              ))}
                             </div>
                           )}
 
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
                             
-                            {/* Note Button */}
-                            {inCart ? (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenItemNote(item.id)}
-                                className="text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-amber-600 flex items-center gap-1 cursor-pointer py-1"
-                              >
-                                <MessageSquare className="w-3 h-3 text-amber-500" />
-                                <span>{inCart.specialInstructions ? "Edit Note" : "+ Note"}</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                                <Clock className="w-2.5 h-2.5" />
-                                <span>{item.preparationTime || 15}m</span>
-                              </span>
-                            )}
+                            {/* Prep Time or Note indicator */}
+                            <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>{item.preparationTime || 15}m</span>
+                            </span>
 
-                            {/* Stepper / Add Button */}
-                            {inCart ? (
+                            {/* Add / Portion Button */}
+                            {!hasPortions && inCart ? (
                               <div className="flex items-center gap-1 bg-amber-500 text-white rounded-xl p-0.5 shadow-sm">
                                 <button
                                   type="button"
@@ -740,7 +767,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => handleAddItem(item)}
+                                  onClick={() => handleIncrementItem(item.id)}
                                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center hover:bg-amber-600 active:scale-90 transition-all cursor-pointer"
                                   aria-label="Increase quantity"
                                 >
@@ -754,7 +781,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                                 className="bg-slate-900 dark:bg-white hover:bg-emerald-600 dark:hover:bg-emerald-400 text-white dark:text-slate-900 hover:text-white dark:hover:text-slate-900 text-[11px] font-black px-3.5 py-1.5 sm:py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs"
                               >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span>Add</span>
+                                <span>{hasPortions ? "Portion" : "Add"}</span>
                               </button>
                             )}
                           </div>
@@ -842,10 +869,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                           </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              const food = foodItems.find((f: FoodItem) => f.id === item.itemId);
-                              if (food) handleAddItem(food);
-                            }}
+                            onClick={() => handleIncrementItem(item.itemId)}
                             className="w-6 h-6 rounded-lg flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 active:scale-90 transition-all cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
