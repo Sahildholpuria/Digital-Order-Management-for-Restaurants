@@ -97,14 +97,16 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
     return Array.from(itemMap.values());
   }, [activeOrders]);
 
-  // Financial calculations
+  // Financial calculations with strict 2-decimal precision
   const subtotal = useMemo(() => {
-    return consolidatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const sum = consolidatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    return Math.round(sum * 100) / 100;
   }, [consolidatedItems]);
 
   const discountAmount = useMemo(() => {
     if (customDiscountAmt && Number(customDiscountAmt) > 0) {
-      return Math.min(Number(customDiscountAmt), subtotal);
+      const val = Number(customDiscountAmt);
+      return Math.min(Math.round(val * 100) / 100, subtotal);
     }
     if (discountPercent > 0) {
       return Math.round((subtotal * (discountPercent / 100)) * 100) / 100;
@@ -112,14 +114,14 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
     return 0;
   }, [subtotal, discountPercent, customDiscountAmt]);
 
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const taxableAmount = Math.round(Math.max(0, subtotal - discountAmount) * 100) / 100;
   const taxAmount = Math.round(taxableAmount * (taxPercentage / 100) * 100) / 100;
   const grandTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
 
   // Change computation for cash
   const changeDue = useMemo(() => {
     const tendered = Number(cashTendered) || 0;
-    return Math.max(0, tendered - grandTotal);
+    return Math.max(0, Math.round((tendered - grandTotal) * 100) / 100);
   }, [cashTendered, grandTotal]);
 
   // UPI Dynamic QR string (Standard Indian NPCI UPI spec)
