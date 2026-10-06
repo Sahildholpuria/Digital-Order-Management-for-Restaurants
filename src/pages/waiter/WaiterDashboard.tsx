@@ -292,20 +292,20 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
       {/* MAIN CONTENT WRAPPER */}
       <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-3 sm:pt-5 space-y-3.5 sm:space-y-5 flex-1">
 
-        {/* SUMMARY METRIC STRIP */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* COMPACT SUMMARY METRIC STRIP */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
           {/* Available Tables */}
           <div 
             onClick={() => setFilterStatus("available")}
-            className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-emerald-500/50 transition-all cursor-pointer flex items-center gap-3"
+            className="p-2 sm:p-2.5 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-emerald-500/50 transition-all cursor-pointer flex items-center gap-2.5"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Available</p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
-                {availableCount} <span className="text-xs text-slate-400 font-bold">/ {tables.length}</span>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">Available</p>
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">
+                {availableCount} <span className="text-[10px] sm:text-xs text-slate-400 font-bold">/ {tables.length}</span>
               </p>
             </div>
           </div>
@@ -313,15 +313,15 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
           {/* Occupied Tables */}
           <div 
             onClick={() => setFilterStatus("occupied")}
-            className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-amber-500/50 transition-all cursor-pointer flex items-center gap-3"
+            className="p-2 sm:p-2.5 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-amber-500/50 transition-all cursor-pointer flex items-center gap-2.5"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black shrink-0">
-              <UtensilsCrossed className="w-5 h-5" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black shrink-0">
+              <UtensilsCrossed className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Occupied</p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
-                {occupiedCount} <span className="text-xs text-slate-400 font-bold">Tables</span>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupied</p>
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">
+                {occupiedCount} <span className="text-[10px] sm:text-xs text-slate-400 font-bold">Tables</span>
               </p>
             </div>
           </div>
@@ -329,15 +329,15 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
           {/* Active Takeaways */}
           <div 
             onClick={() => setFilterStatus("takeaway")}
-            className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-orange-500/50 transition-all cursor-pointer flex items-center gap-3"
+            className="p-2 sm:p-2.5 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-orange-500/50 transition-all cursor-pointer flex items-center gap-2.5"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black shrink-0">
-              <ShoppingBag className="w-5 h-5" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black shrink-0">
+              <ShoppingBag className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Takeaway</p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
-                {activeTakeawayOrders.length} <span className="text-xs text-slate-400 font-bold">Parcels</span>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">Takeaway</p>
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">
+                {activeTakeawayOrders.length} <span className="text-[10px] sm:text-xs text-slate-400 font-bold">Parcels</span>
               </p>
             </div>
           </div>
@@ -347,25 +347,25 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
             onClick={() => {
               if (activeAlerts.length > 0) setFilterStatus("calling");
             }}
-            className={`p-3 sm:p-3.5 rounded-2xl border shadow-2xs transition-all flex items-center gap-3 ${
+            className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border shadow-2xs transition-all flex items-center gap-2.5 ${
               activeAlerts.length > 0
                 ? "bg-rose-500/10 border-rose-500/40 cursor-pointer animate-pulse-gentle hover:bg-rose-500/15"
                 : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 cursor-default"
             }`}
           >
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black shrink-0 ${
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-black shrink-0 ${
               activeAlerts.length > 0
                 ? "bg-rose-500 text-white"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-400"
             }`}>
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Guest Calls</p>
-              <p className={`text-base sm:text-lg font-black leading-tight ${
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">Guest Calls</p>
+              <p className={`text-sm sm:text-base font-black leading-tight ${
                 activeAlerts.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"
               }`}>
-                {activeAlerts.length} <span className="text-xs font-bold text-slate-400">{activeAlerts.length === 1 ? "Alert" : "Alerts"}</span>
+                {activeAlerts.length} <span className="text-[10px] sm:text-xs font-bold text-slate-400">{activeAlerts.length === 1 ? "Alert" : "Alerts"}</span>
               </p>
             </div>
           </div>
