@@ -1,7 +1,26 @@
 import { RestaurantOrder, RestaurantSettings } from "../types";
 import { qzTrayService } from "../services/qzTrayService";
 
-export const printHTMLContent = (htmlContent: string, iframeId: string = "pos-thermal-print-frame") => {
+export const isMobileDevice = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua);
+  const isTouchScreen = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+  const isNarrowScreen = window.innerWidth <= 768;
+  return isMobileUA || (Boolean(isTouchScreen) && isNarrowScreen);
+};
+
+export const printHTMLContent = (
+  htmlContent: string,
+  iframeId: string = "pos-thermal-print-frame",
+  forceMobile: boolean = false
+) => {
+  // Never trigger standard browser print dialog on mobile devices so waiters don't get interrupted by system AirPrint/Android print sheets
+  if (isMobileDevice() && !forceMobile) {
+    console.info("[PrintUtils] Mobile browser print dialog suppressed. KOT/Bill is handled by central POS/Kitchen thermal printer.");
+    return;
+  }
+
   let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
   if (!iframe) {
     iframe = document.createElement("iframe");
@@ -389,8 +408,13 @@ export const printKOTReceipt = async (
   }
 
   // 2. If QZ Tray is NOT connected:
-  // ONLY open browser print dialog if the user MANUALLY clicked print (forcePrint === true).
-  // Automatic background events (like accepting orders in Live Orders or auto-punching) will NEVER pop up the browser dialog.
+  // On mobile devices (Waiters / Captains), NEVER open the mobile browser AirPrint/Android print modal
+  if (isMobileDevice()) {
+    console.info("[PrintKOT] Mobile browser print dialog suppressed on phone. Central POS printer station handles physical KOT.");
+    return { success: true, mode: "none", message: "Mobile print suppressed" };
+  }
+
+  // ONLY open browser print dialog on desktop PC if the user MANUALLY clicked print
   if (forcePrint) {
     printHTMLContent(kotHtml, "pos-kot-print-frame");
     return { success: true, mode: "browser" };
