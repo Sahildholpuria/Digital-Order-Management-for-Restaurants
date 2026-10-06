@@ -178,19 +178,19 @@ export const BillingManager: React.FC = () => {
 
   // Map selectedGroup to a synthesized consolidated RestaurantOrder for seamless printing & rendering
   const selectedOrder = useMemo((): RestaurantOrder | null => {
-    if (!selectedGroup) return null;
+    if (!selectedGroup || !selectedGroup.orders || selectedGroup.orders.length === 0) return null;
     const primaryOrder = selectedGroup.orders[0];
-    const orderNumbersStr = selectedGroup.orders.map(o => o.orderNumber).join(", ");
     return {
-      id: selectedGroup.id,
-      orderNumber: selectedGroup.orders.length > 1 ? `${primaryOrder.orderNumber} (+${selectedGroup.orders.length - 1} more)` : primaryOrder.orderNumber,
-      tableId: selectedGroup.tableId || "table",
+      ...primaryOrder,
+      id: primaryOrder.id,
+      orderNumber: primaryOrder.orderNumber,
+      tableId: selectedGroup.tableId || primaryOrder.tableId,
       tableName: selectedGroup.tableName,
       tableFloor: selectedGroup.tableFloor,
       orderType: selectedGroup.orderType,
-      customerName: selectedGroup.customerName,
-      customerPhone: selectedGroup.customerPhone,
-      tokenNumber: selectedGroup.tokenNumber,
+      customerName: selectedGroup.customerName || primaryOrder.customerName,
+      customerPhone: selectedGroup.customerPhone || primaryOrder.customerPhone,
+      tokenNumber: selectedGroup.tokenNumber || primaryOrder.tokenNumber,
       items: selectedGroup.items,
       subtotal: selectedGroup.subtotal,
       tax: selectedGroup.tax,
@@ -215,19 +215,22 @@ export const BillingManager: React.FC = () => {
   const [autoPrintOnSettle, setAutoPrintOnSettle] = useState(true);
 
   const handleMarkPaid = async () => {
-    if (!selectedOrder) return;
+    if (!selectedGroup || !selectedOrder) return;
     setIsProcessing(true);
     try {
-      // 1. Log payment settlement
+      const primaryOrder = selectedGroup.orders[0] || selectedOrder;
+      const paymentId = `pay-${Date.now()}`;
+
+      // 1. Log payment settlement with genuine primary order ID
       await addPaymentRecord({
-        id: `pay-${Date.now()}`,
-        orderId: selectedOrder.id,
-        orderNumber: selectedOrder.orderNumber,
-        tableName: selectedOrder.tableName,
-        orderType: selectedOrder.orderType,
-        customerName: selectedOrder.customerName,
-        customerPhone: selectedOrder.customerPhone,
-        tokenNumber: selectedOrder.tokenNumber,
+        id: paymentId,
+        orderId: primaryOrder.id,
+        orderNumber: primaryOrder.orderNumber,
+        tableName: selectedGroup.tableName,
+        orderType: selectedGroup.orderType,
+        customerName: selectedGroup.customerName || primaryOrder.customerName,
+        customerPhone: selectedGroup.customerPhone || primaryOrder.customerPhone,
+        tokenNumber: selectedGroup.tokenNumber || primaryOrder.tokenNumber,
         subtotal,
         tax: taxAmount,
         discount: discountAmount,
@@ -236,45 +239,46 @@ export const BillingManager: React.FC = () => {
         createdAt: new Date().toISOString()
       });
       
-      // 2. Mark master order and any associated table orders completed with exact settled totals
-      const settledOrder = {
-        ...selectedOrder,
-        subtotal,
-        discount: discountAmount,
-        tax: taxAmount,
-        grandTotal,
-        status: "completed" as const
-      };
-      await saveOrder(settledOrder);
-      await updateOrderStatus(selectedOrder.id, "completed");
-
-      // Complete any other running orders for this same table session
-      if (!isSelectedTakeaway && selectedOrder.tableId && selectedOrder.tableId !== "takeaway") {
-        const otherTableOrders = orders.filter(o => 
-          o.id !== selectedOrder.id &&
-          (o.tableId === selectedOrder.tableId || o.tableName === selectedOrder.tableName) &&
-          !["completed", "cancelled"].includes(o.status)
-        );
-        for (const otherOrder of otherTableOrders) {
-          try {
-            await updateOrderStatus(otherOrder.id, "completed");
-          } catch (_) {}
+      // 2. Mark all orders in this table session as completed
+      for (const ord of selectedGroup.orders) {
+        try {
+          const updatedOrd: RestaurantOrder = {
+            ...ord,
+            status: "completed" as const,
+            subtotal: ord.id === primaryOrder.id ? subtotal : ord.subtotal,
+            discount: ord.id === primaryOrder.id ? discountAmount : 0,
+            tax: ord.id === primaryOrder.id ? taxAmount : ord.tax,
+            grandTotal: ord.id === primaryOrder.id ? grandTotal : ord.grandTotal,
+          };
+          await saveOrder(updatedOrd);
+          await updateOrderStatus(ord.id, "completed");
+        } catch (itemErr) {
+          console.warn("Complete order item notice:", itemErr);
         }
       }
-      
-      showToast(`Table ${selectedOrder.tableName} settled successfully via ${paymentMethod.toUpperCase()}!`, "success");
 
-      // 3. Mark table available
-      if (!isSelectedTakeaway && selectedOrder.tableId && selectedOrder.tableId !== "takeaway") {
+      // 3. Mark dining table available
+      if (!selectedGroup.isTakeaway && selectedGroup.tableId && selectedGroup.tableId !== "takeaway") {
         try {
-          await updateTableStatus(selectedOrder.tableId, "available");
+          await updateTableStatus(selectedGroup.tableId, "available");
         } catch (_) {}
       }
 
-      // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
+      showToast(`${selectedGroup.tableName} settled successfully via ${paymentMethod.toUpperCase()}!`, "success");
+
+      // 4. Auto-trigger bill printing on POS thermal billing machine if enabled
       if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
         try {
-          await printBillReceipt({ ...settledOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, "80mm", true);
+          const receiptPrintOrder: RestaurantOrder = {
+            ...primaryOrder,
+            tableName: selectedGroup.tableName,
+            items: selectedGroup.items,
+            subtotal,
+            discount: discountAmount,
+            tax: taxAmount,
+            grandTotal,
+          };
+          await printBillReceipt({ ...receiptPrintOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, "80mm", true);
         } catch (err) {
           console.warn("Settlement receipt auto-print notice:", err);
         }
@@ -283,9 +287,9 @@ export const BillingManager: React.FC = () => {
       // Reset POS terminal selection
       setSelectedOrderId("");
       setDiscountPercent(0);
-    } catch (err) {
-      console.error(err);
-      showToast("Settlement failed.", "error");
+    } catch (err: any) {
+      console.error("Settlement error:", err);
+      showToast("Settlement error: " + (err.message || "Operation failed"), "error");
     } finally {
       setIsProcessing(false);
     }
