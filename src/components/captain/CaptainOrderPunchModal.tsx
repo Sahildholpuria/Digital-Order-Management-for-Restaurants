@@ -496,7 +496,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                       }`}
                     >
                       <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>🍽️ Table</span>
+                      <span>Table</span>
                     </button>
                     <button
                       type="button"
@@ -508,7 +508,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                       }`}
                     >
                       <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>🛍️ Takeaway</span>
+                      <span>Takeaway</span>
                     </button>
                   </div>
 
@@ -536,23 +536,36 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
                 {/* Row 2: Target Assignment (Table Dropdown OR Takeaway Fields) */}
                 {orderType === "dine_in" ? (
-                  <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 p-1.5 sm:p-2 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-2xs">
-                    <span className="text-[10px] sm:text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 pl-1 shrink-0 flex items-center gap-1">
+                  <div className="flex items-center gap-2 bg-white dark:bg-slate-800/90 p-1.5 sm:p-2 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-2xs">
+                    <div className="flex items-center gap-1 text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 pl-1 shrink-0">
                       <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-500" />
                       <span>Table:</span>
-                    </span>
+                    </div>
                     <select
                       value={selectedTableId}
                       onChange={(e) => setSelectedTableId(e.target.value)}
-                      className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                      className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer truncate"
                     >
                       <option value="" disabled>-- Select Table --</option>
                       {tables.map((t: RestaurantTable) => (
                         <option key={t.id} value={t.id}>
-                          Table {t.number} {t.floor ? `[${t.floor}] ` : ""}({t.status.toUpperCase()} • {t.capacity} Seats)
+                          Table {t.number}{t.floor ? ` (${t.floor})` : ""} • ${t.capacity} Seats
                         </option>
                       ))}
                     </select>
+                    {(() => {
+                      const currentT = tables.find((t: RestaurantTable) => t.id === selectedTableId);
+                      if (!currentT) return null;
+                      return (
+                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md shrink-0 border ${
+                          currentT.status === 'occupied'
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                        }`}>
+                          {currentT.status === 'occupied' ? 'Busy' : 'Free'}
+                        </span>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5 sm:gap-2 bg-orange-50/80 dark:bg-orange-950/20 p-2 rounded-xl border border-orange-200/80 dark:border-orange-900/40 shadow-2xs">
