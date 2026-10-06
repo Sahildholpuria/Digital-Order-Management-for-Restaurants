@@ -1135,7 +1135,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     customerInfo?: { name?: string; phone?: string }
   ): Promise<RestaurantOrder> => {
     if (cart.length === 0) throw new Error("Cart is empty");
-    if (orderType === "dine_in" && !currentTable) throw new Error("Table not assigned");
+
+    // Resolve table if dine_in
+    let targetTable = currentTable;
+    if (orderType === "dine_in" && !targetTable) {
+      const menuMatch = typeof window !== 'undefined' ? window.location.pathname.match(/^\/menu\/([^\/]+)$/) : null;
+      const urlTableId = menuMatch?.[1];
+      if (urlTableId) {
+        const cleanNum = urlTableId.replace(/^table[\s\-_]*/i, '');
+        targetTable = tables.find(t => t.id === urlTableId || t.number === cleanNum || t.number === urlTableId || t.id.replace(/^table-/i, '') === cleanNum) || {
+          id: urlTableId,
+          number: cleanNum || '1',
+          capacity: 4,
+          status: 'occupied',
+          qrCodeUrl: "",
+          updatedAt: new Date().toISOString()
+        };
+        setCurrentTable(targetTable);
+      }
+    }
+
+    if (orderType === "dine_in" && !targetTable) throw new Error("Table not assigned. Please re-scan table QR code.");
 
     const isTakeaway = orderType === "takeaway";
     const todayTakeaways = orders.filter(o => {
@@ -1143,7 +1163,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return isToday && o.orderType === "takeaway";
     });
     const tokenStr = isTakeaway ? `TK-${String(todayTakeaways.length + 1).padStart(2, "0")}` : undefined;
-    const cleanTableName = isTakeaway ? `Takeaway • ${tokenStr}` : `Table ${currentTable?.number || ""}`;
+    const cleanTableName = isTakeaway ? `Takeaway • ${tokenStr}` : `Table ${targetTable?.number || ""}`;
 
     const taxRate = settings?.taxPercentage ?? 0;
     const subtotal = getCartSubtotal();
@@ -1151,12 +1171,24 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
     const orderNum = `${isTakeaway ? "TAK" : "ORD"}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // Resolve effective restaurant ID
+    let effectiveRestaurantId = restaurantId;
+    if (!effectiveRestaurantId && targetTable?.id) {
+      effectiveRestaurantId = (await dbService.getRestaurantIdByTableId(targetTable.id)) || '';
+    }
+    if (!effectiveRestaurantId && typeof window !== 'undefined') {
+      effectiveRestaurantId = localStorage.getItem('last_active_customer_restaurant_id') || sessionStorage.getItem('last_active_customer_restaurant_id') || '';
+    }
+    if (!effectiveRestaurantId) {
+      effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
+    }
+
     const newOrder: RestaurantOrder = {
       id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       orderNumber: orderNum,
-      tableId: isTakeaway ? "takeaway" : (currentTable ? currentTable.id : "takeaway"),
+      tableId: isTakeaway ? "takeaway" : (targetTable ? targetTable.id : "takeaway"),
       tableName: cleanTableName,
-      tableFloor: isTakeaway ? undefined : currentTable?.floor,
+      tableFloor: isTakeaway ? undefined : targetTable?.floor,
       orderType,
       customerName: customerInfo?.name?.trim() || undefined,
       customerPhone: customerInfo?.phone?.trim() || undefined,
@@ -1175,7 +1207,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
 
     // Save order to database
-    await dbService.saveOrder(restaurantId, newOrder);
+    await dbService.saveOrder(effectiveRestaurantId, newOrder);
     
     // Update table status to occupied if Dine-In
     if (!isTakeaway && currentTable) {

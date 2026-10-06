@@ -422,8 +422,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         spread: 80,
         origin: { y: 0.6 }
       });
-    } catch (err) {
-      showToast('Failed to place order. Please try again.', 'error');
+    } catch (err: any) {
+      console.error('Order placement error:', err);
+      showToast(err?.message || 'Failed to place order. Please try again.', 'error');
     } finally {
       setIsPlacingOrder(false);
     }

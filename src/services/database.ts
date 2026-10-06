@@ -1842,10 +1842,27 @@ export const dbService = {
   async saveOrder(restaurantId: string, order: RestaurantOrder): Promise<void> {
     if (isSupabaseConfigured) {
       const dbOrder = mapOrderToDb(order, restaurantId);
-      const { error } = await supabase
+      // For anonymous guest QR customer placement and new orders, execute clean INSERT first
+      const { error: insertError } = await supabase
         .from('orders')
-        .upsert(dbOrder);
-      if (error) throw error;
+        .insert(dbOrder);
+      
+      if (insertError) {
+        // If duplicate primary key (e.g. updating an existing order / status changes), perform update
+        if (insertError.code === '23505' || insertError.message?.includes('duplicate key') || insertError.message?.includes('unique') || insertError.message?.includes('already exists')) {
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update(dbOrder)
+            .eq('id', order.id);
+          if (updateError) throw updateError;
+        } else {
+          // Attempt upsert fallback
+          const { error: upsertError } = await supabase
+            .from('orders')
+            .upsert(dbOrder);
+          if (upsertError) throw insertError || upsertError;
+        }
+      }
     } else {
       const data = localStorage.getItem('restaurant_orders');
       const orders: any[] = data ? JSON.parse(data) : [];
