@@ -84,11 +84,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     }
   }, [initialTab]);
   const [subPayments, setSubPayments] = useState<SubscriptionPaymentRecord[]>([]);
-  const [isSubFeatureEnabled, setIsSubFeatureEnabled] = useState<boolean>(() => {
-    const val = localStorage.getItem('saas_subscription_feature_enabled');
-    return val === null ? true : val === 'true';
-  });
-  const [isTogglingSubFeature, setIsTogglingSubFeature] = useState(false);
+
   const [pricingPlans, setPricingPlans] = useState(() => getSubscriptionPlans());
   const [starterPriceInput, setStarterPriceInput] = useState<number | string>(() => getCustomPlanPricing().starterPrice);
   const [starterDurationInput, setStarterDurationInput] = useState<number | string>(() => getCustomPlanPricing().starterDurationMonths || 6);
@@ -237,9 +233,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   }, [currentUser?.isSuperAdmin]);
 
   useEffect(() => {
-    const unsubToggle = subscriptionService.subscribeFeatureToggle((enabled) => {
-      setIsSubFeatureEnabled(enabled);
-    });
     const unsubPricing = subscriptionService.subscribeCustomPricing((pricing) => {
       setStarterPriceInput(pricing.starterPrice);
       setStarterDurationInput(pricing.starterDurationMonths || 6);
@@ -248,7 +241,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       setPricingPlans(getSubscriptionPlans());
     });
     return () => {
-      unsubToggle();
       unsubPricing();
     };
   }, []);
@@ -302,35 +294,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     }
   };
 
-  const handleToggleSubscriptionFeature = async () => {
-    setIsTogglingSubFeature(true);
-    const nextState = !isSubFeatureEnabled;
-    setIsSubFeatureEnabled(nextState);
-    await subscriptionService.setFeatureEnabled(nextState);
-    setIsTogglingSubFeature(false);
-    showToast(
-      nextState
-        ? "✓ Global Subscription Plan section is now VISIBLE in restaurant settings."
-        : "✕ Global Subscription Plan section is now HIDDEN from restaurant settings.",
-      "success"
-    );
-  };
 
-  const handleToggleRestSubscription = async (r: RestaurantSettings) => {
-    const newHidden = !r.hideSubscriptionPlan;
-    try {
-      await dbService.updateSettings(r.id, { hideSubscriptionPlan: newHidden });
-      await fetchAllData();
-      showToast(
-        newHidden
-          ? `Subscription section is now HIDDEN for ${r.name}.`
-          : `Subscription section is now VISIBLE for ${r.name}.`,
-        'success'
-      );
-    } catch (err: any) {
-      showToast('Failed to update: ' + (err.message || err), 'error');
-    }
-  };
 
   // Close any active modal overlay on Escape key press
   useEffect(() => {
@@ -899,32 +863,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             <span>+ Create Staff User</span>
           </button>
 
-          {/* Quick 1-Click Subscription Feature Visibility Button */}
-          <button
-            type="button"
-            onClick={handleToggleSubscriptionFeature}
-            disabled={isTogglingSubFeature}
-            className={`flex items-center justify-center gap-2 font-black px-4 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap active:scale-95 border backdrop-blur-md col-span-2 sm:col-span-1 ${
-              isSubFeatureEnabled
-                ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30"
-                : "bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/30"
-            }`}
-            title="Toggle Subscription Plan section visibility in restaurant store settings"
-          >
-            {isSubFeatureEnabled ? (
-              <>
-                <Eye className="w-4 h-4 text-emerald-400" />
-                <span>Subscriptions: Visible</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
-              </>
-            ) : (
-              <>
-                <EyeOff className="w-4 h-4 text-rose-400" />
-                <span>Subscriptions: Hidden</span>
-                <span className="w-2 h-2 rounded-full bg-rose-400 ml-0.5" />
-              </>
-            )}
-          </button>
+
         </div>
       </div>
 
@@ -1036,60 +975,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             {/* ===== SAAS SUBSCRIPTIONS & RAZORPAY TAB VIEW ===== */}
       {activeTab === "subscriptions" && (
         <div className="space-y-6 animate-fade-in">
-          {/* Subscription Feature Visibility Master Toggle */}
-          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 p-5 sm:p-6 rounded-3xl shadow-sm text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-                isSubFeatureEnabled
-                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                  : "bg-rose-500/20 text-rose-400 border-rose-500/30"
-              }`}>
-                {isSubFeatureEnabled ? <Eye className="w-6 h-6" /> : <EyeOff className="w-6 h-6" />}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm sm:text-base font-black text-white">
-                    Subscription Feature Visibility
-                  </h3>
-                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                    isSubFeatureEnabled
-                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                      : "bg-rose-500/20 border-rose-500/40 text-rose-300"
-                  }`}>
-                    {isSubFeatureEnabled ? "Visible in Settings" : "Hidden from Settings"}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  {isSubFeatureEnabled
-                    ? "The Subscription Plan & Renewal section is currently visible in all restaurant settings."
-                    : "The Subscription Plan & Renewal section is completely hidden from all restaurant settings. Restaurant owners cannot see or access it."}
-                </p>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleToggleSubscriptionFeature}
-              disabled={isTogglingSubFeature}
-              className={`flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-95 shrink-0 ${
-                isSubFeatureEnabled
-                  ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
-              }`}
-            >
-              {isSubFeatureEnabled ? (
-                <>
-                  <EyeOff className="w-4 h-4" />
-                  <span>Hide Subscription Section</span>
-                </>
-              ) : (
-                <>
-                  <Eye className="w-4 h-4" />
-                  <span>Show Subscription Section</span>
-                </>
-              )}
-            </button>
-          </div>
 
           {/* Revenue Overview Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1780,27 +1666,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                           <span>Remind</span>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleRestSubscription(r)}
-                          className={`border text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            r.hideSubscriptionPlan
-                              ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
-                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
-                          }`}
-                        >
-                          {r.hideSubscriptionPlan ? (
-                            <>
-                              <EyeOff className="w-3.5 h-3.5 text-rose-500" />
-                              <span>Sub: Hidden</span>
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-3.5 h-3.5 text-emerald-500" />
-                              <span>Sub: Visible</span>
-                            </>
-                          )}
-                        </button>
+
 
                         <button
                           type="button"
@@ -1987,28 +1853,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                               <span>Remind</span>
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => handleToggleRestSubscription(r)}
-                              className={`border text-[10px] font-black px-2.5 py-1.5 rounded-xl transition-all inline-flex items-center gap-1 shadow-2xs cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
-                                r.hideSubscriptionPlan
-                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
-                                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
-                              }`}
-                              title={r.hideSubscriptionPlan ? "Subscription section is HIDDEN in settings. Click to show." : "Subscription section is VISIBLE in settings. Click to hide."}
-                            >
-                              {r.hideSubscriptionPlan ? (
-                                <>
-                                  <EyeOff className="w-3 h-3 text-rose-500" />
-                                  <span>Sub: Hidden</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Eye className="w-3 h-3 text-emerald-500" />
-                                  <span>Sub: Visible</span>
-                                </>
-                              )}
-                            </button>
+
 
                             <button
                               type="button"
