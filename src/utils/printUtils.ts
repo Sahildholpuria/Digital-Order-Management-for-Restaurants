@@ -81,16 +81,15 @@ class PrintQueueManager {
   }
 
   private async executePrintTask(task: PrintTask): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> {
-    // Check duplicate print suppression if not forced
-    if (task.orderId && !task.forcePrint) {
-      const now = Date.now();
-      const last = this.lastPrintedMap.get(`${task.type}-${task.orderId}`) || 0;
-      if (now - last < 12000) {
-        console.log(`[PrintQueue] Duplicate print suppressed for ${task.jobName}`);
-        return { success: true, mode: "none", message: "Duplicate print suppressed" };
-      }
-      this.lastPrintedMap.set(`${task.type}-${task.orderId}`, now);
+    // Global duplicate print suppression (suppresses rapid duplicate print triggers within 3.5s)
+    const printKey = `${task.type}-${task.orderId || task.orderNumber || 'generic'}`;
+    const now = Date.now();
+    const last = this.lastPrintedMap.get(printKey) || 0;
+    if (now - last < 3500) {
+      console.log(`[PrintQueue] Rapid duplicate print suppressed for ${task.jobName} (${printKey})`);
+      return { success: true, mode: "none", message: "Duplicate print suppressed" };
     }
+    this.lastPrintedMap.set(printKey, now);
 
     const qzConfig = qzTrayService.getConfig();
     const targetPrinter = task.printerName || (task.type === "kot" ? qzConfig.kotPrinter : qzConfig.billPrinter);
