@@ -425,6 +425,8 @@ export const printKOTReceipt = async (
   return { success: false, mode: "none", message: "QZ Tray offline" };
 };
 
+const lastPrintedBillMap = new Map<string, number>();
+
 export const printBillReceipt = async (
   order: RestaurantOrder,
   settings?: RestaurantSettings | null,
@@ -432,6 +434,17 @@ export const printBillReceipt = async (
   forcePrint: boolean = false
 ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> => {
   if (!order || !order.id) return { success: false, mode: "none" };
+
+  const now = Date.now();
+  const lastPrintTime = lastPrintedBillMap.get(order.id) || 0;
+
+  // Prevent duplicate print triggers for the exact same bill within 15 seconds unless user explicitly clicks manual Print button
+  if (!forcePrint && now - lastPrintTime < 15000) {
+    console.log(`[PrintBill] Skipped duplicate print trigger for order ${order.orderNumber || order.id}`);
+    return { success: true, mode: "none" };
+  }
+
+  lastPrintedBillMap.set(order.id, now);
 
   const qzConfig = qzTrayService.getConfig();
   const effectiveWidth = paperWidth || qzConfig.paperWidth || "80mm";
