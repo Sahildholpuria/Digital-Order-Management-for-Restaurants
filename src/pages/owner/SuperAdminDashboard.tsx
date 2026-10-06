@@ -812,7 +812,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-8 animate-fade-in font-sans">
-      {/* Header Banner */}
+      {/* Dynamic Header Banner based on Active Nav Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl shadow-emerald-950/20 border border-emerald-500/20 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="space-y-2 max-w-2xl z-10">
           <div className="flex items-center gap-2">
@@ -824,92 +824,178 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               Live Production
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
-            SaaS Tenant & Infrastructure Manager
-          </h1>
-          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
-            Onboard restaurant client accounts, manage subscription lifecycles, configure Razorpay payment gateways, and monitor real-time merchant operations.
-          </p>
+
+          {activeTab === 'restaurants' && (
+            <>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
+                Restaurants & Multi-Tenant Directory
+              </h1>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+                Onboard restaurant client accounts, monitor live tenant operations, generate instant login credentials, and manage tenant subscriptions.
+              </p>
+            </>
+          )}
+
+          {activeTab === 'users' && (
+            <>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
+                Staff Accounts & Access Directory
+              </h1>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+                Create and manage multi-role staff accounts (Admins, Managers, Cashiers, Chefs, and Captains) across all onboarded restaurants.
+              </p>
+            </>
+          )}
+
+          {activeTab === 'subscriptions' && (
+            <>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
+                SaaS Platform Settings & Gateway
+              </h1>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+                Manage Razorpay API gateway credentials, customize SaaS subscription plan pricing & duration, and configure official support channels.
+              </p>
+            </>
+          )}
+
+          {activeTab === 'announcements' && (
+            <>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
+                Platform Broadcasts & Announcements
+              </h1>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+                Publish platform-wide announcements, system maintenance alerts, and broadcast notices to all active restaurant POS dashboards.
+              </p>
+            </>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 z-10 w-full lg:w-auto shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 z-10 w-full lg:w-auto shrink-0">
           <button 
             onClick={fetchAllData}
-            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center col-span-2 sm:col-span-1"
+            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center"
             title="Refresh database records"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
 
-          <button
-            onClick={handleOpenOnboard}
-            className="flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-black px-4 sm:px-5 py-3 rounded-2xl shadow-lg transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap col-span-2 sm:col-span-1"
-          >
-            <Plus className="w-4 h-4 text-emerald-600" />
-            <span>+ Onboard Restaurant</span>
-          </button>
+          {activeTab === 'restaurants' && (
+            <button
+              onClick={handleOpenOnboard}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black px-4 sm:px-5 py-3 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4 text-white" />
+              <span>+ Onboard Restaurant</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              if (restaurants.length === 0) {
-                showToast('Please onboard at least one restaurant first!', 'error');
-                return;
-              }
-              setUserRestaurantId(restaurants[0].id);
-              setIsUserModalOpen(true);
-            }}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 sm:px-5 py-3 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap col-span-2 sm:col-span-1"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Create Staff User</span>
-          </button>
-
-
+          {activeTab === 'users' && (
+            <button
+              onClick={() => {
+                if (restaurants.length === 0) {
+                  showToast('Please onboard at least one restaurant first!', 'error');
+                  return;
+                }
+                setUserRestaurantId(restaurants[0].id);
+                setIsUserModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black px-4 sm:px-5 py-3 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all text-xs sm:text-sm cursor-pointer active:scale-95 whitespace-nowrap"
+            >
+              <UserPlus className="w-4 h-4 text-white" />
+              <span>+ Create Staff User</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Grid Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
-            <Building className="w-6 h-6" />
+      {/* Contextual Metrics Strip */}
+      {activeTab === 'restaurants' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <Building className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total Onboarded</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{totalCount}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total Onboarded</p>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{totalCount}</p>
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20 shrink-0">
-            <ShieldCheck className="w-6 h-6" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20 shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Active Paid Pro</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{activeCount}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Active Paid Pro</p>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{activeCount}</p>
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
-            <Clock className="w-6 h-6" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Free Trials</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{trialCount}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Free Trials</p>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{trialCount}</p>
-          </div>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Expired / Suspended</p>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{expiredCount}</p>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Expired / Due</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{expiredCount}</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total Staff Users</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{users.length}</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Admins / Owners</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{users.filter(u => u.role === 'admin').length}</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20 shrink-0">
+              <Award className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Store Managers</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{users.filter(u => u.role === 'manager').length}</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Floor & Kitchen Staff</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{users.filter(u => u.role !== 'admin' && u.role !== 'manager').length}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Switcher */}
       <div className="flex gap-2 sm:gap-4 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto no-scrollbar flex-nowrap">
