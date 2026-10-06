@@ -62,14 +62,35 @@ export const generateKOTHtml = (
   const bodyWidth = paperWidth === "58mm" ? "58mm" : "80mm";
 
   const itemsHtml = order.items
-    .map(
-      (item) => `
-    <tr style="border-bottom: 1px dashed #666;">
+    .map((item) => {
+      const lowerName = item.name.toLowerCase();
+      const portionStr = item.portion ? item.portion.toLowerCase() : "";
+      const isHalf = portionStr.includes("half") || lowerName.includes("(half)") || lowerName.includes("[half]");
+      const isFull = portionStr.includes("full") || lowerName.includes("(full)") || lowerName.includes("[full]");
+      
+      let portionBadge = "";
+      if (isHalf) {
+        portionBadge = '<span style="background: #000; color: #fff; padding: 2px 6px; font-size: 11px; font-weight: 900; border-radius: 3px; margin-left: 6px;">[ HALF ]</span>';
+      } else if (isFull) {
+        portionBadge = '<span style="border: 1.5px solid #000; padding: 1px 5px; font-size: 11px; font-weight: 900; border-radius: 3px; margin-left: 6px;">[ FULL ]</span>';
+      } else if (item.portion) {
+        portionBadge = `<span style="border: 1.5px solid #000; padding: 1px 5px; font-size: 11px; font-weight: 900; border-radius: 3px; margin-left: 6px;">[ ${item.portion.toUpperCase()} ]</span>`;
+      }
+
+      const cleanName = item.name
+        .replace(/\s*\((half|full)\)/gi, "")
+        .replace(/\s*\[(half|full)\]/gi, "")
+        .trim();
+
+      return `
+    <tr style="border-bottom: 1px dashed #555;">
       <td style="padding: 6px 0; vertical-align: top;">
-        <div style="font-size: 14px; font-weight: 900; text-transform: uppercase;">${item.name}</div>
+        <div style="font-size: 14px; font-weight: 900; text-transform: uppercase;">
+          ${cleanName} ${portionBadge}
+        </div>
         ${
           item.specialInstructions
-            ? `<div style="font-size: 11px; font-weight: bold; color: #d97706; margin-top: 2px;">*** NOTE: ${item.specialInstructions} ***</div>`
+            ? `<div style="font-size: 11px; font-weight: bold; color: #000; margin-top: 2px;">*** NOTE: ${item.specialInstructions} ***</div>`
             : ""
         }
       </td>
@@ -77,8 +98,8 @@ export const generateKOTHtml = (
         x${item.quantity}
       </td>
     </tr>
-  `
-    )
+  `;
+    })
     .join("");
 
   const totalItemsCount = order.items.reduce((sum, item) => sum + item.quantity, 0);

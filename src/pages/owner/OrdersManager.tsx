@@ -612,14 +612,33 @@ const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Items List */}
       <div className="space-y-2 flex-1 pt-1.5">
-        {order.items.map((item, idx) => (
-          <div key={idx} className="flex justify-between items-center text-xs">
-            <span className="text-slate-700 dark:text-slate-300 font-medium">
-              {item.name} <strong className="text-brand-600 dark:text-brand-400">×{item.quantity}</strong>
-            </span>
-            <span className="text-slate-500 font-semibold">{currency}{(item.price * item.quantity).toFixed(0)}</span>
-          </div>
-        ))}
+        {order.items.map((item, idx) => {
+          const lowerName = item.name.toLowerCase();
+          const portionStr = item.portion ? item.portion.toLowerCase() : "";
+          const isHalf = portionStr.includes("half") || lowerName.includes("(half)") || lowerName.includes("[half]");
+          const isFull = portionStr.includes("full") || lowerName.includes("(full)") || lowerName.includes("[full]");
+          const cleanName = item.name.replace(/\s*\((half|full)\)/gi, "").replace(/\s*\[(half|full)\]/gi, "").trim();
+
+          return (
+            <div key={idx} className="flex justify-between items-center text-xs">
+              <span className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5 flex-wrap">
+                <span>{cleanName}</span>
+                {isHalf && (
+                  <span className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[9px] font-black px-1.5 py-0.5 rounded">
+                    HALF
+                  </span>
+                )}
+                {isFull && (
+                  <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1.5 py-0.5 rounded">
+                    FULL
+                  </span>
+                )}
+                <strong className="text-brand-600 dark:text-brand-400">×{item.quantity}</strong>
+              </span>
+              <span className="text-slate-500 font-semibold">{currency}{(item.price * item.quantity).toFixed(0)}</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="border-t border-slate-100/60 dark:border-slate-800/40 pt-3 flex justify-between items-center text-xs">

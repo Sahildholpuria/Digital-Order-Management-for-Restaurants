@@ -327,11 +327,18 @@ export const KitchenDisplay: React.FC = () => {
                     const isCrossed = !!crossedItems[`${order.id}-${idx}`];
                     
                     let cleanDescNote = item.specialInstructions || "";
-                    let variantLabel = "";
-                    if (item.name.includes("(") && item.name.includes(")")) {
-                      const match = item.name.match(/\(([^)]+)\)/);
-                      if (match) variantLabel = match[1];
-                    }
+                    
+                    // Detect Portion
+                    const lowerName = item.name.toLowerCase();
+                    const portionStr = item.portion ? item.portion.toLowerCase() : "";
+                    const isHalf = portionStr.includes("half") || lowerName.includes("(half)") || lowerName.includes("[half]");
+                    const isFull = portionStr.includes("full") || lowerName.includes("(full)") || lowerName.includes("[full]");
+                    
+                    // Clean dish title
+                    const cleanItemName = item.name
+                      .replace(/\s*\((half|full)\)/gi, "")
+                      .replace(/\s*\[(half|full)\]/gi, "")
+                      .trim();
 
                     return (
                       <div 
@@ -340,7 +347,7 @@ export const KitchenDisplay: React.FC = () => {
                         className={`flex gap-3 items-center cursor-pointer transition-all p-3 rounded-2xl border ${
                           isCrossed 
                             ? "bg-slate-950/60 border-slate-800/50 text-slate-500 line-through opacity-60" 
-                            : "bg-slate-800/80 border-slate-700/80 hover:bg-slate-800 text-slate-100 shadow-sm"
+                            : "bg-slate-800/90 border-slate-700 hover:bg-slate-800 text-slate-100 shadow-sm"
                         }`}
                       >
                         <input
@@ -351,16 +358,28 @@ export const KitchenDisplay: React.FC = () => {
                         />
                         <div className="flex-1 flex justify-between items-center gap-2">
                           <div>
-                            <p className="font-extrabold text-sm text-slate-100 leading-snug flex items-center gap-1.5 flex-wrap">
-                              <span>{item.name}</span>
-                              {variantLabel && (
-                                <span className="bg-slate-700 text-slate-200 text-[10px] font-black px-1.5 py-0.5 rounded-md border border-slate-600">
-                                  {variantLabel}
+                            <p className="font-black text-sm text-slate-100 leading-snug flex items-center gap-2 flex-wrap">
+                              <span>{cleanItemName}</span>
+                              
+                              {/* Prominent Portion Badges */}
+                              {isHalf && (
+                                <span className="bg-amber-500/25 text-amber-300 border-2 border-amber-500/60 text-[11px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs tracking-wider animate-pulse">
+                                  ⚡ HALF
+                                </span>
+                              )}
+                              {isFull && (
+                                <span className="bg-emerald-500/25 text-emerald-300 border-2 border-emerald-500/60 text-[11px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs tracking-wider">
+                                  👑 FULL
+                                </span>
+                              )}
+                              {!isHalf && !isFull && item.portion && (
+                                <span className="bg-slate-700 text-slate-200 text-[10px] font-black px-2 py-0.5 rounded-md border border-slate-600 uppercase">
+                                  {item.portion}
                                 </span>
                               )}
                             </p>
                             {cleanDescNote && (
-                              <p className="text-[10px] text-amber-400 font-black bg-amber-950/60 border border-amber-900/60 px-2 py-0.5 rounded-md mt-1 inline-block">
+                              <p className="text-[10px] text-amber-300 font-bold bg-amber-950/70 border border-amber-800/70 px-2 py-0.5 rounded-md mt-1 inline-block">
                                 Note: {cleanDescNote}
                               </p>
                             )}
