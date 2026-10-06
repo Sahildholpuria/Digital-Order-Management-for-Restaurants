@@ -107,17 +107,23 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
     }
   }, [orderType, orders, tokenNumber]);
 
-  // Sync initial props
+  // Sync initial props & reset previous order state when opened
   useEffect(() => {
-    if (initialTableId) {
-      setSelectedTableId(initialTableId);
-    } else if (tables.length > 0 && !selectedTableId) {
-      setSelectedTableId(tables[0].id);
+    if (isOpen) {
+      setPunchedOrder(null);
+      setCartItems({});
+      setGeneralNotes("");
+      setIsMobileCartDrawerOpen(false);
+      if (initialTableId) {
+        setSelectedTableId(initialTableId);
+      } else if (tables.length > 0 && !selectedTableId) {
+        setSelectedTableId(tables[0].id);
+      }
+      if (initialOrderType) {
+        setOrderType(initialOrderType);
+      }
     }
-    if (initialOrderType) {
-      setOrderType(initialOrderType);
-    }
-  }, [initialTableId, initialOrderType, tables]);
+  }, [isOpen, initialTableId, initialOrderType]);
 
   // Filtered Food Items
   const filteredItems = useMemo(() => {
@@ -285,6 +291,13 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
     setIsMobileCartDrawerOpen(false);
   };
 
+  const handleModalClose = () => {
+    setPunchedOrder(null);
+    setCartItems({});
+    setIsMobileCartDrawerOpen(false);
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const currentSelectedTable = tables.find((t: RestaurantTable) => t.id === selectedTableId);
@@ -328,7 +341,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleModalClose}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer shrink-0 ml-2 active:scale-95"
             aria-label="Close modal"
           >
@@ -409,7 +422,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleModalClose}
               className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-300 cursor-pointer pt-1"
             >
               Close Window
