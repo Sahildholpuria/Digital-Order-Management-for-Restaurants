@@ -1128,7 +1128,7 @@ export const App: React.FC = () => {
                 {/* Mobile / Tablet Hamburger Button */}
                 <button 
                   onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} 
-                  className="xl:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+                  className="hidden md:flex xl:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
                   aria-label="Toggle navigation menu"
                 >
                   <Menu className="w-5 h-5" />
