@@ -2148,51 +2148,121 @@ export const dbService = {
   },
 
   async createAnnouncement(ann: SaaSAnnouncement): Promise<void> {
-    if (isSupabaseConfigured) {
-      const dbRow = mapAnnouncementToDb(ann);
-      const { error } = await supabase
-        .from('announcements')
-        .insert(dbRow);
-      if (error) throw error;
-    } else {
-      const list = await this.getAnnouncements();
-      list.unshift(ann);
+    // 1. Immediate local cache persistence
+    try {
+      const data = localStorage.getItem('saas_global_announcements');
+      const list = data ? JSON.parse(data) : [];
+      const existingIdx = list.findIndex((a: any) => a.id === ann.id);
+      if (existingIdx > -1) {
+        list[existingIdx] = ann;
+      } else {
+        list.unshift(ann);
+      }
       localStorage.setItem('saas_global_announcements', JSON.stringify(list));
       notifyLocalSubscribers();
+    } catch (e) {
+      console.warn('Local storage error for announcement:', e);
+    }
+
+    // 2. Remote Supabase persistence via secure RPC (bypasses RLS)
+    if (isSupabaseConfigured) {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('publish_broadcast_announcement', {
+        p_id: ann.id,
+        p_title: ann.title,
+        p_message: ann.message,
+        p_type: ann.type || 'info',
+        p_expires_at: ann.expiresAt ? new Date(ann.expiresAt).toISOString() : null,
+        p_dismissible: ann.isDismissible !== false,
+        p_is_active: ann.isActive !== false,
+        p_created_at: ann.createdAt ? new Date(ann.createdAt).toISOString() : new Date().toISOString()
+      });
+
+      if (rpcData && rpcData.success === false && rpcData.error) {
+        throw new Error(rpcData.error);
+      }
+
+      if (rpcError) {
+        console.warn('RPC publish_broadcast_announcement fallback notice:', rpcError);
+        const dbRow = mapAnnouncementToDb(ann);
+        const { error } = await supabase
+          .from('announcements')
+          .insert(dbRow);
+        if (error) throw new Error(error.message || 'Database error creating announcement');
+      }
     }
   },
 
   async updateAnnouncement(id: string, updates: Partial<SaaSAnnouncement>): Promise<void> {
-    if (isSupabaseConfigured) {
-      const dbRow = mapAnnouncementToDb(updates);
-      const { error } = await supabase
-        .from('announcements')
-        .update(dbRow)
-        .eq('id', id);
-      if (error) throw error;
-    } else {
-      const list = await this.getAnnouncements();
-      const idx = list.findIndex(a => a.id === id);
+    try {
+      const data = localStorage.getItem('saas_global_announcements');
+      const list = data ? JSON.parse(data) : [];
+      const idx = list.findIndex((a: any) => a.id === id);
       if (idx > -1) {
         list[idx] = { ...list[idx], ...updates };
         localStorage.setItem('saas_global_announcements', JSON.stringify(list));
         notifyLocalSubscribers();
       }
+    } catch (e) {
+      console.warn('Local storage error for announcement update:', e);
+    }
+
+    if (isSupabaseConfigured) {
+      const list = await this.getAnnouncements();
+      const existing = list.find(a => a.id === id);
+      const merged = { ...existing, ...updates, id };
+      const { data: rpcData, error: rpcError } = await supabase.rpc('publish_broadcast_announcement', {
+        p_id: id,
+        p_title: merged.title || '',
+        p_message: merged.message || '',
+        p_type: merged.type || 'info',
+        p_expires_at: merged.expiresAt ? new Date(merged.expiresAt).toISOString() : null,
+        p_dismissible: merged.isDismissible !== false,
+        p_is_active: merged.isActive !== false,
+        p_created_at: merged.createdAt ? new Date(merged.createdAt).toISOString() : new Date().toISOString()
+      });
+
+      if (rpcData && rpcData.success === false && rpcData.error) {
+        throw new Error(rpcData.error);
+      }
+
+      if (rpcError) {
+        const dbRow = mapAnnouncementToDb(updates);
+        const { error } = await supabase
+          .from('announcements')
+          .update(dbRow)
+          .eq('id', id);
+        if (error) throw new Error(error.message || 'Database error updating announcement');
+      }
     }
   },
 
   async deleteAnnouncement(id: string): Promise<void> {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase
-        .from('announcements')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    } else {
-      const list = await this.getAnnouncements();
-      const filtered = list.filter(a => a.id !== id);
+    try {
+      const data = localStorage.getItem('saas_global_announcements');
+      const list = data ? JSON.parse(data) : [];
+      const filtered = list.filter((a: any) => a.id !== id);
       localStorage.setItem('saas_global_announcements', JSON.stringify(filtered));
       notifyLocalSubscribers();
+    } catch (e) {
+      console.warn('Local storage error for announcement delete:', e);
+    }
+
+    if (isSupabaseConfigured) {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('delete_broadcast_announcement', {
+        p_id: id
+      });
+
+      if (rpcData && rpcData.success === false && rpcData.error) {
+        throw new Error(rpcData.error);
+      }
+
+      if (rpcError) {
+        const { error } = await supabase
+          .from('announcements')
+          .delete()
+          .eq('id', id);
+        if (error) throw new Error(error.message || 'Database error deleting announcement');
+      }
     }
   },
 
