@@ -11,47 +11,193 @@ export const isMobileDevice = (): boolean => {
   return isMobileUA || isIOS || (Boolean(isTouchScreen) && isNarrowScreen);
 };
 
+export interface PrintTask {
+  id: string;
+  orderId?: string;
+  orderNumber?: string;
+  type: "kot" | "bill" | "custom";
+  html: string;
+  printerName?: string;
+  paperWidth: "80mm" | "58mm";
+  jobName: string;
+  forcePrint: boolean;
+  retries: number;
+  resolve: (res: { success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }) => void;
+  reject: (err: any) => void;
+}
+
+/**
+ * Sequential FIFO Print Queue Manager
+ * Guarantees zero dropped print jobs when multiple orders arrive simultaneously.
+ */
+class PrintQueueManager {
+  private queue: PrintTask[] = [];
+  private isProcessing: boolean = false;
+  private lastPrintedMap: Map<string, number> = new Map();
+
+  public enqueue(task: Omit<PrintTask, "resolve" | "reject" | "retries">): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> {
+    return new Promise((resolve, reject) => {
+      this.queue.push({
+        ...task,
+        retries: 0,
+        resolve,
+        reject
+      });
+      this.processQueue();
+    });
+  }
+
+  public getPendingCount(): number {
+    return this.queue.length;
+  }
+
+  private async processQueue() {
+    if (this.isProcessing || this.queue.length === 0) return;
+    this.isProcessing = true;
+
+    while (this.queue.length > 0) {
+      const task = this.queue[0];
+      try {
+        const res = await this.executePrintTask(task);
+        task.resolve(res);
+      } catch (err: any) {
+        if (task.retries < 2) {
+          task.retries += 1;
+          console.warn(`[PrintQueue] Retrying print job ${task.jobName} (attempt ${task.retries + 1})...`);
+          await new Promise(r => setTimeout(r, 400));
+          continue; // retry this task
+        } else {
+          console.error(`[PrintQueue] Print job failed after retries:`, err);
+          task.resolve({ success: false, mode: "none", message: err.message || String(err) });
+        }
+      }
+
+      // Remove finished task and add spacing buffer so thermal hardware feeds and prints smoothly
+      this.queue.shift();
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    this.isProcessing = false;
+  }
+
+  private async executePrintTask(task: PrintTask): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> {
+    // Check duplicate print suppression if not forced
+    if (task.orderId && !task.forcePrint) {
+      const now = Date.now();
+      const last = this.lastPrintedMap.get(`${task.type}-${task.orderId}`) || 0;
+      if (now - last < 12000) {
+        console.log(`[PrintQueue] Duplicate print suppressed for ${task.jobName}`);
+        return { success: true, mode: "none", message: "Duplicate print suppressed" };
+      }
+      this.lastPrintedMap.set(`${task.type}-${task.orderId}`, now);
+    }
+
+    const qzConfig = qzTrayService.getConfig();
+    const targetPrinter = task.printerName || (task.type === "kot" ? qzConfig.kotPrinter : qzConfig.billPrinter);
+
+    // 1. Silent direct thermal printing via QZ Tray if connected
+    if (qzTrayService.isConnected() && (targetPrinter || qzTrayService.getPrinters().length > 0)) {
+      if (!task.forcePrint) {
+        if (task.type === "kot" && qzConfig.autoPrintKOT === false) {
+          return { success: true, mode: "none", message: "Auto-print KOT disabled" };
+        }
+        if (task.type === "bill" && qzConfig.autoPrintBill === false) {
+          return { success: true, mode: "none", message: "Auto-print Bill disabled" };
+        }
+      }
+
+      const res = await qzTrayService.printHTML({
+        printerName: targetPrinter,
+        html: task.html,
+        paperWidth: task.paperWidth,
+        jobName: task.jobName,
+      });
+
+      if (res.success) {
+        return { success: true, mode: "qz-tray", message: res.message };
+      }
+      throw new Error(res.message || "QZ Tray printing failed");
+    }
+
+    // 2. Mobile device suppression for silent background KOTs
+    if (isMobileDevice() && !task.forcePrint) {
+      return { success: true, mode: "none", message: "Mobile print suppressed (handled by POS)" };
+    }
+
+    // 3. Desktop manual browser print dialog fallback
+    if (task.forcePrint) {
+      await this.printViaBrowserIframe(task.html, task.type === "kot" ? "pos-kot-print-frame" : "pos-receipt-print-frame");
+      return { success: true, mode: "browser" };
+    }
+
+    return { success: false, mode: "none", message: "QZ Tray offline" };
+  }
+
+  private printViaBrowserIframe(htmlContent: string, iframeId: string): Promise<void> {
+    return new Promise((resolve) => {
+      let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+      if (iframe) {
+        try { document.body.removeChild(iframe); } catch (_) {}
+      }
+
+      iframe = document.createElement("iframe");
+      iframe.id = iframeId;
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (!doc) {
+        resolve();
+        return;
+      }
+
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error("Print iframe error:", e);
+        }
+        // Spacing buffer before next print in queue
+        setTimeout(() => {
+          resolve();
+        }, 500);
+      }, 200);
+    });
+  }
+}
+
+export const printQueueManager = new PrintQueueManager();
+
 export const printHTMLContent = (
   htmlContent: string,
   iframeId: string = "pos-thermal-print-frame",
   forceMobile: boolean = false
 ) => {
-  // Never trigger standard browser print dialog on mobile devices so waiters don't get interrupted by system AirPrint/Android print sheets
   if (isMobileDevice() && !forceMobile) {
-    console.info("[PrintUtils] Mobile browser print dialog suppressed. KOT/Bill is handled by central POS/Kitchen thermal printer.");
+    console.info("[PrintUtils] Mobile browser print dialog suppressed.");
     return;
   }
 
-  let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.id = iframeId;
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.style.opacity = "0";
-    iframe.style.pointerEvents = "none";
-    document.body.appendChild(iframe);
-  }
-
-  const doc = iframe.contentWindow?.document || iframe.contentDocument;
-  if (!doc) return;
-
-  doc.open();
-  doc.write(htmlContent);
-  doc.close();
-
-  setTimeout(() => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (e) {
-      console.error("Print iframe error:", e);
-    }
-  }, 150);
+  printQueueManager.enqueue({
+    id: `manual-${Date.now()}`,
+    type: "custom",
+    html: htmlContent,
+    paperWidth: "80mm",
+    jobName: "POS Manual Print",
+    forcePrint: true
+  });
 };
 
 export const generateKOTHtml = (
@@ -118,69 +264,95 @@ export const generateKOTHtml = (
           @media print {
             html, body {
               width: ${bodyWidth};
-              margin: 0 auto;
+              margin: 0;
               padding: 0;
             }
-            .no-print { display: none !important; }
           }
           body {
-            font-family: monospace, sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             width: ${bodyWidth};
             margin: 0 auto;
-            padding: 8px;
-            box-sizing: border-box;
-            font-size: 11px;
-            line-height: 1.35;
+            padding: 8px 6px;
             color: #000;
             background: #fff;
+            box-sizing: border-box;
           }
-          .text-center { text-align: center; }
-          .text-right { text-align: right; }
-          .text-left { text-align: left; }
-          .font-bold { font-weight: bold; }
-          .dashed-divider {
-            border-top: 2px dashed #000;
-            margin: 8px 0;
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
           }
-          .double-divider {
-            border-top: 3px double #000;
-            margin: 8px 0;
+          .title {
+            font-size: 20px;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: 1px;
           }
-          table {
+          .subtitle {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 2px 0;
+          }
+          .meta-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: bold;
+            margin: 3px 0;
+          }
+          .table-badge {
+            font-size: 18px;
+            font-weight: 900;
+            text-align: center;
+            background: #000;
+            color: #fff;
+            padding: 5px;
+            margin: 6px 0;
+            border-radius: 4px;
+          }
+          .items-table {
             width: 100%;
             border-collapse: collapse;
+            margin: 8px 0;
+          }
+          .footer {
+            border-top: 2px solid #000;
+            padding-top: 6px;
+            margin-top: 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
           }
         </style>
       </head>
       <body>
-        <div class="text-center">
-          <h1 style="margin: 0; font-size: 18px; font-weight: 900;">${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "*** TAKEAWAY / PARCEL ***" : "*** KOT ***"}</h1>
-          <div style="font-size: 11px; font-weight: bold; margin-top: 2px;">${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "PARCEL PACKING TICKET" : "KITCHEN ORDER TICKET"}</div>
-          <div style="font-size: 10px; color: #333;">${restaurantName}</div>
+        <div class="header">
+          <div class="title">KITCHEN ORDER TICKET</div>
+          <div class="subtitle">${restaurantName.toUpperCase()}</div>
         </div>
 
-        <div class="double-divider"></div>
-
-        <div style="font-size: 13px; font-weight: 900; display: flex; justify-content: space-between;">
-          <span>${order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") ? "ORDER: " + (order.tokenNumber ? "TOKEN #" + order.tokenNumber : order.tableName.toUpperCase()) : "TABLE: " + order.tableName.toUpperCase() + (order.tableFloor ? " • " + order.tableFloor.toUpperCase() : "")}</span>
-          <span>#${order.orderNumber}</span>
+        <div class="meta-row">
+          <span>KOT #: <strong>${order.orderNumber}</strong></span>
+          <span>${new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
-        ${order.customerName || order.customerPhone ? `
-        <div style="font-size: 11px; font-weight: bold; margin-top: 3px; background: #eee; padding: 2px 4px;">
-          <span>Customer: ${order.customerName || "Guest"} ${order.customerPhone ? "(" + order.customerPhone + ")" : ""}</span>
-        </div>` : ""}
-        <div style="font-size: 10px; display: flex; justify-content: space-between; margin-top: 2px;">
+        <div class="meta-row">
           <span>Date: ${new Date(order.createdAt).toLocaleDateString()}</span>
-          <span>Time: ${new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>Type: <strong>${order.orderType === 'takeaway' ? 'TAKEAWAY' : 'DINE-IN'}</strong></span>
         </div>
 
-        <div class="dashed-divider"></div>
+        <div class="table-badge">
+          ${order.orderType === 'takeaway' ? `TAKEAWAY ${order.tokenNumber ? '#' + order.tokenNumber : ''}` : order.tableName.toUpperCase()}
+          ${order.tableFloor ? ` (${order.tableFloor.toUpperCase()})` : ''}
+        </div>
 
-        <table>
+        ${order.customerName ? `<div class="meta-row"><span>Customer: ${order.customerName}</span>${order.customerPhone ? `<span>Ph: ${order.customerPhone}</span>` : ''}</div>` : ''}
+
+        <table class="items-table">
           <thead>
-            <tr style="border-bottom: 2px solid #000;">
-              <th class="text-left" style="font-size: 12px; font-weight: 900; padding-bottom: 4px;">ITEM</th>
-              <th class="text-right" style="font-size: 12px; font-weight: 900; padding-bottom: 4px;">QTY</th>
+            <tr style="border-bottom: 2px solid #000; font-size: 13px;">
+              <th style="text-align: left; padding-bottom: 4px;">ITEM</th>
+              <th style="text-align: right; padding-bottom: 4px;">QTY</th>
             </tr>
           </thead>
           <tbody>
@@ -188,18 +360,13 @@ export const generateKOTHtml = (
           </tbody>
         </table>
 
-        <div class="dashed-divider"></div>
-
-        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 900;">
-          <span>TOTAL ITEMS:</span>
-          <span>${totalItemsCount}</span>
+        <div class="footer">
+          <div style="font-size: 14px; font-weight: 900; margin-bottom: 4px;">
+            TOTAL ITEMS: ${totalItemsCount}
+          </div>
+          ${order.orderNotes ? `<div style="border: 1px dashed #000; padding: 4px; margin-top: 4px; font-weight: bold;">ORDER NOTE: ${order.orderNotes}</div>` : ''}
         </div>
-
-        <div class="dashed-divider"></div>
-        <div class="text-center" style="font-size: 10px; font-weight: bold; margin-top: 6px;">
-          -- END OF KOT --
-        </div>
-        <div style="height: 30px;"></div>
+        <div style="height: 25px;"></div>
       </body>
     </html>
   `;
@@ -210,19 +377,57 @@ export const generateBillReceiptHtml = (
   settings?: RestaurantSettings | null,
   paperWidth: "80mm" | "58mm" = "80mm"
 ): string => {
-  const currency = settings?.currency || "₹";
-  const restName = (settings?.name || "DEMO RESTAURANT").toUpperCase();
-  const restAddress = settings?.address || "";
-  const gstNo = settings?.gstNumber ? `GSTIN: ${settings.gstNumber}` : "";
-  const websiteStr = settings?.websiteUrl || "";
   const bodyWidth = paperWidth === "58mm" ? "58mm" : "80mm";
+  const currency = settings?.currency || "₹";
+  const restName = settings?.name || "RestaurantsOS";
+  const address = settings?.address || "";
+  const phone = settings?.phone || "";
+  const gstin = settings?.gstNumber || "";
+  const websiteStr = settings?.websiteUrl || "";
 
-  const isTakeaway = order.orderType === "takeaway" || order.tableName.toLowerCase().includes("takeaway") || !!order.tokenNumber;
-  const cleanTable = order.tableName.replace(/^table[\s\-_]*/gi, "Table ");
-  const paymentMethodStr = (order.paymentMethod || "CASH").toUpperCase();
+  const isTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
 
-  const taxPercentage = settings?.taxPercentage ?? 0;
-  const discountAmount = order.discount || 0;
+  const itemsHtml = order.items
+    .map((item) => {
+      const lowerName = item.name.toLowerCase();
+      const portionStr = item.portion ? item.portion.toLowerCase() : "";
+      const isHalf = portionStr.includes("half") || lowerName.includes("(half)") || lowerName.includes("[half]");
+      const isFull = portionStr.includes("full") || lowerName.includes("(full)") || lowerName.includes("[full]");
+
+      let portionBadge = "";
+      if (isHalf) {
+        portionBadge = ' <span style="font-size: 9px; font-weight: 800; border: 1px solid #334155; padding: 0 3px; border-radius: 2px;">HALF</span>';
+      } else if (isFull) {
+        portionBadge = ' <span style="font-size: 9px; font-weight: 800; border: 1px solid #334155; padding: 0 3px; border-radius: 2px;">FULL</span>';
+      } else if (item.portion) {
+        portionBadge = ` <span style="font-size: 9px; font-weight: 800; border: 1px solid #334155; padding: 0 3px; border-radius: 2px;">${item.portion.toUpperCase()}</span>`;
+      }
+
+      const cleanName = item.name
+        .replace(/\s*\((half|full)\)/gi, "")
+        .replace(/\s*\[(half|full)\]/gi, "")
+        .trim();
+
+      const itemTotal = item.price * item.quantity;
+
+      return `
+        <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 11px;">
+          <td style="padding: 5px 0; text-align: left; vertical-align: top; font-weight: 700;">
+            ${cleanName}${portionBadge}
+          </td>
+          <td style="padding: 5px 2px; text-align: center; vertical-align: top; font-weight: 800; font-family: ui-monospace, monospace;">
+            ${item.quantity}
+          </td>
+          <td style="padding: 5px 2px; text-align: right; vertical-align: top; font-family: ui-monospace, monospace;">
+            ${currency}${item.price.toFixed(2)}
+          </td>
+          <td style="padding: 5px 0; text-align: right; vertical-align: top; font-weight: 800; font-family: ui-monospace, monospace;">
+            ${currency}${itemTotal.toFixed(2)}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
 
   return `
     <!DOCTYPE html>
@@ -238,206 +443,90 @@ export const generateBillReceiptHtml = (
           @media print {
             html, body {
               width: ${bodyWidth};
-              margin: 0 auto;
+              margin: 0;
               padding: 0;
             }
-            .no-print { display: none !important; }
           }
           body {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             width: ${bodyWidth};
             margin: 0 auto;
-            padding: 10px 8px;
+            padding: 8px 6px;
+            color: #0f172a;
+            background: #fff;
             box-sizing: border-box;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #0f172a;
-            background: #ffffff;
           }
-          .receipt-icon-wrap {
-            text-align: center;
-            margin-bottom: 6px;
-          }
-          .rest-name {
-            font-size: 15px;
-            font-weight: 900;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0;
-            color: #0f172a;
-          }
-          .rest-sub {
-            font-size: 10px;
-            color: #475569;
-            text-align: center;
-            line-height: 1.3;
-            margin-top: 3px;
-          }
-          .dashed-divider {
-            border-top: 1px dashed #94a3b8;
-            margin: 7px 0;
-            width: 100%;
-          }
-          .meta-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            color: #334155;
-            line-height: 1.5;
-          }
-          .meta-row.bold {
-            font-weight: bold;
-            color: #0f172a;
-          }
-          table.items-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-            color: #1e293b;
-          }
-          table.items-table th {
-            border-bottom: 1px dashed #94a3b8;
-            padding-bottom: 3px;
-            font-weight: bold;
-          }
-          table.items-table td {
-            padding: 3px 0;
-            vertical-align: top;
-          }
-          .text-left { text-align: left; }
-          .text-center { text-align: center; }
-          .text-right { text-align: right; }
-          .financial-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            color: #1e293b;
-            line-height: 1.5;
-          }
-          .grand-total-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            font-weight: 900;
-            color: #0f172a;
-            letter-spacing: 0.5px;
-            margin: 3px 0;
-          }
-          .footer-section {
-            text-align: center;
-            font-size: 9.5px;
-            color: #475569;
-            line-height: 1.45;
-            margin-top: 6px;
-          }
+          .center { text-align: center; }
+          .bold { font-weight: 800; }
         </style>
       </head>
       <body>
-        <!-- Header Green Receipt Icon -->
-        <div class="receipt-icon-wrap">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto;">
-            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
-            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
-            <path d="M12 6v12"/>
-          </svg>
+        <div class="center" style="margin-bottom: 8px; border-bottom: 2px dashed #0f172a; padding-bottom: 6px;">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 900; text-transform: uppercase;">${restName}</h2>
+          ${address ? `<p style="margin: 2px 0; font-size: 10px; color: #475569;">${address}</p>` : ''}
+          ${phone ? `<p style="margin: 2px 0; font-size: 10px; color: #475569;">Ph: ${phone}</p>` : ''}
+          ${gstin ? `<p style="margin: 2px 0; font-size: 10px; font-weight: bold;">GSTIN: ${gstin}</p>` : ''}
+          <div style="font-size: 11px; font-weight: 900; margin-top: 4px; letter-spacing: 0.5px;">TAX INVOICE</div>
         </div>
 
-        <!-- Restaurant Name & Info -->
-        <h4 class="rest-name">${restName}</h4>
-        ${restAddress ? `<div class="rest-sub">${restAddress}</div>` : ""}
-        ${gstNo ? `<div class="rest-sub" style="font-weight: bold;">${gstNo}</div>` : ""}
-
-        ${isTakeaway ? `
-        <div style="margin-top: 4px; padding: 3px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: center;">
-          <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">*** TAKEAWAY / PARCEL INVOICE ***</div>
-          ${order.tokenNumber ? `<div style="font-weight: 900; font-size: 13px; margin-top: 2px;">TOKEN NUMBER: #${order.tokenNumber}</div>` : ""}
+        <div style="font-size: 10px; margin-bottom: 6px; line-height: 1.4;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Bill #: <strong>${order.orderNumber}</strong></span>
+            <span>${new Date(order.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>${isTakeaway ? `Takeaway ${order.tokenNumber ? '#' + order.tokenNumber : ''}` : order.tableName}</span>
+            <span>${new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          ${order.customerName ? `<div>Customer: <strong>${order.customerName}</strong>${order.customerPhone ? ` (${order.customerPhone})` : ''}</div>` : ''}
         </div>
-        ` : ""}
 
-        <div class="dashed-divider"></div>
-
-        <!-- Order Metadata Grid -->
-        <div class="meta-row">
-          <span>Receipt No: ${order.orderNumber}</span>
-          <span>Date: ${new Date(order.createdAt).toLocaleDateString("en-GB")}</span>
-        </div>
-        <div class="meta-row">
-          <span>${isTakeaway ? "Order Type:" : "Table:"} ${isTakeaway ? "TAKEAWAY / PARCEL" : cleanTable}</span>
-          <span>Time: ${new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}</span>
-        </div>
-        ${order.customerName ? `
-        <div class="meta-row bold" style="margin-top: 2px;">
-          <span>Customer: ${order.customerName}</span>
-          ${order.customerPhone ? `<span>${order.customerPhone}</span>` : ""}
-        </div>` : ""}
-
-        <div class="dashed-divider"></div>
-
-        <!-- Items Table -->
-        <table class="items-table">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
           <thead>
-            <tr>
-              <th class="text-left" style="width: 50%;">Item</th>
-              <th class="text-center" style="width: 20%;">Qty</th>
-              <th class="text-right" style="width: 30%;">Price</th>
+            <tr style="border-bottom: 1.5px solid #0f172a; font-size: 10px; font-weight: 900;">
+              <th style="text-align: left; padding: 4px 0;">ITEM</th>
+              <th style="text-align: center; padding: 4px 2px;">QTY</th>
+              <th style="text-align: right; padding: 4px 2px;">RATE</th>
+              <th style="text-align: right; padding: 4px 0;">AMOUNT</th>
             </tr>
           </thead>
           <tbody>
-            ${order.items.map(i => `
-              <tr>
-                <td class="text-left">
-                  <div style="font-weight: 500;">${i.name}</div>
-                  ${i.specialInstructions ? `<div style="font-size: 8.5px; color: #64748b;">(${i.specialInstructions})</div>` : ""}
-                </td>
-                <td class="text-center">${i.quantity}</td>
-                <td class="text-right">${currency}${(i.price * i.quantity).toFixed(0)}</td>
-              </tr>
-            `).join("")}
+            ${itemsHtml}
           </tbody>
         </table>
 
-        <div class="dashed-divider"></div>
-
-        <!-- Financial Summary -->
-        <div class="financial-row">
-          <span>Subtotal</span>
-          <span>${currency}${order.subtotal.toFixed(2)}</span>
-        </div>
-        ${discountAmount > 0 ? `
-        <div class="financial-row" style="color: #dc2626; font-weight: bold;">
-          <span>Discount</span>
-          <span>-${currency}${discountAmount.toFixed(2)}</span>
-        </div>` : ""}
-        <div class="financial-row">
-          <span>Taxes & GST (${taxPercentage}%)</span>
-          <span>${currency}${order.tax.toFixed(2)}</span>
-        </div>
-
-        <div class="dashed-divider"></div>
-
-        <!-- Grand Total -->
-        <div class="grand-total-row">
-          <span>GRAND TOTAL</span>
-          <span>${currency}${order.grandTotal.toFixed(2)}</span>
+        <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px;">
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>Subtotal:</span>
+            <span style="font-family: ui-monospace, monospace; font-weight: 700;">${currency}${order.subtotal.toFixed(2)}</span>
+          </div>
+          ${order.tax > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 2px 0; color: #475569;">
+              <span>GST / Tax:</span>
+              <span style="font-family: ui-monospace, monospace;">${currency}${order.tax.toFixed(2)}</span>
+            </div>
+          ` : ''}
+          ${order.discount > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 2px 0; color: #16a34a;">
+              <span>Discount:</span>
+              <span style="font-family: ui-monospace, monospace;">-${currency}${order.discount.toFixed(2)}</span>
+            </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px; font-weight: 900; border-top: 1.5px dashed #0f172a; padding-top: 4px;">
+            <span>GRAND TOTAL:</span>
+            <span style="font-family: ui-monospace, monospace;">${currency}${order.grandTotal.toFixed(2)}</span>
+          </div>
         </div>
 
-        <div class="dashed-divider"></div>
-
-        <!-- Footer Section -->
-        <div class="footer-section">
-          <p style="margin: 2px 0;">Settled via ${paymentMethodStr}</p>
+        <div class="center" style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 10px; color: #64748b;">
           <p style="margin: 2px 0;">${isTakeaway ? "Thank you for picking up with us!" : "Thank you for dining with us!"}</p>
-          ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 600; color: #334155;">${websiteStr}</p>` : `<p style="margin: 2px 0; color: #94a3b8;">Please visit again</p>`}
+          ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 600; color: #334155;">${websiteStr}</p>` : '<p style="margin: 2px 0; color: #94a3b8;">Please visit again</p>'}
         </div>
-
         <div style="height: 25px;"></div>
       </body>
     </html>
   `;
 };
-
-const lastPrintedKotMap = new Map<string, number>();
 
 export const printKOTReceipt = async (
   order: RestaurantOrder,
@@ -447,69 +536,27 @@ export const printKOTReceipt = async (
 ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> => {
   if (!order || !order.id) return { success: false, mode: "none" };
 
-  // CRITICAL: Customer QR orders start as "pending" and MUST NOT auto-print until the Manager clicks "Accept & Send to Kitchen"
   if (!forcePrint && order.status === "pending") {
     console.info(`[PrintKOT] Skipped KOT auto-print for pending order #${order.orderNumber || order.id} (Awaiting Manager Acceptance)`);
     return { success: true, mode: "none", message: "Awaiting Manager Acceptance" };
   }
 
-  const now = Date.now();
-  const lastPrintTime = lastPrintedKotMap.get(order.id) || 0;
-
-  // Prevent duplicate print triggers for the exact same order within 15 seconds unless user explicitly clicks manual Print button
-  if (!forcePrint && now - lastPrintTime < 15000) {
-    console.log(`[PrintKOT] Skipped duplicate print trigger for order ${order.orderNumber || order.id}`);
-    return { success: true, mode: "none" };
-  }
-
-  lastPrintedKotMap.set(order.id, now);
-
   const qzConfig = qzTrayService.getConfig();
   const effectiveWidth = paperWidth || qzConfig.paperWidth || "80mm";
   const kotHtml = generateKOTHtml(order, restaurantName, effectiveWidth);
 
-  // 1. If QZ Tray is connected, execute silent direct thermal printing
-  if (qzTrayService.isConnected() && (qzConfig.kotPrinter || qzTrayService.getPrinters().length > 0)) {
-    // If it is an automatic print trigger, check if autoPrintKOT is enabled
-    if (!forcePrint && qzConfig.autoPrintKOT === false) {
-      return { success: true, mode: "none", message: "Auto-print KOT disabled" };
-    }
-
-    try {
-      const res = await qzTrayService.printHTML({
-        printerName: qzConfig.kotPrinter,
-        html: kotHtml,
-        paperWidth: effectiveWidth,
-        jobName: `KOT #${order.orderNumber}`,
-      });
-
-      if (res.success) {
-        return { success: true, mode: "qz-tray", message: res.message };
-      }
-      console.warn("QZ Tray print failed:", res.message);
-    } catch (qzErr) {
-      console.warn("QZ Tray print exception:", qzErr);
-    }
-  }
-
-  // 2. If QZ Tray is NOT connected:
-  // On mobile devices (Waiters / Captains), NEVER open the mobile browser AirPrint/Android print modal
-  if (isMobileDevice()) {
-    console.info("[PrintKOT] Mobile browser print dialog suppressed on phone. Central POS printer station handles physical KOT.");
-    return { success: true, mode: "none", message: "Mobile print suppressed" };
-  }
-
-  // ONLY open browser print dialog on desktop PC if the user MANUALLY clicked print
-  if (forcePrint) {
-    printHTMLContent(kotHtml, "pos-kot-print-frame");
-    return { success: true, mode: "browser" };
-  }
-
-  console.info("[PrintKOT] QZ Tray is offline. Silent KOT skipped (Start QZ Tray for zero-popup direct thermal printing).");
-  return { success: false, mode: "none", message: "QZ Tray offline" };
+  return printQueueManager.enqueue({
+    id: `kot-${order.id}-${Date.now()}`,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    type: "kot",
+    html: kotHtml,
+    printerName: qzConfig.kotPrinter,
+    paperWidth: effectiveWidth,
+    jobName: `KOT #${order.orderNumber}`,
+    forcePrint
+  });
 };
-
-const lastPrintedBillMap = new Map<string, number>();
 
 export const printBillReceipt = async (
   order: RestaurantOrder,
@@ -519,51 +566,19 @@ export const printBillReceipt = async (
 ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> => {
   if (!order || !order.id) return { success: false, mode: "none" };
 
-  const now = Date.now();
-  const lastPrintTime = lastPrintedBillMap.get(order.id) || 0;
-
-  // Prevent duplicate print triggers for the exact same bill within 15 seconds unless user explicitly clicks manual Print button
-  if (!forcePrint && now - lastPrintTime < 15000) {
-    console.log(`[PrintBill] Skipped duplicate print trigger for order ${order.orderNumber || order.id}`);
-    return { success: true, mode: "none" };
-  }
-
-  lastPrintedBillMap.set(order.id, now);
-
   const qzConfig = qzTrayService.getConfig();
   const effectiveWidth = paperWidth || qzConfig.paperWidth || "80mm";
   const receiptHtml = generateBillReceiptHtml(order, settings, effectiveWidth);
 
-  // 1. If QZ Tray is connected, execute silent direct thermal printing
-  if (qzTrayService.isConnected() && (qzConfig.billPrinter || qzTrayService.getPrinters().length > 0)) {
-    if (!forcePrint && qzConfig.autoPrintBill === false) {
-      return { success: true, mode: "none", message: "Auto-print Bill disabled" };
-    }
-
-    try {
-      const res = await qzTrayService.printHTML({
-        printerName: qzConfig.billPrinter,
-        html: receiptHtml,
-        paperWidth: effectiveWidth,
-        jobName: `Receipt #${order.orderNumber}`,
-      });
-
-      if (res.success) {
-        return { success: true, mode: "qz-tray", message: res.message };
-      }
-      console.warn("QZ Tray bill print failed:", res.message);
-    } catch (qzErr) {
-      console.warn("QZ Tray bill print exception:", qzErr);
-    }
-  }
-
-  // 2. If QZ Tray is NOT connected:
-  // ONLY open browser print dialog if the user MANUALLY requested it (forcePrint === true).
-  if (forcePrint) {
-    printHTMLContent(receiptHtml, "pos-receipt-print-frame");
-    return { success: true, mode: "browser" };
-  }
-
-  console.info("[PrintBill] QZ Tray is offline. Silent Bill skipped (Start QZ Tray for zero-popup direct thermal printing).");
-  return { success: false, mode: "none", message: "QZ Tray offline" };
+  return printQueueManager.enqueue({
+    id: `bill-${order.id}-${Date.now()}`,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    type: "bill",
+    html: receiptHtml,
+    printerName: qzConfig.billPrinter,
+    paperWidth: effectiveWidth,
+    jobName: `Receipt #${order.orderNumber}`,
+    forcePrint
+  });
 };

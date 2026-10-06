@@ -21,6 +21,7 @@ import {
 
 import { translations, Language } from '../translations';
 import { printKOTReceipt, printBillReceipt } from '../utils/printUtils';
+import { offlineSyncService } from '../services/offlineSyncService';
 import { qzTrayService, QZPrinterConfig, QZConnectionStatus } from '../services/qzTrayService';
 
 interface RestaurantContextType {
@@ -1221,7 +1222,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const subtotal = getCartSubtotal();
     const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
-    const orderNum = `${isTakeaway ? "TAK" : "ORD"}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const uniqueEntropy = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 6).toUpperCase() : Math.floor(1000 + Math.random() * 9000);
+    const orderNum = `${isTakeaway ? "TAK" : "ORD"}-${Date.now().toString().slice(-4)}-${uniqueEntropy}`;
 
     // Resolve effective restaurant ID
     let effectiveRestaurantId = restaurantId;
@@ -1235,8 +1237,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
     }
 
+    const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
     const newOrder: RestaurantOrder = {
-      id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: newOrderId,
       orderNumber: orderNum,
       tableId: isTakeaway ? "takeaway" : (targetTable ? targetTable.id : "takeaway"),
       tableName: cleanTableName,
@@ -1258,8 +1262,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       elapsedTimeStart: new Date().toISOString(),
     };
 
-    // Save order to database
-    await dbService.saveOrder(effectiveRestaurantId, newOrder);
+    // Save order to database & queue for background sync guarantee
+    offlineSyncService.enqueue('save_order', effectiveRestaurantId, newOrder);
+    try {
+      await dbService.saveOrder(effectiveRestaurantId, newOrder);
+    } catch (err) {
+      console.warn("Direct save notice (queued in offlineSyncService):", err);
+    }
     
     // Update table status to occupied if Dine-In
     if (!isTakeaway && currentTable) {
@@ -1324,10 +1333,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const subtotal = Math.round(items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
     const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
-    const orderNum = `TAK-${Math.floor(1000 + Math.random() * 9000)}`;
+    const uniqueEntropy = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 6).toUpperCase() : Math.floor(1000 + Math.random() * 9000);
+    const orderNum = `TAK-${Date.now().toString().slice(-4)}-${uniqueEntropy}`;
+    const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     const newOrder: RestaurantOrder = {
-      id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: newOrderId,
       orderNumber: orderNum,
       tableId: "takeaway",
       tableName: cleanTableName,
@@ -1367,7 +1378,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     // Optimistically update orders list immediately
-    setOrders(prev => [newOrder, ...prev]);
+    setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
 
     // Save order to database
     try {
@@ -1421,7 +1432,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const subtotal = Math.round(items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
     const tax = Math.round(subtotal * (taxRate / 100) * 100) / 100;
     const grandTotal = Math.round((subtotal + tax) * 100) / 100;
-    const orderNum = `KOT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const uniqueEntropy = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 6).toUpperCase() : Math.floor(1000 + Math.random() * 9000);
+    const orderNum = `KOT-${Date.now().toString().slice(-4)}-${uniqueEntropy}`;
 
     // Resolve effective restaurant ID safely with multi-layer fallback
     let effectiveRestaurantId = restaurantId;
@@ -1447,8 +1459,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
     }
 
+    const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
     const newOrder: RestaurantOrder = {
-      id: `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: newOrderId,
       orderNumber: orderNum,
       tableId: targetTable ? targetTable.id : tableId,
       tableName: cleanTableName,
@@ -1473,7 +1487,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
 
     // Optimistically update orders list immediately so UI updates instantly
-    setOrders(prev => [newOrder, ...prev]);
+    setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
 
     // Save order to database (persists locally & syncs to Supabase)
     try {
