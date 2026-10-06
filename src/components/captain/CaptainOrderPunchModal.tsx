@@ -1156,6 +1156,79 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
 
       </div>
 
+      {/* QUICK PORTION PICKER MODAL (HALF / FULL) */}
+      {portionPickerItem && (
+        <div className="fixed inset-0 z-[10005] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 max-w-xs w-full shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+              <div className="min-w-0 pr-2">
+                <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-[10px] uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Choose Portion</span>
+                </div>
+                <h4 className="font-black text-sm text-slate-900 dark:text-white truncate mt-0.5">
+                  {portionPickerItem.name}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPortionPickerItem(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {(() => {
+                const parsed = parseFoodItemDescription(portionPickerItem.description || "");
+                let portions: { name: string; price: number }[] = [];
+                if (portionPickerItem.portions && portionPickerItem.portions.length > 0) {
+                  portions = portionPickerItem.portions;
+                } else if (portionPickerItem.hasPortions) {
+                  if (portionPickerItem.halfPrice) portions.push({ name: "Half", price: portionPickerItem.halfPrice });
+                  if (portionPickerItem.fullPrice) portions.push({ name: "Full", price: portionPickerItem.fullPrice });
+                } else if (parsed.portions && parsed.portions.length > 0) {
+                  portions = parsed.portions;
+                } else if (parsed.variants && parsed.variants.length > 0) {
+                  portions = parsed.variants;
+                }
+
+                // Fallback guarantee
+                if (portions.length === 0) {
+                  if (portionPickerItem.halfPrice) portions.push({ name: "Half", price: portionPickerItem.halfPrice });
+                  portions.push({ name: "Full", price: portionPickerItem.fullPrice || portionPickerItem.price });
+                }
+
+                return portions.map((p) => {
+                  const isHalf = p.name.toLowerCase().includes("half");
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => handleAddPortionItem(portionPickerItem, p.name, p.price)}
+                      className={`p-3.5 rounded-2xl border-2 text-left transition-all active:scale-95 cursor-pointer flex flex-col justify-between ${
+                        isHalf
+                          ? "border-amber-500/50 bg-amber-500/10 hover:border-amber-500 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200"
+                          : "border-emerald-500/50 bg-emerald-500/10 hover:border-emerald-500 hover:bg-emerald-500/20 text-emerald-900 dark:text-emerald-200"
+                      }`}
+                    >
+                      <span className="text-xs font-black uppercase tracking-wider block">
+                        {isHalf ? "⚡ " : "👑 "}
+                        {p.name}
+                      </span>
+                      <span className="text-base font-black text-slate-900 dark:text-white mt-2 block">
+                        {currency}{p.price}
+                      </span>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DISH SPECIAL INSTRUCTIONS POPUP MODAL */}
       {activeItemNoteId && (
         <div className="fixed inset-0 z-[10000] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
