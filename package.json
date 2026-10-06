@@ -1,13 +1,17 @@
 {
   "name": "digital-order-management-for-restaurants",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/bump-version.js sync && tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "version:sync": "node scripts/bump-version.js sync",
+    "bump:patch": "node scripts/bump-version.js patch",
+    "bump:minor": "node scripts/bump-version.js minor",
+    "bump:major": "node scripts/bump-version.js major"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.6",
