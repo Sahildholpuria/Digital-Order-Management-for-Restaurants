@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
-import { RestaurantOrder, PaymentRecord } from "../../types";
+import { RestaurantOrder, PaymentRecord, OrderItem, OrderType, OrderStatus } from "../../types";
 import { printBillReceipt } from "../../utils/printUtils";
 import { CaptainOrderPunchModal } from "../../components/captain/CaptainOrderPunchModal";
 import { 
@@ -46,24 +46,166 @@ export const BillingManager: React.FC = () => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const currency = settings?.currency || "₹";
 
-  // Get active orders that need payment (either ready, served or completed, but let's show served as primary target for POS cash-out)
-  const allBillableOrders = orders.filter(o => ["ready", "served"].includes(o.status));
-  
-  const billableOrders = allBillableOrders.filter(o => {
-    const isTakeaway = o.orderType === "takeaway" || !!o.tokenNumber;
-    if (queueFilter === "dine_in") return !isTakeaway;
-    if (queueFilter === "takeaway") return isTakeaway;
-    return true;
-  });
+  // Build Consolidated Bill Groups: Combines multiple rounds/KOTs for the same table into 1 unified bill
+  const activeOrdersList = useMemo(() => {
+    return orders.filter(o => !["completed", "cancelled"].includes(o.status));
+  }, [orders]);
 
-  const selectedOrder = orders.find(o => o.id === selectedOrderId) || billableOrders[0];
+  const billableGroups = useMemo(() => {
+    const groups: {
+      id: string;
+      key: string;
+      tableName: string;
+      tableId?: string;
+      tableFloor?: string;
+      orderType: OrderType;
+      customerName?: string;
+      customerPhone?: string;
+      tokenNumber?: string;
+      orders: RestaurantOrder[];
+      items: OrderItem[];
+      subtotal: number;
+      tax: number;
+      grandTotal: number;
+      status: OrderStatus;
+      createdAt: string;
+      isTakeaway: boolean;
+    }[] = [];
 
-  const isSelectedTakeaway = selectedOrder ? (selectedOrder.orderType === "takeaway" || !!selectedOrder.tokenNumber) : false;
+    const tableMap = new Map<string, typeof groups[0]>();
 
-  // Calculations
-  const subtotal = selectedOrder 
-    ? Math.round(selectedOrder.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 100) / 100 
-    : 0;
+    activeOrdersList.forEach(order => {
+      const isTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
+      
+      if (isTakeaway) {
+        // Each takeaway parcel is an independent bill
+        const items = order.items || [];
+        const sub = Math.round(items.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 100) / 100;
+        const taxRate = settings?.taxPercentage ?? 0;
+        const tax = Math.round(sub * (taxRate / 100) * 100) / 100;
+        const total = Math.round((sub + tax) * 100) / 100;
+
+        groups.push({
+          id: order.id,
+          key: `takeaway-${order.id}`,
+          tableName: order.tableName || "Takeaway",
+          tableId: "takeaway",
+          tableFloor: undefined,
+          orderType: "takeaway",
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          tokenNumber: order.tokenNumber,
+          orders: [order],
+          items,
+          subtotal: sub,
+          tax,
+          grandTotal: total,
+          status: order.status,
+          createdAt: order.createdAt,
+          isTakeaway: true
+        });
+      } else {
+        // Consolidate all orders for this table into 1 master bill
+        const cleanTableNum = (order.tableName || "").replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+        const groupKey = order.tableId && order.tableId !== "takeaway" ? order.tableId : `table-${cleanTableNum || '1'}`;
+
+        if (tableMap.has(groupKey)) {
+          const grp = tableMap.get(groupKey)!;
+          grp.orders.push(order);
+          if (order.customerName && !grp.customerName) grp.customerName = order.customerName;
+          if (order.customerPhone && !grp.customerPhone) grp.customerPhone = order.customerPhone;
+          if (order.tableFloor && !grp.tableFloor) grp.tableFloor = order.tableFloor;
+
+          // Merge item quantities
+          (order.items || []).forEach(newItem => {
+            const key = `${newItem.itemId}_${newItem.price}_${newItem.portion || ''}_${newItem.specialInstructions || ''}`;
+            const existingIdx = grp.items.findIndex(i => `${i.itemId}_${i.price}_${i.portion || ''}_${i.specialInstructions || ''}` === key);
+            if (existingIdx > -1) {
+              grp.items[existingIdx].quantity += newItem.quantity;
+            } else {
+              grp.items.push({ ...newItem });
+            }
+          });
+        } else {
+          const items = (order.items || []).map(i => ({ ...i }));
+          const grp = {
+            id: groupKey,
+            key: groupKey,
+            tableName: order.tableName.toLowerCase().startsWith("table") ? order.tableName : `Table ${order.tableName}`,
+            tableId: order.tableId,
+            tableFloor: order.tableFloor,
+            orderType: "dine_in" as OrderType,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            tokenNumber: undefined,
+            orders: [order],
+            items,
+            subtotal: 0,
+            tax: 0,
+            grandTotal: 0,
+            status: order.status,
+            createdAt: order.createdAt,
+            isTakeaway: false
+          };
+          tableMap.set(groupKey, grp);
+          groups.push(grp);
+        }
+      }
+    });
+
+    // Compute final subtotal and totals for consolidated table groups
+    const taxRate = settings?.taxPercentage ?? 0;
+    groups.forEach(g => {
+      if (!g.isTakeaway) {
+        g.subtotal = Math.round(g.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 100) / 100;
+        g.tax = Math.round(g.subtotal * (taxRate / 100) * 100) / 100;
+        g.grandTotal = Math.round((g.subtotal + g.tax) * 100) / 100;
+      }
+    });
+
+    return groups;
+  }, [activeOrdersList, settings]);
+
+  const filteredBillableGroups = useMemo(() => {
+    return billableGroups.filter(g => {
+      if (queueFilter === "dine_in") return !g.isTakeaway;
+      if (queueFilter === "takeaway") return g.isTakeaway;
+      return true;
+    });
+  }, [billableGroups, queueFilter]);
+
+  const selectedGroup = billableGroups.find(g => g.id === selectedOrderId || g.key === selectedOrderId) || filteredBillableGroups[0];
+
+  // Map selectedGroup to a synthesized consolidated RestaurantOrder for seamless printing & rendering
+  const selectedOrder = useMemo((): RestaurantOrder | null => {
+    if (!selectedGroup) return null;
+    const primaryOrder = selectedGroup.orders[0];
+    const orderNumbersStr = selectedGroup.orders.map(o => o.orderNumber).join(", ");
+    return {
+      id: selectedGroup.id,
+      orderNumber: selectedGroup.orders.length > 1 ? `${primaryOrder.orderNumber} (+${selectedGroup.orders.length - 1} more)` : primaryOrder.orderNumber,
+      tableId: selectedGroup.tableId || "table",
+      tableName: selectedGroup.tableName,
+      tableFloor: selectedGroup.tableFloor,
+      orderType: selectedGroup.orderType,
+      customerName: selectedGroup.customerName,
+      customerPhone: selectedGroup.customerPhone,
+      tokenNumber: selectedGroup.tokenNumber,
+      items: selectedGroup.items,
+      subtotal: selectedGroup.subtotal,
+      tax: selectedGroup.tax,
+      discount: 0,
+      grandTotal: selectedGroup.grandTotal,
+      status: selectedGroup.status,
+      createdAt: selectedGroup.createdAt,
+      elapsedTimeStart: selectedGroup.createdAt,
+    };
+  }, [selectedGroup]);
+
+  const isSelectedTakeaway = selectedGroup?.isTakeaway || false;
+
+  // Financial calculations
+  const subtotal = selectedGroup ? selectedGroup.subtotal : 0;
   const taxPercentage = settings?.taxPercentage ?? 0;
   const discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100;
   const taxableAmount = Math.round((subtotal - discountAmount) * 100) / 100;
@@ -187,8 +329,8 @@ export const BillingManager: React.FC = () => {
     }
   };
 
-  const dineInCount = allBillableOrders.filter(o => o.orderType !== "takeaway" && !o.tokenNumber).length;
-  const takeawayCount = allBillableOrders.filter(o => o.orderType === "takeaway" || !!o.tokenNumber).length;
+  const dineInCount = billableGroups.filter(g => !g.isTakeaway).length;
+  const takeawayCount = billableGroups.filter(g => g.isTakeaway).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -200,7 +342,7 @@ export const BillingManager: React.FC = () => {
             POS Billing Terminal
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Generate professional invoices, apply discount margins, and settle payments for Dine-In & Takeaway.
+            Consolidated table billing, discount management, and instant payment settlement for Dine-In & Takeaway.
           </p>
         </div>
 
@@ -243,7 +385,7 @@ export const BillingManager: React.FC = () => {
           <div className="space-y-3 pb-2 border-b border-slate-100 dark:border-slate-850">
             <div className="flex justify-between items-center">
               <h3 className="font-extrabold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">
-                Awaiting Billing ({allBillableOrders.length})
+                Active Tables & Bills ({billableGroups.length})
               </h3>
             </div>
 
@@ -256,7 +398,7 @@ export const BillingManager: React.FC = () => {
                   queueFilter === "all" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                All ({allBillableOrders.length})
+                All ({billableGroups.length})
               </button>
               <button
                 type="button"
@@ -265,7 +407,7 @@ export const BillingManager: React.FC = () => {
                   queueFilter === "dine_in" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
-                🍽️ Table ({dineInCount})
+                🍽️ Tables ({dineInCount})
               </button>
               <button
                 type="button"
@@ -274,61 +416,68 @@ export const BillingManager: React.FC = () => {
                   queueFilter === "takeaway" ? "bg-orange-600 text-white shadow-xs" : "text-orange-600/80 hover:text-orange-600"
                 }`}
               >
-                🛍️ Parcel ({takeawayCount})
+                🛍️ Parcels ({takeawayCount})
               </button>
             </div>
           </div>
 
           <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
-            {billableOrders.length === 0 ? (
+            {filteredBillableGroups.length === 0 ? (
               <div className="text-center py-10 text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
-                No orders waiting for check-out.
+                No active tables waiting for check-out.
               </div>
             ) : (
-              billableOrders.map(order => {
-                const isOrderTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
+              filteredBillableGroups.map(group => {
+                const isSelected = selectedGroup?.id === group.id;
+                const totalItemsCount = group.items.reduce((acc, curr) => acc + curr.quantity, 0);
+
                 return (
                   <button
-                    key={order.id}
+                    key={group.id}
                     onClick={() => {
-                      setSelectedOrderId(order.id);
+                      setSelectedOrderId(group.id);
                       setDiscountPercent(0);
                     }}
                     className={`w-full text-left p-4 rounded-2xl border transition-all flex flex-col gap-1.5 cursor-pointer ${
-                      (selectedOrder?.id === order.id)
+                      isSelected
                         ? "bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-950/20 dark:border-brand-900/30"
                         : "bg-slate-50/50 border-slate-100 dark:bg-slate-800/10 dark:border-slate-850 text-slate-500 hover:bg-slate-100"
                     }`}
                   >
                     <div className="flex justify-between items-center w-full">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-xs font-mono">#{order.orderNumber}</span>
-                        {isOrderTakeaway && (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-black text-xs font-mono">
+                          {group.isTakeaway ? `TK #${group.tokenNumber || group.orders[0]?.orderNumber}` : group.tableName}
+                        </span>
+                        {group.orders.length > 1 && (
+                          <span className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[9px] font-black px-1.5 py-0.2 rounded">
+                            {group.orders.length} KOTs Combined
+                          </span>
+                        )}
+                        {group.isTakeaway && (
                           <span className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black px-1.5 py-0.2 rounded">
-                            🛍️ {order.tokenNumber ? `TK #${order.tokenNumber}` : "TAKEAWAY"}
+                            🛍️ TAKEAWAY
                           </span>
                         )}
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500 text-white rounded-md">
-                        {order.status.toUpperCase()}
+                        {group.status.toUpperCase()}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-end w-full">
                       <div>
-                        <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
-                          {isOrderTakeaway 
-                            ? (order.tokenNumber ? `Takeaway Token #${order.tokenNumber}` : order.tableName)
-                            : order.tableName}
-                        </h4>
-                        {order.customerName && (
+                        {group.customerName && (
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                            {order.customerName} {order.customerPhone ? `(${order.customerPhone})` : ""}
+                            {group.customerName} {group.customerPhone ? `(${group.customerPhone})` : ""}
                           </p>
                         )}
-                        <p className="text-[10px] text-slate-400 mt-0.5">{order.items.reduce((acc, curr) => acc + curr.quantity, 0)} items</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          {totalItemsCount} {totalItemsCount === 1 ? "item" : "items"}
+                          {group.orders.length > 1 ? ` across ${group.orders.length} rounds` : ""}
+                        </p>
                       </div>
-                      <span className="font-black text-sm text-slate-800 dark:text-slate-200">{currency}{order.grandTotal.toFixed(0)}</span>
+                      <span className="font-black text-sm text-slate-800 dark:text-slate-200">{currency}{group.grandTotal.toFixed(0)}</span>
                     </div>
                   </button>
                 );

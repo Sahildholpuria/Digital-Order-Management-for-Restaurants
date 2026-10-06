@@ -178,16 +178,24 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
   // Active orders placed at this table in this session. Completed (settled) and cancelled orders clear immediately.
   const tableOrders = useMemo(() => {
+    const cleanParam = tableId ? tableId.replace(/^table[\s\-_]*/i, '').trim().toLowerCase() : '';
+    const resolvedTableId = currentTable?.id || tableId;
+    const resolvedTableNum = currentTable?.number ? currentTable.number.replace(/^table[\s\-_]*/i, '').trim().toLowerCase() : cleanParam;
+
     return orders
       .filter(o => {
-        if (o.tableId !== tableId) return false;
-        if (o.status === 'completed' || o.status === 'cancelled') {
-          return false;
-        }
-        return true;
+        if (o.orderType === "takeaway") return false;
+        if (o.status === 'completed' || o.status === 'cancelled') return false;
+
+        const oCleanNum = (o.tableName || '').replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+        const matchesId = o.tableId === tableId || o.tableId === resolvedTableId || o.tableId === `table-${cleanParam}`;
+        const matchesNum = (cleanParam && oCleanNum === cleanParam) || (resolvedTableNum && oCleanNum === resolvedTableNum);
+        const matchesName = o.tableName === `Table ${cleanParam}` || o.tableName === `Table ${resolvedTableNum}`;
+
+        return matchesId || matchesNum || matchesName;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [orders, tableId]);
+  }, [orders, tableId, currentTable]);
 
   useEffect(() => {
     if (tableId) {
@@ -1029,6 +1037,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
             {/* Orders List */}
             <div className="overflow-y-auto flex-1 px-4 py-4 space-y-3">
+              {tableOrders.length > 1 && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3.5 flex items-center justify-between shadow-2xs">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">Combined Running Bill</span>
+                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{tableOrders.length} orders placed at this table</p>
+                  </div>
+                  <span className="text-base font-black text-emerald-700 dark:text-emerald-300">
+                    {settings?.currency || '₹'}{tableOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0).toFixed(0)}
+                  </span>
+                </div>
+              )}
               {tableOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <ClipboardList className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
