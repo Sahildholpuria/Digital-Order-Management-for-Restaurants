@@ -814,10 +814,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 if (!isFirstLoad.current || isLiveCreatedDuringSession) {
                   triggerNotificationSoundAndSpeech(n);
 
-                  // Auto-dispatch silent KOT print if this machine is connected to QZ Tray hardware printer
+                  // Auto-dispatch silent KOT print only if order is already accepted/preparing (e.g. punched by waiter).
+                  // Customer QR orders start as "pending" and will print once the manager accepts.
                   if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false && n.orderId) {
                     dbService.getOrder(restaurantId, n.orderId).then(orderObj => {
-                      if (orderObj) {
+                      if (orderObj && orderObj.status !== 'pending') {
                         printKOTReceipt(orderObj, settings?.name || "Kitchen", qzConfig.paperWidth, false);
                       }
                     }).catch(err => {
@@ -1470,12 +1471,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Persist to Database
     await dbService.saveOrder(restaurantId, updatedOrder);
 
-    // Auto-print Kitchen Order Ticket (KOT) automatically ONCE when order is accepted
-    if (status === 'accepted' || (status === 'preparing' && order.status === 'pending')) {
-      try {
-        printKOTReceipt(updatedOrder, settings?.name || 'Kitchen');
-      } catch (err) {
-        console.warn('Auto KOT printing warning:', err);
+    // Auto-print Kitchen Order Ticket (KOT) automatically when order is accepted/sent to kitchen
+    if (status === 'accepted' || (status === 'preparing' && order.status === 'pending') || (status === 'preparing' && order.status === 'accepted')) {
+      if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
+        try {
+          await printKOTReceipt(updatedOrder, settings?.name || 'Kitchen', qzConfig.paperWidth, false);
+        } catch (err) {
+          console.warn('Auto KOT printing warning:', err);
+        }
       }
     }
 

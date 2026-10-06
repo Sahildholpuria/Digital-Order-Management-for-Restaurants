@@ -641,7 +641,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>Accept & Print KOT</span>
+              <span>Accept & Send to Kitchen</span>
             </button>
             <button
               onClick={() => onUpdateStatus(order.id, "cancelled")}

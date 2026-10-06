@@ -20,9 +20,9 @@ export const KitchenDisplay: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Filter for active kitchen tickets
+  // Filter for active kitchen tickets (Customer Pending orders stay in Manager queue until accepted)
   const activeOrders = orders
-    .filter(o => ["pending", "accepted", "preparing"].includes(o.status))
+    .filter(o => ["accepted", "preparing"].includes(o.status))
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   // Recent recallable ready orders (last 8 completed in past 30 mins)
