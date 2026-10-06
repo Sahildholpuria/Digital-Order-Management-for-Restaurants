@@ -32,7 +32,9 @@ import {
   ShoppingBag,
   User,
   Phone,
-  Tag
+  Tag,
+  TrendingUp,
+  RefreshCw
 } from "lucide-react";
 
 interface WaiterDashboardProps {
@@ -94,7 +96,6 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
     const ids = new Set<string>();
     activeAlerts.forEach(a => {
       if (a.tableId) ids.add(a.tableId);
-      // Also match by table number if present
       const match = a.message.match(/Table\s+([A-Za-z0-9_-]+)/i);
       if (match && match[1]) {
         const found = tables.find(t => String(t.number) === match[1] || t.id === match[1]);
@@ -114,7 +115,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   const prevAlertsCountRef = useRef<number>(activeAlerts.length);
   const isInitialMount = useRef<boolean>(true);
 
-  // Play crisp two-tone service bell chime whenever a new call waiter / bill request alert arrives
+  // Play service bell chime
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -202,10 +203,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors pb-24">
+    <div className="min-h-screen bg-slate-50/80 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors pb-24">
       
-      {/* TOP RESPONSIVE HEADER BAR */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-6 py-2.5 shadow-xs">
+      {/* TOP RESPONSIVE APP BAR */}
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-6 py-2.5 shadow-2xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           
           {/* Brand & Console Title */}
@@ -217,23 +218,42 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                   {settings?.name || "RestaurantsOS"}
                 </span>
                 <span className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  Floor Captain & Takeaway POS
+                  Floor Captain & POS
                 </span>
               </div>
             </div>
 
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
 
-            {/* Captain Role Badge */}
-            <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 px-2.5 py-1 rounded-full text-[11px] font-extrabold">
-              <Bell className="w-3 h-3 text-amber-500 fill-current animate-wiggle" />
-              <span>{currentUser?.name || "Captain Floor"}</span>
+            {/* Waiter Profile Badge */}
+            <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[11px] font-black">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{currentUser?.name || "Floor Captain"}</span>
             </div>
           </div>
 
-          {/* Actions & Utilities */}
+          {/* Quick Header Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             
+            {/* Direct New Order CTA Buttons (Desktop & Tablet) */}
+            <button
+              type="button"
+              onClick={() => handleOpenPunchForTable(undefined, "dine_in")}
+              className="hidden md:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-black text-xs tracking-wider shadow-sm transition-all cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+              <span>+ TABLE KOT</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+              className="hidden md:flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-black text-xs tracking-wider shadow-sm transition-all cursor-pointer"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>+ TAKEAWAY</span>
+            </button>
+
             {/* Sound Chime Toggle */}
             <button
               type="button"
@@ -245,29 +265,20 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               }}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 soundEnabled
-                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
                   : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
               }`}
-              title={soundEnabled ? "Sound Chimes Active (Click to mute)" : "Sound Muted (Click to enable)"}
+              title={soundEnabled ? "Mute Service Chimes" : "Enable Service Chimes"}
             >
-              {soundEnabled ? (
-                <>
-                  <Volume2 className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-                  <span className="hidden md:inline text-[11px]">Chimes ON</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline text-[11px]">Muted</span>
-                </>
-              )}
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-amber-500" /> : <VolumeX className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{soundEnabled ? "Chime" : "Muted"}</span>
             </button>
 
-            {/* Theme Toggle */}
+            {/* Dark Mode Toggle */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors cursor-pointer"
               title="Toggle Theme"
             >
               {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
@@ -297,22 +308,85 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
       </header>
 
       {/* MAIN CONTENT WRAPPER */}
-      <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-4 sm:pt-6 space-y-4 sm:space-y-6 flex-1">
+      <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-3 sm:pt-5 space-y-3.5 sm:space-y-5 flex-1">
 
-        {/* COMPACT FLOOR STATUS STRIP */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-2xl px-4 py-2.5 sm:py-3 text-white shadow-md shadow-emerald-950/10 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 z-10">
-            <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>Real-Time Captain Floor</span>
-            </span>
-            <span className="text-xs text-emerald-100 font-medium">
-              Floor: <strong className="text-white font-black">{occupiedCount} / {tables.length}</strong> Tables Busy &bull; <strong className="text-white font-black">{activeTakeawayOrders.length}</strong> Parcels Active
-            </span>
+        {/* SUMMARY METRIC STRIP */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          {/* Available Tables */}
+          <div 
+            onClick={() => setFilterStatus("available")}
+            className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-emerald-500/50 transition-all cursor-pointer flex items-center gap-3"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Available</p>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+                {availableCount} <span className="text-xs text-slate-400 font-bold">/ {tables.length}</span>
+              </p>
+            </div>
           </div>
 
-          {/* Decorative subtle pattern */}
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-white/10 to-transparent pointer-events-none" />
+          {/* Occupied Tables */}
+          <div 
+            onClick={() => setFilterStatus("occupied")}
+            className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-amber-500/50 transition-all cursor-pointer flex items-center gap-3"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black shrink-0">
+              <UtensilsCrossed className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Occupied</p>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+                {occupiedCount} <span className="text-xs text-slate-400 font-bold">Tables</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Active Takeaways */}
+          <div 
+            onClick={() => setFilterStatus("takeaway")}
+            className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-orange-500/50 transition-all cursor-pointer flex items-center gap-3"
+          >
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black shrink-0">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Takeaway</p>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+                {activeTakeawayOrders.length} <span className="text-xs text-slate-400 font-bold">Parcels</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Urgent Guest Calls */}
+          <div 
+            onClick={() => {
+              if (activeAlerts.length > 0) setFilterStatus("calling");
+            }}
+            className={`p-3 sm:p-3.5 rounded-2xl border shadow-2xs transition-all flex items-center gap-3 ${
+              activeAlerts.length > 0
+                ? "bg-rose-500/10 border-rose-500/40 cursor-pointer animate-pulse-gentle hover:bg-rose-500/15"
+                : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 cursor-default"
+            }`}
+          >
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black shrink-0 ${
+              activeAlerts.length > 0
+                ? "bg-rose-500 text-white"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+            }`}>
+              <Bell className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Guest Calls</p>
+              <p className={`text-base sm:text-lg font-black leading-tight ${
+                activeAlerts.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"
+              }`}>
+                {activeAlerts.length} <span className="text-xs font-bold text-slate-400">{activeAlerts.length === 1 ? "Alert" : "Alerts"}</span>
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* ACTIVE CALL BELL & BILL REQUEST ALERTS BANNER */}
@@ -403,19 +477,19 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
         )}
 
         {/* CONTROLS & FILTER BAR */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs space-y-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-3 sm:p-3.5 rounded-2xl shadow-2xs space-y-2.5">
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             
             {/* Status Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
               <button
                 type="button"
                 onClick={() => setFilterStatus("all")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
                   filterStatus === "all"
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                    : "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
                 }`}
               >
                 All Tables ({tables.length})
@@ -424,9 +498,9 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               <button
                 type="button"
                 onClick={() => setFilterStatus("available")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   filterStatus === "available"
-                    ? "bg-emerald-600 text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-xs"
                     : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
                 }`}
               >
@@ -437,9 +511,9 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               <button
                 type="button"
                 onClick={() => setFilterStatus("occupied")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   filterStatus === "occupied"
-                    ? "bg-amber-500 text-white shadow-sm"
+                    ? "bg-amber-500 text-white shadow-xs"
                     : "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100"
                 }`}
               >
@@ -453,7 +527,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                 onClick={() => setFilterStatus("takeaway")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   filterStatus === "takeaway"
-                    ? "bg-orange-600 text-white shadow-sm"
+                    ? "bg-orange-600 text-white shadow-xs"
                     : "bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 hover:bg-orange-100"
                 }`}
               >
@@ -467,7 +541,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                   onClick={() => setFilterStatus("calling")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 shrink-0 cursor-pointer animate-pulse ${
                     filterStatus === "calling"
-                      ? "bg-rose-600 text-white shadow-sm"
+                      ? "bg-rose-600 text-white shadow-xs"
                       : "bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 hover:bg-rose-100"
                   }`}
                 >
@@ -479,19 +553,19 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
             {/* Quick Table Search */}
             <div className="relative w-full sm:w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search table # or takeaway token..."
+                placeholder="Search table # or token..."
                 value={searchTableQuery}
                 onChange={(e) => setSearchTableQuery(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-8.5 pr-7 py-1.5 text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
               />
               {searchTableQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchTableQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -502,10 +576,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
           {/* Horizontal Floor Filter Carousel */}
           {availableFloors.length > 0 && filterStatus !== "takeaway" && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
               <span className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1 pr-1 shrink-0">
                 <Layers className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Zone:</span>
+                <span>Floor:</span>
               </span>
               <button
                 type="button"
@@ -516,7 +590,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                     : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
                 }`}
               >
-                All Zones ({tables.length})
+                All ({tables.length})
               </button>
               {availableFloors.map(fl => {
                 const count = tables.filter(t => t.floor?.trim() === fl).length;
@@ -542,9 +616,9 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
         {/* TAKEAWAY ORDERS GRID (WHEN TAKEAWAY TAB SELECTED) */}
         {filterStatus === "takeaway" ? (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-orange-500" />
                 <span>Active Takeaway & Parcel Orders ({activeTakeawayOrders.length})</span>
               </h2>
@@ -576,91 +650,63 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {activeTakeawayOrders.map(order => {
-                  const itemCount = order.items.reduce((sum, i) => sum + i.quantity, 0);
                   return (
                     <div
                       key={order.id}
-                      className="bg-white dark:bg-slate-900 border-2 border-orange-500/40 hover:border-orange-500 p-4 rounded-3xl transition-all shadow-xs flex flex-col justify-between"
+                      className="bg-white dark:bg-slate-900 border-2 border-orange-500/40 rounded-3xl p-4 shadow-sm flex flex-col justify-between space-y-3"
                     >
-                      <div>
-                        {/* Header: Token & Status */}
-                        <div className="flex items-start justify-between gap-1 mb-2">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 block">
-                              🛍️ Takeaway Token
+                            <span className="bg-orange-500/15 text-orange-700 dark:text-orange-400 font-mono font-black text-xs px-2 py-0.5 rounded-md">
+                              #{order.tokenNumber || order.orderNumber}
                             </span>
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white leading-none">
-                              {order.tokenNumber ? `#${order.tokenNumber}` : order.orderNumber}
-                            </h3>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                            ["ready", "served"].includes(order.status)
-                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                              : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                          }`}>
-                            {order.status === "ready" ? "PACKED / READY" : order.status}
-                          </span>
-                        </div>
-
-                        {/* Customer Details */}
-                        {(order.customerName || order.customerPhone) && (
-                          <div className="text-xs font-bold text-slate-700 dark:text-slate-300 py-1.5 border-t border-slate-100 dark:border-slate-800 space-y-0.5">
-                            {order.customerName && (
-                              <p className="flex items-center gap-1 truncate">
-                                <User className="w-3 h-3 text-slate-400" />
-                                <span>{order.customerName}</span>
-                              </p>
-                            )}
+                            <h4 className="font-black text-sm text-slate-900 dark:text-white mt-1">
+                              {order.customerName || "Guest Takeaway"}
+                            </h4>
                             {order.customerPhone && (
-                              <p className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                              <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                                 <Phone className="w-3 h-3" />
                                 <span>{order.customerPhone}</span>
                               </p>
                             )}
                           </div>
-                        )}
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            {order.status}
+                          </span>
+                        </div>
 
-                        {/* Items preview */}
-                        <div className="py-2 border-t border-slate-100 dark:border-slate-800 space-y-1 text-xs text-slate-600 dark:text-slate-400">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                            {itemCount} Items:
-                          </p>
-                          {order.items.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-[11px]">
-                              <span className="truncate pr-1">{item.name} x{item.quantity}</span>
-                              <span className="font-bold shrink-0">{currency}{(item.price * item.quantity).toFixed(0)}</span>
+                        {/* Order Items Preview */}
+                        <div className="space-y-1 py-1.5 border-t border-slate-100 dark:border-slate-800 text-xs">
+                          {order.items.slice(0, 3).map((it, idx) => (
+                            <div key={idx} className="flex justify-between text-slate-600 dark:text-slate-400">
+                              <span className="truncate pr-2">{it.name}</span>
+                              <span className="font-bold shrink-0">x{it.quantity}</span>
                             </div>
                           ))}
                           {order.items.length > 3 && (
-                            <p className="text-[10px] text-orange-500 font-bold">+{order.items.length - 3} more items...</p>
+                            <p className="text-[10px] text-slate-400 font-bold">
+                              +{order.items.length - 3} more dishes...
+                            </p>
                           )}
                         </div>
                       </div>
 
-                      {/* Card Footer Amount & Punch More */}
+                      {/* Footer Actions */}
                       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Total</span>
-                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 block">Total</span>
+                          <span className="font-black text-sm text-emerald-600 dark:text-emerald-400">
                             {currency}{order.grandTotal.toFixed(0)}
                           </span>
                         </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
-                            className="px-2 py-1.5 rounded-xl text-[10px] font-black bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-xs"
-                            title="Punch more items"
-                          >
-                            + Items
-                          </button>
+                        <div className="flex gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleOpenSettlement(null, order)}
-                            className="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer shadow-xs flex items-center gap-1"
                             title="Settle bill"
                           >
                             <Receipt className="w-3 h-3" />
@@ -697,7 +743,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5 animate-fade-in">
               {filteredTables.map(table => {
                 const isOccupied = table.status === "occupied";
                 const isCalling = callingTableIds.has(table.id);
@@ -724,7 +770,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                         handleOpenPunchForTable(table.id, "dine_in");
                       }
                     }}
-                    className={`group relative p-4 rounded-3xl border-2 transition-all flex flex-col justify-between cursor-pointer hover:shadow-lg active:scale-98 ${
+                    className={`group relative p-3.5 sm:p-4 rounded-3xl border-2 transition-all flex flex-col justify-between cursor-pointer hover:shadow-lg active:scale-98 ${
                       isCalling
                         ? "bg-rose-500/10 border-rose-500 dark:bg-rose-950/30 shadow-rose-500/20 shadow-md animate-pulse-gentle"
                         : isOccupied
@@ -736,7 +782,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                     <div>
                       <div className="flex items-start justify-between gap-1 mb-2">
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
                             Table
                           </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -744,7 +790,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                               {table.number}
                             </h3>
                             {table.floor && (
-                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 truncate">
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate">
                                 {table.floor}
                               </span>
                             )}
@@ -766,7 +812,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                       </div>
 
                       {/* Capacity & Live Orders info */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
                         <span className="flex items-center gap-1">
                           <Users className="w-3 h-3 text-slate-400" />
                           <span>{table.capacity} Seats</span>
@@ -793,7 +839,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                       <button
                         type="button"
                         onClick={(e) => handleOpenPunchForTable(table.id, "dine_in", e)}
-                        className={`w-full py-2.5 px-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
+                        className={`w-full py-2.5 px-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95 cursor-pointer ${
                           isOccupied
                             ? "bg-slate-900 hover:bg-amber-600 dark:bg-slate-800 dark:hover:bg-amber-600 text-white"
                             : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20"
@@ -813,7 +859,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
       </main>
 
       {/* MOBILE FLOATING ACTION BUTTONS (FAB) */}
-      <div className="fixed bottom-4 right-4 z-40 sm:hidden flex flex-col gap-2 items-end">
+      <div className="fixed bottom-4 right-4 z-40 md:hidden flex flex-col gap-2 items-end">
         <button
           type="button"
           onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
@@ -846,86 +892,67 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 dark:text-white text-base">
-                    Table {selectedTable.number} Overview
+                    Table {selectedTable.number}
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Capacity: {selectedTable.capacity} guests • {selectedTableOrders.length} active KOT tickets
+                  <p className="text-xs text-slate-400 font-medium">
+                    {selectedTable.floor ? `Zone: ${selectedTable.floor} • ` : ""}{selectedTable.capacity} Seats • Active Table
                   </p>
                 </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => setSelectedTable(null)}
-                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Body */}
+            {/* Body: Active KOTs & Items */}
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
               
-              {/* Quick Table Status Switcher */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Update Table Status
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["available", "occupied", "reserved"] as const).map(st => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => {
-                        updateTableStatus(selectedTable.id, st);
-                        setSelectedTable(prev => (prev ? { ...prev, status: st } : null));
-                      }}
-                      className={`py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
-                        selectedTable.status === st
-                          ? "bg-slate-900 border-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                          : "bg-white border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Active KOT Tickets ({selectedTableOrders.length})
+                </span>
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                  Total: {currency}{selectedTableOrders.reduce((sum, o) => sum + o.grandTotal, 0).toFixed(0)}
+                </span>
               </div>
 
-              {/* Active Cooking Tickets List */}
-              <div className="space-y-2.5">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  Running Kitchen Order Tickets (KOT)
-                </label>
-
+              <div className="space-y-3">
                 {selectedTableOrders.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-                    No active dishes currently preparing for this table.
+                  <div className="p-6 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                    <Coffee className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs font-bold">No active dishes ordered yet.</p>
                   </div>
                 ) : (
-                  selectedTableOrders.map(order => (
+                  selectedTableOrders.map((order: RestaurantOrder) => (
                     <div
                       key={order.id}
-                      className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-2"
+                      className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-3.5 space-y-2.5 shadow-2xs"
                     >
                       <div className="flex justify-between items-center text-xs">
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                          #{order.orderNumber}
-                        </span>
-                        <span
-                          className={`font-black px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${
-                            ["ready", "served"].includes(order.status)
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                              : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                          }`}
-                        >
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            #{order.orderNumber}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                           {order.status}
                         </span>
                       </div>
 
-                      <div className="space-y-1 divide-y divide-slate-100 dark:divide-slate-700/50">
+                      <div className="space-y-1 py-1 border-t border-slate-200 dark:border-slate-700/60 text-xs">
                         {order.items.map((i, idx) => (
-                          <div key={idx} className="pt-1 flex justify-between text-xs text-slate-700 dark:text-slate-300">
-                            <span>{i.name} <strong className="text-slate-900 dark:text-white">x{i.quantity}</strong></span>
+                          <div key={idx} className="flex justify-between text-slate-700 dark:text-slate-300">
+                            <span>
+                              {i.name} <strong className="text-emerald-600 dark:text-emerald-400">x{i.quantity}</strong>
+                            </span>
                             <span className="font-bold">{currency}{(i.price * i.quantity).toFixed(0)}</span>
                           </div>
                         ))}
@@ -947,7 +974,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               <button
                 type="button"
                 onClick={() => handleOpenPunchForTable(selectedTable.id, "dine_in")}
-                className="flex-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-black py-3 rounded-2xl transition-all shadow-sm text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-black py-3 rounded-2xl transition-all shadow-sm text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Punch Dishes</span>
@@ -957,7 +984,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                 <button
                   type="button"
                   onClick={() => handleOpenSettlement(selectedTable, null)}
-                  className="flex-1 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <Receipt className="w-4 h-4" />
                   <span>Settle & Free Table</span>
@@ -992,5 +1019,3 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
     </div>
   );
 };
-
-export default WaiterDashboard;
