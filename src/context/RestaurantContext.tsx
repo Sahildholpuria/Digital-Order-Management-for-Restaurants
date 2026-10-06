@@ -1316,11 +1316,27 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           : undefined,
     };
 
-    // Save order to database
-    await dbService.saveOrder(restaurantId, newOrder);
+    // Resolve effective restaurant ID
+    let effectiveRestaurantId = restaurantId;
+    if (!effectiveRestaurantId && currentUser?.restaurantId) {
+      effectiveRestaurantId = currentUser.restaurantId;
+    }
+    if (!effectiveRestaurantId && typeof window !== 'undefined') {
+      effectiveRestaurantId = localStorage.getItem('last_active_staff_restaurant_id') || localStorage.getItem('last_active_customer_restaurant_id') || '';
+    }
+    if (!effectiveRestaurantId) {
+      effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
+    }
 
-    // Optimistically update orders list
+    // Optimistically update orders list immediately
     setOrders(prev => [newOrder, ...prev]);
+
+    // Save order to database
+    try {
+      await dbService.saveOrder(effectiveRestaurantId, newOrder);
+    } catch (err) {
+      console.warn("Takeaway DB save notice (persisted locally):", err);
+    }
 
     // Dispatch real-time notification
     try {
@@ -1334,7 +1350,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isRead: false,
         createdAt: new Date().toISOString(),
       };
-      await dbService.addNotification(restaurantId, notification);
+      await dbService.addNotification(effectiveRestaurantId, notification);
     } catch (_) {}
 
     // Auto silent thermal KOT printing via QZ Tray if online

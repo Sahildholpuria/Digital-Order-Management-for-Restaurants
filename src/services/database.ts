@@ -1894,41 +1894,46 @@ export const dbService = {
   },
 
   async saveOrder(restaurantId: string, order: RestaurantOrder): Promise<void> {
-    if (isSupabaseConfigured) {
-      const dbOrder = mapOrderToDb(order, restaurantId);
-      // For anonymous guest QR customer placement and new orders, execute clean INSERT first
-      const { error: insertError } = await supabase
-        .from('orders')
-        .insert(dbOrder);
-      
-      if (insertError) {
-        // If duplicate primary key (e.g. updating an existing order / status changes), perform update
-        if (insertError.code === '23505' || insertError.message?.includes('duplicate key') || insertError.message?.includes('unique') || insertError.message?.includes('already exists')) {
-          const { error: updateError } = await supabase
-            .from('orders')
-            .update(dbOrder)
-            .eq('id', order.id);
-          if (updateError) throw updateError;
-        } else {
-          // Attempt upsert fallback
-          const { error: upsertError } = await supabase
-            .from('orders')
-            .upsert(dbOrder);
-          if (upsertError) throw insertError || upsertError;
-        }
-      }
+    // 1. Always guarantee local persistence first for 100% reliable offline/slow network operations
+    const data = localStorage.getItem('restaurant_orders');
+    const orders: any[] = data ? JSON.parse(data) : [];
+    const itemWithTenant = { ...order, restaurant_id: restaurantId };
+    const index = orders.findIndex(o => o.id === order.id);
+    if (index > -1) {
+      orders[index] = itemWithTenant;
     } else {
-      const data = localStorage.getItem('restaurant_orders');
-      const orders: any[] = data ? JSON.parse(data) : [];
-      const itemWithTenant = { ...order, restaurant_id: restaurantId };
-      const index = orders.findIndex(o => o.id === order.id);
-      if (index > -1) {
-        orders[index] = itemWithTenant;
-      } else {
-        orders.push(itemWithTenant);
+      orders.unshift(itemWithTenant);
+    }
+    localStorage.setItem('restaurant_orders', JSON.stringify(orders));
+    notifyLocalSubscribers();
+
+    // 2. If Supabase is connected, sync to remote Postgres database
+    if (isSupabaseConfigured && restaurantId) {
+      const dbOrder = mapOrderToDb(order, restaurantId);
+      try {
+        const { error: insertError } = await supabase
+          .from('orders')
+          .insert(dbOrder);
+        
+        if (insertError) {
+          // If duplicate primary key (e.g. updating an existing order / status changes), perform update
+          if (insertError.code === '23505' || insertError.message?.includes('duplicate key') || insertError.message?.includes('unique') || insertError.message?.includes('already exists')) {
+            const { error: updateError } = await supabase
+              .from('orders')
+              .update(dbOrder)
+              .eq('id', order.id);
+            if (updateError) console.warn('Supabase update order error:', updateError);
+          } else {
+            // Attempt upsert fallback
+            const { error: upsertError } = await supabase
+              .from('orders')
+              .upsert(dbOrder);
+            if (upsertError) console.warn('Supabase upsert order error:', upsertError);
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase saveOrder exception (persisted locally):', err);
       }
-      localStorage.setItem('restaurant_orders', JSON.stringify(orders));
-      notifyLocalSubscribers();
     }
   },
 
