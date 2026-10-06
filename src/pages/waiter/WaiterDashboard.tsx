@@ -725,7 +725,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3.5 animate-fade-in">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5 animate-fade-in">
               {filteredTables.map(table => {
                 const isOccupied = table.status === "occupied";
                 const isCalling = callingTableIds.has(table.id);
@@ -752,9 +752,9 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                         handleOpenPunchForTable(table.id, "dine_in");
                       }
                     }}
-                    className={`group relative p-3.5 sm:p-4 rounded-3xl border-2 transition-all flex flex-col justify-between cursor-pointer hover:shadow-lg active:scale-98 ${
+                    className={`group relative p-2.5 sm:p-3 rounded-2xl border-2 transition-all flex flex-col justify-between cursor-pointer hover:shadow-md active:scale-98 ${
                       isCalling
-                        ? "bg-rose-500/10 border-rose-500 dark:bg-rose-950/30 shadow-rose-500/20 shadow-md animate-pulse-gentle"
+                        ? "bg-rose-500/10 border-rose-500 dark:bg-rose-950/30 shadow-rose-500/20 shadow-xs animate-pulse-gentle"
                         : isOccupied
                         ? "bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/40 hover:border-amber-500"
                         : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-emerald-500"
@@ -762,17 +762,17 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                   >
                     {/* Card Header: Table Number & Status Pill */}
                     <div>
-                      <div className="flex items-start justify-between gap-1 mb-2">
+                      <div className="flex items-start justify-between gap-1 mb-1.5">
                         <div>
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
+                          <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block leading-none">
                             Table
                           </span>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
                               {table.number}
                             </h3>
                             {table.floor && (
-                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate">
+                              <span className="text-[8px] font-extrabold px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate max-w-[80px]">
                                 {table.floor}
                               </span>
                             )}
@@ -781,7 +781,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
                         {/* Status Pill */}
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                          className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${
                             isCalling
                               ? "bg-rose-500 text-white border-rose-500 animate-bounce"
                               : isOccupied
@@ -789,19 +789,19 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                               : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
                           }`}
                         >
-                          {isCalling ? "CALLING 🔔" : isOccupied ? "OCCUPIED" : "AVAILABLE"}
+                          {isCalling ? "CALLING 🔔" : isOccupied ? "BUSY" : "AVAILABLE"}
                         </span>
                       </div>
 
                       {/* Capacity & Live Orders info */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3 text-slate-400" />
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                        <span className="flex items-center gap-0.5">
+                          <Users className="w-2.5 h-2.5 text-slate-400" />
                           <span>{table.capacity} Seats</span>
                         </span>
 
                         {isOccupied && (
-                          <span className="font-extrabold text-amber-600 dark:text-amber-400 text-[10px]">
+                          <span className="font-extrabold text-amber-600 dark:text-amber-400 text-[9px]">
                             {activeOrders.length} KOT ({itemCount})
                           </span>
                         )}
@@ -809,7 +809,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
                       {/* Running Amount if Occupied */}
                       {isOccupied && totalAmount > 0 && (
-                        <div className="mt-2 pt-1.5 border-t border-dashed border-amber-500/25 flex justify-between items-center text-xs font-black text-amber-700 dark:text-amber-400">
+                        <div className="mt-1 pt-1 border-t border-dashed border-amber-500/25 flex justify-between items-center text-[10px] font-black text-amber-700 dark:text-amber-400">
                           <span>Running:</span>
                           <span>{currency}{totalAmount.toFixed(0)}</span>
                         </div>
@@ -817,17 +817,17 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                     </div>
 
                     {/* Primary Touch Button */}
-                    <div className="mt-3 pt-2">
+                    <div className="mt-2 pt-1 border-t border-slate-100/60 dark:border-slate-800/60">
                       <button
                         type="button"
                         onClick={(e) => handleOpenPunchForTable(table.id, "dine_in", e)}
-                        className={`w-full py-2.5 px-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95 cursor-pointer ${
+                        className={`w-full py-1.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-95 cursor-pointer ${
                           isOccupied
                             ? "bg-slate-900 hover:bg-amber-600 dark:bg-slate-800 dark:hover:bg-amber-600 text-white"
-                            : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20"
+                            : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/15"
                         }`}
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3 h-3" />
                         <span>{isOccupied ? "Add Dishes" : "Take Order"}</span>
                       </button>
                     </div>
