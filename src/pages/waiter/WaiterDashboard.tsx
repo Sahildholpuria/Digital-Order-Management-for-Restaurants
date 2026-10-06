@@ -287,10 +287,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
       {/* MAIN CONTENT WRAPPER */}
       <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-4 sm:pt-6 space-y-4 sm:space-y-6 flex-1">
 
-        {/* HERO BANNER & INSTANT PUNCH CTAs */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-emerald-950/20 flex flex-col md:flex-row md:items-center justify-between gap-5">
+        {/* HERO BANNER */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-3xl p-4 sm:p-6 text-white shadow-xl shadow-emerald-950/20 flex flex-col justify-between gap-2">
           <div className="space-y-1.5 max-w-xl z-10">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-300" />
                 <span>Real-Time Captain Floor</span>
@@ -305,27 +305,6 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
             <p className="text-xs sm:text-sm text-emerald-100/90 font-medium">
               Take guest orders on mobile or tablet. KOT prints silently and alerts the kitchen instantly.
             </p>
-          </div>
-
-          {/* Dual Quick Punch CTAs */}
-          <div className="flex flex-col sm:flex-row items-center gap-2.5 z-10 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleOpenPunchForTable(undefined, "dine_in")}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 px-5 py-3 rounded-2xl font-black text-xs tracking-wide shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
-            >
-              <Zap className="w-4 h-4 fill-current text-slate-950" />
-              <span>+ TABLE DINE-IN</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 active:scale-95 text-white px-5 py-3 rounded-2xl font-black text-xs tracking-wide shadow-lg shadow-orange-500/30 transition-all cursor-pointer border border-white/20"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>+ TAKEAWAY PARCEL</span>
-            </button>
           </div>
 
           {/* Decorative subtle pattern */}
