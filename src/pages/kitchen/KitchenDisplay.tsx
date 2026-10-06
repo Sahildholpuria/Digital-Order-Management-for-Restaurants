@@ -73,7 +73,7 @@ export const KitchenDisplay: React.FC = () => {
             osc.stop(ctx.currentTime + 0.4);
           } catch (_) {}
         }
-        if (autoPrintKOT) {
+        if (autoPrintKOT && latestOrder.status !== "pending") {
           try {
             printKOTReceipt(latestOrder, settings?.name || "Kitchen", "80mm", false);
           } catch (_) {}

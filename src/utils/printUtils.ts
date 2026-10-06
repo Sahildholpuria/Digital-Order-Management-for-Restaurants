@@ -369,6 +369,12 @@ export const printKOTReceipt = async (
 ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> => {
   if (!order || !order.id) return { success: false, mode: "none" };
 
+  // CRITICAL: Customer QR orders start as "pending" and MUST NOT auto-print until the Manager clicks "Accept & Send to Kitchen"
+  if (!forcePrint && order.status === "pending") {
+    console.info(`[PrintKOT] Skipped KOT auto-print for pending order #${order.orderNumber || order.id} (Awaiting Manager Acceptance)`);
+    return { success: true, mode: "none", message: "Awaiting Manager Acceptance" };
+  }
+
   const now = Date.now();
   const lastPrintTime = lastPrintedKotMap.get(order.id) || 0;
 
