@@ -43,45 +43,50 @@ export const KitchenDisplay: React.FC = () => {
           ? activeOrders.filter(o => o.status === "preparing")
           : activeOrders;
 
-  // Auto-print & Sound Chime when new KOT arrives
-  const prevOrdersCountRef = useRef(activeOrders.length);
-  const isFirstRender = useRef(true);
+  // Auto-print & Sound Chime when new KOT arrives (tracks exact order IDs to prevent duplicate prints)
+  const seenOrderIdsRef = useRef<Set<string>>(new Set(activeOrders.map(o => o.id)));
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      prevOrdersCountRef.current = activeOrders.length;
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      seenOrderIdsRef.current = new Set(activeOrders.map(o => o.id));
       return;
     }
 
-    if (activeOrders.length > prevOrdersCountRef.current) {
-      const latestOrder = activeOrders[activeOrders.length - 1];
-      if (latestOrder) {
-        if (soundEnabled) {
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = "triangle";
-            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.4);
-          } catch (_) {}
-        }
-        if (autoPrintKOT && latestOrder.status !== "pending") {
-          try {
-            printKOTReceipt(latestOrder, settings?.name || "Kitchen", "80mm", false);
-          } catch (_) {}
-        }
+    // Find all genuinely new incoming orders
+    const newIncomingOrders = activeOrders.filter(o => !seenOrderIdsRef.current.has(o.id));
+
+    if (newIncomingOrders.length > 0) {
+      // Play sound alert once for the new order batch
+      if (soundEnabled) {
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+        } catch (_) {}
       }
+
+      // Auto-print ONLY the genuinely new incoming KOT tickets
+      newIncomingOrders.forEach(newOrder => {
+        seenOrderIdsRef.current.add(newOrder.id);
+        if (autoPrintKOT && newOrder.status !== "pending") {
+          try {
+            printKOTReceipt(newOrder, settings?.name || "Kitchen", "80mm", false);
+          } catch (_) {}
+        }
+      });
     }
-    prevOrdersCountRef.current = activeOrders.length;
-  }, [activeOrders.length, soundEnabled]);
+  }, [activeOrders, soundEnabled, autoPrintKOT, settings?.name]);
 
   const toggleItemCross = (orderId: string, itemIdx: number) => {
     const key = `${orderId}-${itemIdx}`;
