@@ -124,7 +124,9 @@ export const BillingManager: React.FC = () => {
 
       // Auto-trigger bill printing on POS thermal billing machine if enabled in settings
       if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
-        triggerPrint("80mm", false);
+        try {
+          await printBillReceipt({ ...settledOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, "80mm", false);
+        } catch (_) {}
       }
 
       // Reset POS terminal selection

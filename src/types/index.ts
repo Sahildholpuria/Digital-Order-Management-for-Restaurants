@@ -112,6 +112,7 @@ export interface RestaurantOrder {
   discount: number;
   grandTotal: number;
   status: OrderStatus;
+  paymentMethod?: string;
   createdAt: any; // ISO String or Timestamp
   elapsedTimeStart: any;
   waiterId?: string;
