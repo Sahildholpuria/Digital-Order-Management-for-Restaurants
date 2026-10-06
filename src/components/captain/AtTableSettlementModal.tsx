@@ -58,10 +58,13 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
   const [customerPhone, setCustomerPhone] = useState<string>("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState<boolean>(true);
   const [isSettling, setIsSettling] = useState<boolean>(false);
+  const [selectedQrTab, setSelectedQrTab] = useState<"dynamic" | "custom">(
+    settings?.paymentQrType === "custom" && settings?.paymentQrImage ? "custom" : "dynamic"
+  );
 
   const currency = settings?.currency || "₹";
   const taxPercentage = settings?.taxPercentage !== undefined ? settings.taxPercentage : 5;
-  const upiId = "merchant@upi";
+  const upiId = settings?.upiId || "merchant@upi";
 
   // Find all active orders for this table or takeaway
   const activeOrders = useMemo(() => {
@@ -412,21 +415,62 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
               })}
             </div>
 
-            {/* DYNAMIC UPI QR CODE DISPLAY (Directly on Waiter Phone Screen) */}
+            {/* DYNAMIC UPI QR / CUSTOM STANDEE DISPLAY */}
             {paymentMethod === "upi" && (
               <div className="bg-purple-500/5 dark:bg-purple-500/10 border-2 border-purple-500/30 rounded-2xl p-4 flex flex-col items-center text-center space-y-2.5 animate-scale-up">
+                
+                {/* Switcher if both Standee Image & Dynamic UPI are configured */}
+                {settings?.paymentQrImage && (
+                  <div className="flex items-center gap-1 bg-purple-500/10 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQrTab("dynamic")}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
+                        selectedQrTab === "dynamic"
+                          ? "bg-purple-600 text-white shadow-2xs"
+                          : "text-purple-700 dark:text-purple-300 hover:bg-purple-500/20"
+                      }`}
+                    >
+                      ⚡ Dynamic Amount (₹{grandTotal.toFixed(0)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQrTab("custom")}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
+                        selectedQrTab === "custom"
+                          ? "bg-purple-600 text-white shadow-2xs"
+                          : "text-purple-700 dark:text-purple-300 hover:bg-purple-500/20"
+                      }`}
+                    >
+                      🖼️ Standee QR
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-1.5 text-xs font-black text-purple-700 dark:text-purple-400 uppercase tracking-wider">
                   <QrCode className="w-4 h-4" />
-                  <span>Scan to Pay at Table ({currency}{grandTotal.toFixed(0)})</span>
+                  <span>
+                    {selectedQrTab === "custom" && settings?.paymentQrImage
+                      ? `Merchant Standee QR (Pay ${currency}${grandTotal.toFixed(0)})`
+                      : `Scan to Pay at Table (${currency}${grandTotal.toFixed(0)})`}
+                  </span>
                 </div>
 
                 <div className="p-3 bg-white rounded-2xl shadow-md border border-purple-100 flex items-center justify-center">
-                  <QRCodeCanvas
-                    value={upiQrString}
-                    size={140}
-                    level="M"
-                    includeMargin={false}
-                  />
+                  {selectedQrTab === "custom" && settings?.paymentQrImage ? (
+                    <img
+                      src={settings.paymentQrImage}
+                      alt="Merchant Standee QR"
+                      className="w-36 h-36 object-contain rounded-lg"
+                    />
+                  ) : (
+                    <QRCodeCanvas
+                      value={upiQrString}
+                      size={140}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  )}
                 </div>
 
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">

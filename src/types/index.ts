@@ -20,6 +20,9 @@ export interface RestaurantSettings {
   subscriptionStatus?: 'trial' | 'active' | 'expired' | 'suspended';
   subscriptionExpiresAt?: any;
   planType?: 'starter' | 'pro' | 'pro_6m' | 'pro_1y';
+  upiId?: string;
+  paymentQrImage?: string;
+  paymentQrType?: "dynamic" | "custom";
   createdAt: any;
 }
 

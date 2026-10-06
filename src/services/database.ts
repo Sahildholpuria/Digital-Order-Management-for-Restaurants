@@ -50,6 +50,9 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     subscriptionStatus: row.subscription_status || row.subscriptionStatus || 'trial',
     subscriptionExpiresAt: row.subscription_expires_at || row.subscriptionExpiresAt,
     planType: (row.plan_type === 'pro_6m' || row.plan_type === 'pro_1y') ? 'pro' : (row.plan_type || row.planType || 'starter'),
+    upiId: row.upi_id || row.upiId || "",
+    paymentQrImage: row.payment_qr_image || row.paymentQrImage || "",
+    paymentQrType: row.payment_qr_type || row.paymentQrType || "dynamic",
     createdAt: row.created_at || row.createdAt,
   };
 };
@@ -69,6 +72,9 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.subscriptionStatus !== undefined && { subscription_status: model.subscriptionStatus }),
     ...(model.subscriptionExpiresAt !== undefined && { subscription_expires_at: model.subscriptionExpiresAt }),
     ...(model.planType !== undefined && { plan_type: model.planType }),
+    ...(model.upiId !== undefined && { upi_id: model.upiId }),
+    ...(model.paymentQrImage !== undefined && { payment_qr_image: model.paymentQrImage }),
+    ...(model.paymentQrType !== undefined && { payment_qr_type: model.paymentQrType }),
   };
 
   if (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRestaurant } from "../../context/RestaurantContext";
+import { QRCodeCanvas } from "qrcode.react";
 import { 
   Building, 
   MapPin, 
@@ -24,7 +25,10 @@ import {
   ShieldCheck,
   Lock,
   Zap,
-  Radio
+  Radio,
+  QrCode,
+  Upload,
+  Trash2
 } from "lucide-react";
 
 export const SettingsManager: React.FC = () => {
@@ -58,6 +62,9 @@ export const SettingsManager: React.FC = () => {
   const [enableBillRequest, setEnableBillRequest] = useState(settings?.enableBillRequest ?? true);
   const [enableSoundNotification, setEnableSoundNotification] = useState(settings?.enableSoundNotification ?? true);
   const [enableBillPrinting, setEnableBillPrinting] = useState(settings?.enableBillPrinting ?? true);
+  const [upiId, setUpiId] = useState(settings?.upiId || "");
+  const [paymentQrImage, setPaymentQrImage] = useState(settings?.paymentQrImage || "");
+  const [paymentQrType, setPaymentQrType] = useState<"dynamic" | "custom">(settings?.paymentQrType || "dynamic");
   const [isSaving, setIsSaving] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
@@ -80,6 +87,9 @@ export const SettingsManager: React.FC = () => {
       setEnableBillRequest(settings.enableBillRequest ?? true);
       setEnableSoundNotification(settings.enableSoundNotification ?? true);
       setEnableBillPrinting(settings.enableBillPrinting ?? true);
+      setUpiId(settings.upiId || "");
+      setPaymentQrImage(settings.paymentQrImage || "");
+      setPaymentQrType(settings.paymentQrType || "dynamic");
       
       const savedDate = localStorage.getItem(`settings_updated_at_${settings.id}`);
       if (savedDate) {
@@ -94,6 +104,25 @@ export const SettingsManager: React.FC = () => {
     { label: "Euro (€)", symbol: "€" },
     { label: "Pound (£)", symbol: "£" },
   ];
+
+  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      showToast("Please upload an image smaller than 3MB", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string;
+      if (result) {
+        setPaymentQrImage(result);
+        setPaymentQrType("custom");
+        showToast("Payment QR image loaded! Click Save Changes to apply.", "success");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +145,9 @@ export const SettingsManager: React.FC = () => {
         enableBillRequest,
         enableSoundNotification,
         enableBillPrinting,
+        upiId,
+        paymentQrImage,
+        paymentQrType,
       });
       if (settings?.id) {
         const now = new Date().toLocaleString([], { 
@@ -423,6 +455,169 @@ export const SettingsManager: React.FC = () => {
               </div>
             </div>
 
+          </div>
+
+          {/* ================= UPI & AT-TABLE PAYMENT QR CODE SETTINGS ================= */}
+          <div className="bg-gradient-to-br from-white to-purple-500/5 dark:from-slate-900 dark:to-purple-950/20 border-2 border-purple-500/30 dark:border-purple-500/20 p-5 sm:p-7 rounded-2xl sm:rounded-3xl shadow-sm space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-purple-500/15">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-black text-slate-900 dark:text-slate-100 text-sm sm:text-base uppercase tracking-wider">
+                      UPI & At-Table Payment QR Code
+                    </h3>
+                    <span className="text-[10px] bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <Zap className="w-3 h-3 fill-current" />
+                      <span>Instant At-Table POS</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Set your merchant UPI ID (VPA) or upload your physical standee QR so waiters can accept customer payments directly at the dining table.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Form Controls */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* UPI ID */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center justify-between">
+                    <span>Merchant UPI ID / VPA</span>
+                    <span className="text-[10px] font-normal text-purple-600 dark:text-purple-400 font-bold">For Dynamic QR</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-purple-500">
+                      <QrCode className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="e.g. yourrestaurant@okhdfcbank or 9876543210@paytm"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 rounded-2xl py-3 pl-10 pr-4 text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    When set, waiter smartphones automatically generate a QR code with the exact order bill amount (e.g. ₹999).
+                  </p>
+                </div>
+
+                {/* Mode Selector */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                    Default Payment QR Style
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentQrType("dynamic")}
+                      className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                        paymentQrType === "dynamic"
+                          ? "bg-purple-500/15 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs"
+                          : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                      }`}
+                    >
+                      <div className="font-extrabold text-xs flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>Dynamic Amount QR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                        Auto-embeds bill amount. Customer scans & clicks pay without typing amount.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentQrType("custom")}
+                      className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                        paymentQrType === "custom"
+                          ? "bg-purple-500/15 border-purple-500 text-purple-950 dark:text-purple-200 shadow-xs"
+                          : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                      }`}
+                    >
+                      <div className="font-extrabold text-xs flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Uploaded Standee QR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                        Displays your uploaded PhonePe / BharatPe / Paytm standee QR image.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Upload Merchant Standee Image */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                    Upload Merchant Standee QR Image
+                  </label>
+                  <div className="flex items-center gap-2.5">
+                    <label className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-purple-300 dark:border-purple-800/60 hover:border-purple-500 dark:hover:border-purple-400 rounded-2xl p-3 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer transition-all bg-purple-50/40 dark:bg-purple-950/20">
+                      <Upload className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span>{paymentQrImage ? "Replace Standee Image" : "Upload QR Image (PNG/JPG)"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQrImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {paymentQrImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentQrImage("");
+                          setPaymentQrType("dynamic");
+                          showToast("Custom QR image removed", "info");
+                        }}
+                        className="p-3 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 text-rose-600 transition-all cursor-pointer"
+                        title="Remove uploaded QR image"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Preview Panel */}
+              <div className="lg:col-span-5 bg-white dark:bg-slate-800/80 rounded-3xl p-5 border border-purple-200/80 dark:border-purple-900/40 flex flex-col items-center text-center space-y-3 shadow-xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-500/15 px-3 py-1 rounded-full border border-purple-500/30">
+                  Waiter At-Table Preview
+                </span>
+
+                <div className="w-48 h-48 bg-white rounded-2xl p-3 shadow-md border border-slate-200 flex items-center justify-center overflow-hidden">
+                  {paymentQrType === "custom" && paymentQrImage ? (
+                    <img
+                      src={paymentQrImage}
+                      alt="Uploaded Payment QR"
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                  ) : (
+                    <QRCodeCanvas
+                      value={`upi://pay?pa=${upiId || "merchant@upi"}&pn=${encodeURIComponent(name || "RestaurantsOS")}&am=999.00&cu=INR&tn=Table_1_Bill`}
+                      size={160}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-100">
+                    {paymentQrType === "custom" && paymentQrImage ? "Uploaded Merchant Standee QR" : (upiId ? `Dynamic UPI: ${upiId}` : "Dynamic UPI (Default)")}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Scannable by Google Pay, PhonePe, Paytm, BHIM & all banking apps
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ================= PROMINENT QZ TRAY SILENT THERMAL PRINTING STATION ================= */}
