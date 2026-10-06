@@ -3,6 +3,7 @@ import { useRestaurant } from "../../context/RestaurantContext";
 import { useTheme } from "../../context/ThemeContext";
 import { RestaurantTable, TableStatus, RestaurantOrder } from "../../types";
 import { CaptainOrderPunchModal } from "../../components/captain/CaptainOrderPunchModal";
+import { AtTableSettlementModal } from "../../components/captain/AtTableSettlementModal";
 import { RestaurantsOSLogo } from "../../components/RestaurantsOSLogo";
 import { PWAInstallButton } from "../../components/common/PWAInstallButton";
 import {
@@ -61,6 +62,17 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "occupied" | "calling" | "takeaway">("all");
   const [selectedFloorFilter, setSelectedFloorFilter] = useState<string>("all");
   const [searchTableQuery, setSearchTableQuery] = useState<string>("");
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState<boolean>(false);
+  const [settlementTable, setSettlementTable] = useState<RestaurantTable | null>(null);
+  const [settlementTakeaway, setSettlementTakeaway] = useState<RestaurantOrder | null>(null);
+
+  const handleOpenSettlement = (table?: RestaurantTable | null, takeaway?: RestaurantOrder | null, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSettlementTable(table || null);
+    setSettlementTakeaway(takeaway || null);
+    setIsSettlementModalOpen(true);
+    if (selectedTable) setSelectedTable(null);
+  };
 
   // Unique floors across all tables
   const availableFloors = useMemo(() => {
@@ -356,17 +368,32 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                       >
                         ✓ Done
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          handleResolveAlert(alert.id, e);
-                          handleOpenPunchForTable(alert.tableId, "dine_in");
-                        }}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs flex items-center gap-0.5"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>Order</span>
-                      </button>
+                      {isBill ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            handleResolveAlert(alert.id, e);
+                            const t = tables.find(tbl => tbl.id === alert.tableId || String(tbl.number) === alert.tableId || alert.message.includes(`Table ${tbl.number}`));
+                            handleOpenSettlement(t || null, null, e);
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs flex items-center gap-1"
+                        >
+                          <Receipt className="w-3 h-3" />
+                          <span>Settle</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            handleResolveAlert(alert.id, e);
+                            handleOpenPunchForTable(alert.tableId, "dine_in");
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs flex items-center gap-0.5"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Order</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -621,13 +648,25 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
-                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-slate-900 hover:bg-orange-600 text-white dark:bg-slate-800 dark:hover:bg-orange-600 transition-all cursor-pointer shadow-xs"
-                        >
-                          + Punch More
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
+                            className="px-2 py-1.5 rounded-xl text-[10px] font-black bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-xs"
+                            title="Punch more items"
+                          >
+                            + Items
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenSettlement(null, order)}
+                            className="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                            title="Settle bill"
+                          >
+                            <Receipt className="w-3 h-3" />
+                            <span>Settle</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -904,15 +943,26 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
             </div>
 
             {/* Footer Actions */}
-            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
+            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
                 onClick={() => handleOpenPunchForTable(selectedTable.id, "dine_in")}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-black py-3 rounded-2xl transition-all shadow-sm text-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Zap className="w-4 h-4 fill-current text-amber-300" />
-                <span>+ Punch More Dishes to Table {selectedTable.number}</span>
+                <Plus className="w-4 h-4" />
+                <span>+ Punch Dishes</span>
               </button>
+
+              {selectedTableOrders.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenSettlement(selectedTable, null)}
+                  className="flex-1 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>Settle & Free Table</span>
+                </button>
+              )}
             </div>
 
           </div>
@@ -925,6 +975,18 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
         onClose={() => setIsPunchModalOpen(false)}
         initialTableId={punchInitialTableId}
         initialOrderType={punchInitialOrderType}
+      />
+
+      {/* AT-TABLE BILL SETTLEMENT MODAL */}
+      <AtTableSettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => {
+          setIsSettlementModalOpen(false);
+          setSettlementTable(null);
+          setSettlementTakeaway(null);
+        }}
+        table={settlementTable}
+        takeawayOrder={settlementTakeaway}
       />
 
     </div>

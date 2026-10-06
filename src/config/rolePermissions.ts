@@ -84,7 +84,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfile> = {
     canEditMenu: false,
     canEditPrices: false,
     canToggleItemAvailability: false,
-    canSettleBills: false,
+    canSettleBills: true,
     canViewReports: false,
     canPunchOrders: true,
     canAccessWaiterConsole: true,
