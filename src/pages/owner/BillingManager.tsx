@@ -94,7 +94,7 @@ export const BillingManager: React.FC = () => {
         createdAt: new Date().toISOString()
       });
       
-      // 2. Mark order completed with exact settled totals
+      // 2. Mark master order and any associated table orders completed with exact settled totals
       const settledOrder = {
         ...selectedOrder,
         subtotal,
@@ -105,21 +105,28 @@ export const BillingManager: React.FC = () => {
       };
       await saveOrder(settledOrder);
       await updateOrderStatus(selectedOrder.id, "completed");
-      
-      showToast(`Order ${selectedOrder.orderNumber} settled successfully via ${paymentMethod.toUpperCase()}!`, "success");
 
-      // 3. If no other active orders remain for this table, mark table available (for dine-in only)
+      // Complete any other running orders for this same table session
       if (!isSelectedTakeaway && selectedOrder.tableId && selectedOrder.tableId !== "takeaway") {
-        const otherActiveOrders = orders.filter(o => 
+        const otherTableOrders = orders.filter(o => 
           o.id !== selectedOrder.id &&
           (o.tableId === selectedOrder.tableId || o.tableName === selectedOrder.tableName) &&
-          ["pending", "accepted", "preparing", "ready", "served"].includes(o.status)
+          !["completed", "cancelled"].includes(o.status)
         );
-        if (otherActiveOrders.length === 0) {
+        for (const otherOrder of otherTableOrders) {
           try {
-            await updateTableStatus(selectedOrder.tableId, "available");
+            await updateOrderStatus(otherOrder.id, "completed");
           } catch (_) {}
         }
+      }
+      
+      showToast(`Table ${selectedOrder.tableName} settled successfully via ${paymentMethod.toUpperCase()}!`, "success");
+
+      // 3. Mark table available
+      if (!isSelectedTakeaway && selectedOrder.tableId && selectedOrder.tableId !== "takeaway") {
+        try {
+          await updateTableStatus(selectedOrder.tableId, "available");
+        } catch (_) {}
       }
 
       // Auto-trigger bill printing on POS thermal billing machine if enabled in settings

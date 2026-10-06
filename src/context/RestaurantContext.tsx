@@ -1237,75 +1237,146 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
     }
 
-    const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    // Check if table already has an active running session
+    const existingActiveOrder = !isTakeaway && targetTable
+      ? orders.find(o => 
+          (o.tableId === targetTable.id || o.tableName === cleanTableName || o.tableName === `Table ${targetTable.number}`) &&
+          !["completed", "cancelled"].includes(o.status)
+        )
+      : null;
 
-    const newOrder: RestaurantOrder = {
-      id: newOrderId,
-      orderNumber: orderNum,
-      tableId: isTakeaway ? "takeaway" : (targetTable ? targetTable.id : "takeaway"),
-      tableName: cleanTableName,
-      tableFloor: isTakeaway ? undefined : targetTable?.floor,
-      orderType,
-      customerName: customerInfo?.name?.trim() || undefined,
-      customerPhone: customerInfo?.phone?.trim() || undefined,
-      tokenNumber: tokenStr,
-      items: cart.map(c => ({
-        ...c,
-        specialInstructions: c.specialInstructions || instructions || "",
-      })),
-      subtotal,
-      tax,
-      discount: 0,
-      grandTotal,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      elapsedTimeStart: new Date().toISOString(),
-    };
+    let resultOrder: RestaurantOrder;
 
-    // Save order to database & queue for background sync guarantee
-    offlineSyncService.enqueue('save_order', effectiveRestaurantId, newOrder);
-    try {
-      await dbService.saveOrder(effectiveRestaurantId, newOrder);
-    } catch (err) {
-      console.warn("Direct save notice (queued in offlineSyncService):", err);
-    }
-    
-    // Update table status to occupied if Dine-In
-    if (!isTakeaway && currentTable) {
-      try {
-        await dbService.updateTableStatus(restaurantId, currentTable.id, "occupied");
-      } catch (err) {
-        console.warn("Table status auto-update notice:", err);
-      }
-      setCurrentTable(prev => prev ? { ...prev, status: "occupied" } : null);
-      setTables(prev => prev.map(t => {
-        const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, "");
-        if (t.id === currentTable.id || t.number === cleanNum || t.number === currentTable.number || t.id.replace(/^table-/i, "") === cleanNum) {
-          return { ...t, status: "occupied", updatedAt: new Date().toISOString() };
+    if (existingActiveOrder) {
+      // CONSOLIDATE: Append newly ordered dishes to existing running bill
+      const mergedItems = [...existingActiveOrder.items];
+      cart.forEach(newItem => {
+        const existingIdx = mergedItems.findIndex(mi => 
+          mi.itemId === newItem.itemId && 
+          mi.price === newItem.price && 
+          (mi.portion || '') === (newItem.portion || '') &&
+          (mi.specialInstructions || '') === (newItem.specialInstructions || '')
+        );
+        if (existingIdx > -1) {
+          mergedItems[existingIdx] = {
+            ...mergedItems[existingIdx],
+            quantity: mergedItems[existingIdx].quantity + newItem.quantity
+          };
+        } else {
+          mergedItems.push({
+            ...newItem,
+            specialInstructions: newItem.specialInstructions || instructions || "",
+          });
         }
-        return t;
-      }));
-    }
+      });
 
-    // Add alert notification for kitchen/staff
-    try {
-      const notification: RestaurantNotification = {
-        id: `notify-${Date.now()}`,
-        type: "new_order",
-        tableId: isTakeaway ? "takeaway" : (currentTable?.id || "takeaway"),
-        tableName: cleanTableName,
-        orderId: newOrder.id,
-        message: isTakeaway
-          ? `New Takeaway pickup order ${orderNum} (${tokenStr}) received.`
-          : `New order ${orderNum} received from Table ${currentTable?.number}.`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+      const combinedSubtotal = Math.round(mergedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
+      const combinedTax = Math.round(combinedSubtotal * (taxRate / 100) * 100) / 100;
+      const combinedGrandTotal = Math.round((combinedSubtotal + combinedTax) * 100) / 100;
+
+      resultOrder = {
+        ...existingActiveOrder,
+        items: mergedItems,
+        subtotal: combinedSubtotal,
+        tax: combinedTax,
+        grandTotal: combinedGrandTotal,
+        customerName: customerInfo?.name?.trim() || existingActiveOrder.customerName,
+        customerPhone: customerInfo?.phone?.trim() || existingActiveOrder.customerPhone,
+        status: existingActiveOrder.status === "served" || existingActiveOrder.status === "ready" ? "preparing" : existingActiveOrder.status,
       };
-      await dbService.addNotification(restaurantId, notification);
-    } catch (_) {}
+
+      setOrders(prev => [resultOrder, ...prev.filter(o => o.id !== resultOrder.id)]);
+      offlineSyncService.enqueue('save_order', effectiveRestaurantId, resultOrder);
+      try {
+        await dbService.saveOrder(effectiveRestaurantId, resultOrder);
+      } catch (_) {}
+
+      // Add alert notification for addon items
+      try {
+        const notification: RestaurantNotification = {
+          id: `notify-${Date.now()}`,
+          type: "new_order",
+          tableId: targetTable?.id || "table",
+          tableName: cleanTableName,
+          orderId: resultOrder.id,
+          message: `⚡ Additional dishes added to Table ${targetTable?.number} (${resultOrder.orderNumber}).`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        await dbService.addNotification(restaurantId, notification);
+      } catch (_) {}
+
+    } else {
+      const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      resultOrder = {
+        id: newOrderId,
+        orderNumber: orderNum,
+        tableId: isTakeaway ? "takeaway" : (targetTable ? targetTable.id : "takeaway"),
+        tableName: cleanTableName,
+        tableFloor: isTakeaway ? undefined : targetTable?.floor,
+        orderType,
+        customerName: customerInfo?.name?.trim() || undefined,
+        customerPhone: customerInfo?.phone?.trim() || undefined,
+        tokenNumber: tokenStr,
+        items: cart.map(c => ({
+          ...c,
+          specialInstructions: c.specialInstructions || instructions || "",
+        })),
+        subtotal,
+        tax,
+        discount: 0,
+        grandTotal,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        elapsedTimeStart: new Date().toISOString(),
+      };
+
+      // Save order to database & queue for background sync guarantee
+      offlineSyncService.enqueue('save_order', effectiveRestaurantId, resultOrder);
+      try {
+        await dbService.saveOrder(effectiveRestaurantId, resultOrder);
+      } catch (err) {
+        console.warn("Direct save notice (queued in offlineSyncService):", err);
+      }
+      
+      // Update table status to occupied if Dine-In
+      if (!isTakeaway && currentTable) {
+        try {
+          await dbService.updateTableStatus(restaurantId, currentTable.id, "occupied");
+        } catch (err) {
+          console.warn("Table status auto-update notice:", err);
+        }
+        setCurrentTable(prev => prev ? { ...prev, status: "occupied" } : null);
+        setTables(prev => prev.map(t => {
+          const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, "");
+          if (t.id === currentTable.id || t.number === cleanNum || t.number === currentTable.number || t.id.replace(/^table-/i, "") === cleanNum) {
+            return { ...t, status: "occupied", updatedAt: new Date().toISOString() };
+          }
+          return t;
+        }));
+      }
+
+      // Add alert notification for kitchen/staff
+      try {
+        const notification: RestaurantNotification = {
+          id: `notify-${Date.now()}`,
+          type: "new_order",
+          tableId: isTakeaway ? "takeaway" : (currentTable?.id || "takeaway"),
+          tableName: cleanTableName,
+          orderId: resultOrder.id,
+          message: isTakeaway
+            ? `New Takeaway pickup order ${orderNum} (${tokenStr}) received.`
+            : `New order ${orderNum} received from Table ${currentTable?.number}.`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        await dbService.addNotification(restaurantId, notification);
+      } catch (_) {}
+    }
 
     clearCart();
-    return newOrder;
+    return resultOrder;
   };
 
   // CAPTAIN DIRECT TAKEAWAY / PARCEL ORDER PUNCHING
@@ -1459,84 +1530,187 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       effectiveRestaurantId = isSupabaseConfigured ? '' : 'demo-restaurant';
     }
 
-    const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    // Check if table already has an active running order session
+    const existingActiveOrder = orders.find(o => 
+      (o.tableId === tableId || o.tableId === targetTable?.id || o.tableName === cleanTableName || o.tableName === `Table ${tableNumber}`) &&
+      !["completed", "cancelled"].includes(o.status)
+    );
 
-    const newOrder: RestaurantOrder = {
-      id: newOrderId,
-      orderNumber: orderNum,
-      tableId: targetTable ? targetTable.id : tableId,
-      tableName: cleanTableName,
-      tableFloor: targetTable?.floor,
-      orderType: "dine_in",
-      items: items.map(c => ({
-        ...c,
-        specialInstructions: c.specialInstructions || specialInstructions || "",
-      })),
-      subtotal,
-      tax,
-      discount: 0,
-      grandTotal,
-      status: "preparing", // Directly preparing for instant kitchen ticket
-      createdAt: new Date().toISOString(),
-      elapsedTimeStart: new Date().toISOString(),
-      waiterId: (waiterId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waiterId))
-        ? waiterId
-        : (currentUser?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id))
-          ? currentUser.id
-          : undefined,
-    };
+    let resultOrder: RestaurantOrder;
 
-    // Optimistically update orders list immediately so UI updates instantly
-    setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
+    if (existingActiveOrder) {
+      // CONSOLIDATE: Merge new items into existing active order so there is only 1 running bill for the table
+      const mergedItems = [...existingActiveOrder.items];
+      items.forEach(newItem => {
+        const existingIdx = mergedItems.findIndex(mi => 
+          mi.itemId === newItem.itemId && 
+          mi.price === newItem.price && 
+          (mi.portion || '') === (newItem.portion || '') &&
+          (mi.specialInstructions || '') === (newItem.specialInstructions || '')
+        );
+        if (existingIdx > -1) {
+          mergedItems[existingIdx] = {
+            ...mergedItems[existingIdx],
+            quantity: mergedItems[existingIdx].quantity + newItem.quantity
+          };
+        } else {
+          mergedItems.push({
+            ...newItem,
+            specialInstructions: newItem.specialInstructions || specialInstructions || "",
+          });
+        }
+      });
 
-    // Save order to database (persists locally & syncs to Supabase)
-    try {
-      await dbService.saveOrder(effectiveRestaurantId, newOrder);
-    } catch (err) {
-      console.warn("Table DB save notice (persisted locally):", err);
-    }
+      const combinedSubtotal = Math.round(mergedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
+      const combinedTax = Math.round(combinedSubtotal * (taxRate / 100) * 100) / 100;
+      const combinedGrandTotal = Math.round((combinedSubtotal + combinedTax) * 100) / 100;
 
-    // Update table status to occupied automatically in DB and state
-    if (targetTable) {
+      resultOrder = {
+        ...existingActiveOrder,
+        items: mergedItems,
+        subtotal: combinedSubtotal,
+        tax: combinedTax,
+        grandTotal: combinedGrandTotal,
+        status: "preparing", // Reset to preparing so kitchen gets notified
+      };
+
+      // Optimistically update orders state
+      setOrders(prev => [resultOrder, ...prev.filter(o => o.id !== resultOrder.id)]);
+      offlineSyncService.enqueue('save_order', effectiveRestaurantId, resultOrder);
       try {
-        await dbService.updateTableStatus(effectiveRestaurantId, targetTable.id, "occupied");
+        await dbService.saveOrder(effectiveRestaurantId, resultOrder);
       } catch (err) {
-        console.warn("Table status auto-update notice:", err);
+        console.warn("Table DB save notice:", err);
       }
 
-      setTables(prev => prev.map(t => {
-        if (t.id === targetTable.id) {
-          return { ...t, status: "occupied", updatedAt: new Date().toISOString() };
-        }
-        return t;
-      }));
-    }
+      // Add notification for kitchen/staff about addon items
+      try {
+        const notification: RestaurantNotification = {
+          id: `notify-${Date.now()}`,
+          type: "new_order",
+          tableId: targetTable ? targetTable.id : tableId,
+          tableName: cleanTableName,
+          orderId: resultOrder.id,
+          message: `⚡ Captain added more dishes to Table ${tableNumber} (${resultOrder.orderNumber}).`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        await dbService.addNotification(effectiveRestaurantId, notification);
+      } catch (_) {}
 
-    // Add notification for kitchen/staff
-    try {
-      const notification: RestaurantNotification = {
-        id: `notify-${Date.now()}`,
-        type: "new_order",
+      // Print KOT ticket for ONLY the newly added items so kitchen prepares only the new dishes
+      const addonKOT: RestaurantOrder = {
+        id: `addon-${Date.now()}`,
+        orderNumber: `${resultOrder.orderNumber} (ADD-ON)`,
+        tableId: resultOrder.tableId,
+        tableName: resultOrder.tableName,
+        tableFloor: resultOrder.tableFloor,
+        orderType: "dine_in",
+        items: items.map(c => ({
+          ...c,
+          specialInstructions: c.specialInstructions || specialInstructions || "",
+        })),
+        subtotal: Math.round(items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100,
+        tax: 0,
+        discount: 0,
+        grandTotal: 0,
+        status: "preparing",
+        createdAt: new Date().toISOString(),
+        elapsedTimeStart: new Date().toISOString(),
+      };
+
+      if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
+        try {
+          await printKOTReceipt(addonKOT, settings?.name || "Kitchen", qzConfig.paperWidth, false);
+        } catch (err) {
+          console.warn("Auto QZ KOT addon print notice:", err);
+        }
+      }
+
+      return resultOrder;
+
+    } else {
+      // INITIAL ORDER FOR TABLE
+      const newOrderId = typeof crypto !== 'undefined' && crypto.randomUUID ? `order-${crypto.randomUUID()}` : `order-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      resultOrder = {
+        id: newOrderId,
+        orderNumber: orderNum,
         tableId: targetTable ? targetTable.id : tableId,
         tableName: cleanTableName,
-        orderId: newOrder.id,
-        message: `⚡ Captain punched new order ${orderNum} for Table ${tableNumber}.`,
-        isRead: false,
+        tableFloor: targetTable?.floor,
+        orderType: "dine_in",
+        items: items.map(c => ({
+          ...c,
+          specialInstructions: c.specialInstructions || specialInstructions || "",
+        })),
+        subtotal,
+        tax,
+        discount: 0,
+        grandTotal,
+        status: "preparing", // Directly preparing for instant kitchen ticket
         createdAt: new Date().toISOString(),
+        elapsedTimeStart: new Date().toISOString(),
+        waiterId: (waiterId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waiterId))
+          ? waiterId
+          : (currentUser?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id))
+            ? currentUser.id
+            : undefined,
       };
-      await dbService.addNotification(effectiveRestaurantId, notification);
-    } catch (_) {}
 
-    // Auto silent thermal KOT printing via QZ Tray if online
-    if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
+      // Optimistically update orders list immediately so UI updates instantly
+      setOrders(prev => [resultOrder, ...prev.filter(o => o.id !== resultOrder.id)]);
+
+      // Save order to database (persists locally & syncs to Supabase)
+      offlineSyncService.enqueue('save_order', effectiveRestaurantId, resultOrder);
       try {
-        await printKOTReceipt(newOrder, settings?.name || "Kitchen", qzConfig.paperWidth, false);
+        await dbService.saveOrder(effectiveRestaurantId, resultOrder);
       } catch (err) {
-        console.warn("Auto QZ KOT table print notice:", err);
+        console.warn("Table DB save notice (persisted locally):", err);
       }
-    }
 
-    return newOrder;
+      // Update table status to occupied automatically in DB and state
+      if (targetTable) {
+        try {
+          await dbService.updateTableStatus(effectiveRestaurantId, targetTable.id, "occupied");
+        } catch (err) {
+          console.warn("Table status auto-update notice:", err);
+        }
+
+        setTables(prev => prev.map(t => {
+          if (t.id === targetTable.id) {
+            return { ...t, status: "occupied", updatedAt: new Date().toISOString() };
+          }
+          return t;
+        }));
+      }
+
+      // Add notification for kitchen/staff
+      try {
+        const notification: RestaurantNotification = {
+          id: `notify-${Date.now()}`,
+          type: "new_order",
+          tableId: targetTable ? targetTable.id : tableId,
+          tableName: cleanTableName,
+          orderId: resultOrder.id,
+          message: `⚡ Captain punched new order ${orderNum} for Table ${tableNumber}.`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        };
+        await dbService.addNotification(effectiveRestaurantId, notification);
+      } catch (_) {}
+
+      // Auto silent thermal KOT printing via QZ Tray if online
+      if (qzTrayService.isConnected() && qzConfig.autoPrintKOT !== false) {
+        try {
+          await printKOTReceipt(resultOrder, settings?.name || "Kitchen", qzConfig.paperWidth, false);
+        } catch (err) {
+          console.warn("Auto QZ KOT table print notice:", err);
+        }
+      }
+
+      return resultOrder;
+    }
   };
 
   const callWaiter = async () => {
