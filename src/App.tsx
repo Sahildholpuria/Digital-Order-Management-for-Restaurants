@@ -753,10 +753,11 @@ export const App: React.FC = () => {
             { id: 'reports', label: t.analytics, icon: FileText, roles: ['admin'] },
           ];
         } else {
-          // Pure Super Admin SaaS Mode: Separate nav items for Restaurants Directory, Staff Accounts, and Settings
+          // Pure Super Admin SaaS Mode: Dedicated nav items for each section
           sidebarItems = [
             { id: 'superadmin', label: 'Restaurants Directory', icon: Building, roles: ['admin'] },
             { id: 'superadmin-staff', label: 'Staff Accounts', icon: Users, roles: ['admin'] },
+            { id: 'superadmin-broadcasts', label: 'Broadcasts', icon: Megaphone, roles: ['admin'] },
             { id: 'superadmin-settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] }
           ];
         }
@@ -785,6 +786,8 @@ export const App: React.FC = () => {
           let superTab: 'restaurants' | 'users' | 'subscriptions' | 'announcements' = 'restaurants';
           if (activeTab === 'superadmin-staff') {
             superTab = 'users';
+          } else if (activeTab === 'superadmin-broadcasts' || activeTab === 'broadcasts') {
+            superTab = 'announcements';
           } else if (activeTab === 'superadmin-settings' || activeTab === 'saas-subscriptions' || activeTab === 'settings') {
             superTab = 'subscriptions';
           } else {
@@ -1422,6 +1425,16 @@ export const App: React.FC = () => {
                   </button>
 
                   <button
+                    onClick={() => handleSelectTab("superadmin-broadcasts")}
+                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
+                      activeTab === "superadmin-broadcasts" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                    }`}
+                  >
+                    <Megaphone className="w-4 h-4 shrink-0" />
+                    <span className="truncate w-full text-center leading-tight">Broadcasts</span>
+                  </button>
+
+                  <button
                     onClick={() => handleSelectTab("superadmin-settings")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
                       activeTab === "superadmin-settings" || activeTab === "saas-subscriptions" || activeTab === "settings" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
@@ -1429,16 +1442,6 @@ export const App: React.FC = () => {
                   >
                     <SettingsIcon className="w-4 h-4 shrink-0" />
                     <span className="truncate w-full text-center leading-tight">Settings</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleSelectTab("help")}
-                    className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "help" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
-                    }`}
-                  >
-                    <LifeBuoy className="w-4 h-4 shrink-0" />
-                    <span className="truncate w-full text-center leading-tight">Support</span>
                   </button>
 
                   <button
