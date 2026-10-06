@@ -287,24 +287,16 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
       {/* MAIN CONTENT WRAPPER */}
       <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-4 sm:pt-6 space-y-4 sm:space-y-6 flex-1">
 
-        {/* HERO BANNER */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-3xl p-4 sm:p-6 text-white shadow-xl shadow-emerald-950/20 flex flex-col justify-between gap-2">
-          <div className="space-y-1.5 max-w-xl z-10">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-300" />
-                <span>Real-Time Captain Floor</span>
-              </span>
-              <span className="text-xs text-emerald-200 font-medium">
-                Floor: {occupiedCount} / {tables.length} Tables Busy &bull; {activeTakeawayOrders.length} Parcels Active
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              Punch Dine-In or Takeaway Orders
-            </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/90 font-medium">
-              Take guest orders on mobile or tablet. KOT prints silently and alerts the kitchen instantly.
-            </p>
+        {/* COMPACT FLOOR STATUS STRIP */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-2xl px-4 py-2.5 sm:py-3 text-white shadow-md shadow-emerald-950/10 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 z-10">
+            <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-300" />
+              <span>Real-Time Captain Floor</span>
+            </span>
+            <span className="text-xs text-emerald-100 font-medium">
+              Floor: <strong className="text-white font-black">{occupiedCount} / {tables.length}</strong> Tables Busy &bull; <strong className="text-white font-black">{activeTakeawayOrders.length}</strong> Parcels Active
+            </span>
           </div>
 
           {/* Decorative subtle pattern */}
