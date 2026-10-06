@@ -841,22 +841,22 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
       </main>
 
       {/* MOBILE FLOATING ACTION BUTTONS (FAB) */}
-      <div className="fixed bottom-4 right-4 z-40 md:hidden flex flex-col gap-2 items-end">
+      <div className="fixed bottom-4 right-4 z-40 md:hidden flex flex-col gap-1.5 items-end">
         <button
           type="button"
           onClick={() => handleOpenPunchForTable(undefined, "takeaway")}
-          className="flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-600 active:scale-95 text-white px-4 py-2.5 rounded-full font-black text-xs tracking-wider shadow-xl shadow-orange-600/40 border border-white/20 cursor-pointer"
+          className="flex items-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-600 active:scale-95 text-white px-3 py-1.5 rounded-full font-black text-[11px] tracking-wide shadow-md shadow-orange-600/25 border border-white/20 cursor-pointer"
         >
-          <ShoppingBag className="w-3.5 h-3.5" />
+          <ShoppingBag className="w-3 h-3" />
           <span>+ TAKEAWAY</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleOpenPunchForTable(undefined, "dine_in")}
-          className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 active:scale-95 text-white px-5 py-3.5 rounded-full font-black text-xs tracking-wider shadow-2xl shadow-emerald-600/50 border border-white/20 cursor-pointer"
+          className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 active:scale-95 text-white px-3.5 py-2 rounded-full font-black text-xs tracking-wide shadow-lg shadow-emerald-600/30 border border-white/20 cursor-pointer"
         >
-          <Zap className="w-4 h-4 fill-current text-amber-300 animate-pulse" />
+          <Zap className="w-3.5 h-3.5 fill-current text-amber-300 animate-pulse" />
           <span>+ TAKE ORDER</span>
         </button>
       </div>
