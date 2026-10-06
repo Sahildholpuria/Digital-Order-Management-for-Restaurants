@@ -549,7 +549,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                       <option value="" disabled>-- Select Table --</option>
                       {tables.map((t: RestaurantTable) => (
                         <option key={t.id} value={t.id}>
-                          Table {t.number}{t.floor ? ` (${t.floor})` : ""} • ${t.capacity} Seats
+                          Table {t.number}{t.floor ? ` (${t.floor})` : ""} • {t.capacity} Seats
                         </option>
                       ))}
                     </select>
