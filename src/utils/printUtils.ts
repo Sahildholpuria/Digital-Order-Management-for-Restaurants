@@ -372,21 +372,30 @@ export const generateKOTHtml = (
 };
 
 export const generateBillReceiptHtml = (
-  order: RestaurantOrder,
+  order: RestaurantOrder & { paymentMethod?: string },
   settings?: RestaurantSettings | null,
   paperWidth: "80mm" | "58mm" = "80mm"
 ): string => {
   const bodyWidth = paperWidth === "58mm" ? "58mm" : "80mm";
   const currency = settings?.currency || "₹";
-  const restName = settings?.name || "RestaurantsOS";
+  const restName = settings?.name || "RESTAURANT";
   const address = settings?.address || "";
   const phone = settings?.phone || "";
+  const email = settings?.email || "";
   const gstin = settings?.gstNumber || "";
   const websiteStr = settings?.websiteUrl || "";
+  const taxRate = settings?.taxPercentage ?? 0;
 
   const isTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
+  const paymentModeStr = (order.paymentMethod || "PAID").toUpperCase();
 
-  const itemsHtml = order.items
+  // Calculate taxes breakdown if applicable
+  const taxableAmount = Math.max(0, order.subtotal - (order.discount || 0));
+  const hasTax = (order.tax && order.tax > 0) || taxRate > 0;
+  const halfTaxRate = (taxRate / 2);
+  const halfTaxAmount = hasTax ? ((order.tax || 0) / 2) : 0;
+
+  const itemsHtml = (order.items || [])
     .map((item) => {
       const lowerName = item.name.toLowerCase();
       const portionStr = item.portion ? item.portion.toLowerCase() : "";
@@ -395,11 +404,11 @@ export const generateBillReceiptHtml = (
 
       let portionBadge = "";
       if (isHalf) {
-        portionBadge = ' <span style="font-size: 9px; font-weight: 800; border: 1px solid #334155; padding: 0 3px; border-radius: 2px;">HALF</span>';
+        portionBadge = ' <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 0 2px; border-radius: 2px;">HALF</span>';
       } else if (isFull) {
-        portionBadge = ' <span style="font-size: 9px; font-weight: 800; border: 1px solid #334155; padding: 0 3px; border-radius: 2px;">FULL</span>';
+        portionBadge = ' <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 0 2px; border-radius: 2px;">FULL</span>';
       } else if (item.portion) {
-        portionBadge = ` <span style="font-size: 9px; font-weight: 800; border: 1px solid #334155; padding: 0 3px; border-radius: 2px;">${item.portion.toUpperCase()}</span>`;
+        portionBadge = ` <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 0 2px; border-radius: 2px;">${item.portion.toUpperCase()}</span>`;
       }
 
       const cleanName = item.name
@@ -411,16 +420,16 @@ export const generateBillReceiptHtml = (
 
       return `
         <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 11px;">
-          <td style="padding: 5px 0; text-align: left; vertical-align: top; font-weight: 700;">
+          <td style="padding: 4px 0; text-align: left; vertical-align: top; font-weight: 700; word-break: break-word;">
             ${cleanName}${portionBadge}
           </td>
-          <td style="padding: 5px 2px; text-align: center; vertical-align: top; font-weight: 800; font-family: ui-monospace, monospace;">
+          <td style="padding: 4px 2px; text-align: center; vertical-align: top; font-weight: 900; font-family: ui-monospace, monospace;">
             ${item.quantity}
           </td>
-          <td style="padding: 5px 2px; text-align: right; vertical-align: top; font-family: ui-monospace, monospace;">
+          <td style="padding: 4px 2px; text-align: right; vertical-align: top; font-family: ui-monospace, monospace;">
             ${currency}${item.price.toFixed(2)}
           </td>
-          <td style="padding: 5px 0; text-align: right; vertical-align: top; font-weight: 800; font-family: ui-monospace, monospace;">
+          <td style="padding: 4px 0; text-align: right; vertical-align: top; font-weight: 800; font-family: ui-monospace, monospace;">
             ${currency}${itemTotal.toFixed(2)}
           </td>
         </tr>
@@ -428,11 +437,13 @@ export const generateBillReceiptHtml = (
     })
     .join("");
 
+  const totalItemsCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
+
   return `
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Receipt_${order.orderNumber}</title>
+        <title>TAX_INVOICE_${order.orderNumber}</title>
         <meta charset="utf-8" />
         <style>
           @page {
@@ -451,42 +462,56 @@ export const generateBillReceiptHtml = (
             width: ${bodyWidth};
             margin: 0 auto;
             padding: 8px 6px;
-            color: #0f172a;
+            color: #000;
             background: #fff;
             box-sizing: border-box;
+            line-height: 1.35;
           }
           .center { text-align: center; }
           .bold { font-weight: 800; }
         </style>
       </head>
       <body>
-        <div class="center" style="margin-bottom: 8px; border-bottom: 2px dashed #0f172a; padding-bottom: 6px;">
-          <h2 style="margin: 0; font-size: 16px; font-weight: 900; text-transform: uppercase;">${restName}</h2>
-          ${address ? `<p style="margin: 2px 0; font-size: 10px; color: #475569;">${address}</p>` : ''}
-          ${phone ? `<p style="margin: 2px 0; font-size: 10px; color: #475569;">Ph: ${phone}</p>` : ''}
-          ${gstin ? `<p style="margin: 2px 0; font-size: 10px; font-weight: bold;">GSTIN: ${gstin}</p>` : ''}
-          <div style="font-size: 11px; font-weight: 900; margin-top: 4px; letter-spacing: 0.5px;">TAX INVOICE</div>
+        <!-- RESTAURANT BRAND & TAX HEADER -->
+        <div class="center" style="margin-bottom: 6px; border-bottom: 2px dashed #000; padding-bottom: 6px;">
+          <h2 style="margin: 0 0 2px 0; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">${restName}</h2>
+          ${address ? `<p style="margin: 1px 0; font-size: 10px; color: #222;">${address}</p>` : ''}
+          ${phone ? `<p style="margin: 1px 0; font-size: 10px; font-weight: bold; color: #111;">Ph: ${phone}${email ? ' | ' + email : ''}</p>` : (email ? `<p style="margin: 1px 0; font-size: 10px; color: #222;">${email}</p>` : '')}
+          ${gstin ? `<p style="margin: 2px 0 0 0; font-size: 10.5px; font-weight: 900; letter-spacing: 0.5px;">GSTIN: ${gstin}</p>` : ''}
+          <div style="font-size: 11px; font-weight: 900; margin-top: 5px; padding: 2px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 1px;">
+            *** TAX INVOICE ***
+          </div>
         </div>
 
-        <div style="font-size: 10px; margin-bottom: 6px; line-height: 1.4;">
+        <!-- INVOICE META DETAILS -->
+        <div style="font-size: 10px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #000;">
           <div style="display: flex; justify-content: space-between;">
-            <span>Bill #: <strong>${order.orderNumber}</strong></span>
-            <span>${new Date(order.createdAt).toLocaleDateString()}</span>
+            <span>Invoice No: <strong>${order.orderNumber}</strong></span>
+            <span>Date: <strong>${new Date(order.createdAt).toLocaleDateString()}</strong></span>
           </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>${isTakeaway ? `Takeaway ${order.tokenNumber ? '#' + order.tokenNumber : ''}` : order.tableName}</span>
-            <span>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+          <div style="display: flex; justify-content: space-between; margin-top: 1px;">
+            <span>${isTakeaway ? `Type: <strong>TAKEAWAY PARCEL${order.tokenNumber ? ' (Token #' + order.tokenNumber + ')' : ''}</strong>` : `Table: <strong>${order.tableName.replace(/^table\s*-\s*/gi, 'Table ')}</strong>`}</span>
+            <span>Time: <strong>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></span>
           </div>
-          ${order.customerName ? `<div>Customer: <strong>${order.customerName}</strong>${order.customerPhone ? ` (${order.customerPhone})` : ''}</div>` : ''}
+          ${order.customerName ? `
+            <div style="margin-top: 1px; font-weight: bold;">
+              Customer: ${order.customerName}${order.customerPhone ? ' (' + order.customerPhone + ')' : ''}
+            </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; margin-top: 1px;">
+            <span>Payment Mode: <strong>${paymentModeStr}</strong></span>
+            <span>Total Items: <strong>${totalItemsCount}</strong></span>
+          </div>
         </div>
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
+        <!-- BILLING ITEMS TABLE -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
           <thead>
-            <tr style="border-bottom: 1.5px solid #0f172a; font-size: 10px; font-weight: 900;">
-              <th style="text-align: left; padding: 4px 0;">ITEM</th>
-              <th style="text-align: center; padding: 4px 2px;">QTY</th>
-              <th style="text-align: right; padding: 4px 2px;">RATE</th>
-              <th style="text-align: right; padding: 4px 0;">AMOUNT</th>
+            <tr style="border-bottom: 1.5px solid #000; font-size: 9.5px; font-weight: 900;">
+              <th style="text-align: left; padding: 3px 0;">ITEM</th>
+              <th style="text-align: center; padding: 3px 2px;">QTY</th>
+              <th style="text-align: right; padding: 3px 2px;">RATE</th>
+              <th style="text-align: right; padding: 3px 0;">AMOUNT</th>
             </tr>
           </thead>
           <tbody>
@@ -494,34 +519,59 @@ export const generateBillReceiptHtml = (
           </tbody>
         </table>
 
-        <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px;">
-          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+        <!-- TOTALS & TAX BREAKDOWN -->
+        <div style="border-top: 1.5px solid #000; padding-top: 4px; font-size: 10.5px;">
+          <div style="display: flex; justify-content: space-between; margin: 1.5px 0;">
             <span>Subtotal:</span>
             <span style="font-family: ui-monospace, monospace; font-weight: 700;">${currency}${order.subtotal.toFixed(2)}</span>
           </div>
-          ${order.tax > 0 ? `
-            <div style="display: flex; justify-content: space-between; margin: 2px 0; color: #475569;">
-              <span>GST / Tax:</span>
-              <span style="font-family: ui-monospace, monospace;">${currency}${order.tax.toFixed(2)}</span>
-            </div>
-          ` : ''}
-          ${order.discount > 0 ? `
-            <div style="display: flex; justify-content: space-between; margin: 2px 0; color: #16a34a;">
+
+          ${order.discount && order.discount > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-weight: bold;">
               <span>Discount:</span>
               <span style="font-family: ui-monospace, monospace;">-${currency}${order.discount.toFixed(2)}</span>
             </div>
+            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-size: 9.5px; color: #333;">
+              <span>Taxable Amount:</span>
+              <span style="font-family: ui-monospace, monospace;">${currency}${taxableAmount.toFixed(2)}</span>
+            </div>
           ` : ''}
-          <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px; font-weight: 900; border-top: 1.5px dashed #0f172a; padding-top: 4px;">
+
+          ${hasTax && halfTaxRate > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-size: 9.5px;">
+              <span>CGST (${halfTaxRate}%):</span>
+              <span style="font-family: ui-monospace, monospace;">${currency}${halfTaxAmount.toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-size: 9.5px;">
+              <span>SGST (${halfTaxRate}%):</span>
+              <span style="font-family: ui-monospace, monospace;">${currency}${halfTaxAmount.toFixed(2)}</span>
+            </div>
+          ` : (order.tax && order.tax > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 1.5px 0;">
+              <span>GST / Tax (${taxRate}%):</span>
+              <span style="font-family: ui-monospace, monospace;">${currency}${order.tax.toFixed(2)}</span>
+            </div>
+          ` : '')}
+
+          <!-- PROMINENT GRAND TOTAL -->
+          <div style="display: flex; justify-content: space-between; margin: 4px 0 2px 0; font-size: 14px; font-weight: 900; border-top: 1.5px dashed #000; border-bottom: 1.5px dashed #000; padding: 4px 0;">
             <span>GRAND TOTAL:</span>
             <span style="font-family: ui-monospace, monospace;">${currency}${order.grandTotal.toFixed(2)}</span>
           </div>
+
+          <div style="text-align: right; font-size: 9px; font-weight: 800; margin-top: 2px;">
+            STATUS: SETTLED VIA ${paymentModeStr}
+          </div>
         </div>
 
-        <div class="center" style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 10px; color: #64748b;">
-          <p style="margin: 2px 0;">${isTakeaway ? "Thank you for picking up with us!" : "Thank you for dining with us!"}</p>
-          ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 600; color: #334155;">${websiteStr}</p>` : '<p style="margin: 2px 0; color: #94a3b8;">Please visit again</p>'}
+        <!-- FOOTER & BRANDING -->
+        <div class="center" style="margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-size: 9.5px; color: #333;">
+          <p style="margin: 1px 0; font-weight: bold;">${isTakeaway ? "Thank you for ordering with us!" : "Thank you for dining with us!"}</p>
+          <p style="margin: 1px 0;">Please visit again!</p>
+          ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 700; color: #000;">${websiteStr}</p>` : ''}
+          <p style="margin: 3px 0 0 0; font-size: 8px; color: #666;">*** Computer Generated Tax Invoice ***</p>
         </div>
-        <div style="height: 25px;"></div>
+        <div style="height: 30px;"></div>
       </body>
     </html>
   `;
