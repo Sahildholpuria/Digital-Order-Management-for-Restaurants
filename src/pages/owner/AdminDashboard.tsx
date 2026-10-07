@@ -275,38 +275,38 @@ export const AdminDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-4 sm:space-y-5 animate-fade-in max-w-7xl mx-auto">
       
       {/* Header bar with Date Range Filter */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
               Dashboard
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40">
-              <Sparkles className="w-3 h-3" />
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40">
+              <Sparkles className="w-2.5 h-2.5" />
               {rangeInfo.subtext}
             </span>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
             Real-time operations monitor for <span className="font-bold text-brand-600 dark:text-brand-400">{settings?.name || 'Restaurant'}</span>.
           </p>
         </div>
 
         {/* Date Filter & Calendar Badge Controls */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
 
           {/* Segmented Date Range Picker */}
-          <div className="flex items-center p-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar max-w-full w-full lg:w-auto">
-            <div className="flex items-center gap-1 px-2 text-slate-400">
-              <Filter className="w-3.5 h-3.5" />
+          <div className="flex items-center p-0.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar max-w-full w-full sm:w-auto">
+            <div className="flex items-center gap-1 px-1.5 text-slate-400">
+              <Filter className="w-3 h-3" />
             </div>
             {dateFilterTabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setDateRange(tab.id)}
-                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   dateRange === tab.id
                     ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/25'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -318,43 +318,43 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Current Date Badge */}
-          <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3.5 py-2 rounded-2xl shadow-sm">
-            <Calendar className="w-3.5 h-3.5 text-brand-500" />
+          <div className="hidden md:flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1 rounded-xl shadow-sm">
+            <Calendar className="w-3 h-3 text-brand-500" />
             <span>{rangeInfo.dateString}</span>
           </div>
         </div>
       </div>
 
-      {/* Metrics Card Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+      {/* Metrics Card Grid (Compact & Sleek) */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
         {metrics.map((m, index) => (
-          <div key={index} className="rounded-2xl sm:rounded-3xl border border-slate-200/60 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/50 p-3 sm:p-5 shadow-sm backdrop-blur-md flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-4 transition-all hover:shadow-md">
-            <div className="space-y-0.5 sm:space-y-1 min-w-0 order-2 sm:order-1">
+          <div key={index} className="rounded-xl sm:rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/50 p-3 sm:p-3.5 shadow-sm backdrop-blur-md flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-3 transition-all hover:shadow-md">
+            <div className="space-y-0.5 min-w-0 order-2 sm:order-1">
               <p className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-400 truncate">{m.title}</p>
-              <h3 className="text-xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate">{m.value}</h3>
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold truncate">{m.desc}</p>
+              <h3 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate">{m.value}</h3>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold truncate">{m.desc}</p>
             </div>
             
-            <div className={`p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-white/20 dark:border-slate-800/40 shadow-sm shrink-0 self-start sm:self-auto order-1 sm:order-2 ${m.color}`}>
-              <m.icon className="w-4 h-4 sm:w-6 sm:h-6" />
+            <div className={`p-2 sm:p-2.5 rounded-xl border border-white/20 dark:border-slate-800/40 shadow-sm shrink-0 self-start sm:self-auto order-1 sm:order-2 ${m.color}`}>
+              <m.icon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Real-time Order Stream Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Real-time Order Stream Chart & Load Capacity (Compact) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Sales Area Chart */}
-        <div className="lg:col-span-2 card-premium">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+        <div className="lg:col-span-2 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm backdrop-blur-md">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 sm:mb-4">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">Sales Trend</h3>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-2 py-0.5 rounded-md border border-brand-200/40 dark:border-brand-800/40">
+                <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-base sm:text-lg">Sales Trend</h3>
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-2 py-0.5 rounded-md border border-brand-200/40 dark:border-brand-800/40">
                   {rangeInfo.subtext}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-400 font-medium">
                 {dateRange === 'today' && 'Hourly revenue stream for today'}
                 {dateRange === 'yesterday' && 'Hourly revenue stream for yesterday'}
                 {dateRange === 'week' && 'Daily revenue stream for the last 7 days'}
@@ -362,15 +362,15 @@ export const AdminDashboard: React.FC = () => {
                 {dateRange === 'all' && 'Revenue stream across historical dates'}
               </p>
             </div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-green-600 bg-green-500/10 px-3 py-1 rounded-full dark:text-green-400 flex items-center gap-1 border border-green-500/10">
+            <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-green-600 bg-green-500/10 px-2.5 py-0.5 rounded-full dark:text-green-400 flex items-center gap-1 border border-green-500/10">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
               Live Sync
             </span>
           </div>
 
-          <div className="h-64">
+          <div className="h-48 sm:h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-brand-500)" stopOpacity={0.25}/>
@@ -378,66 +378,68 @@ export const AdminDashboard: React.FC = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.15} />
-                <XAxis dataKey="label" stroke="#94A3B8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} />
+                <XAxis dataKey="label" stroke="#94A3B8" fontSize={10} tickLine={false} />
+                <YAxis stroke="#94A3B8" fontSize={10} tickLine={false} />
                 <Tooltip 
                   formatter={(val: any) => [`${currency}${Number(val).toLocaleString()}`, 'Sales']}
                   contentStyle={{ 
-                    borderRadius: '16px', 
+                    borderRadius: '12px', 
                     border: '1px solid rgba(255,255,255,0.08)', 
-                    boxShadow: '0 8px 32px 0 rgba(0,0,0,0.2)', 
-                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                    boxShadow: '0 8px 24px 0 rgba(0,0,0,0.2)', 
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
                     backdropFilter: 'blur(10px)',
-                    color: '#FFF'
+                    color: '#FFF',
+                    fontSize: '12px',
+                    padding: '8px 12px'
                   }} 
                 />
-                <Area type="monotone" dataKey="sales" stroke="var(--color-brand-500)" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" dataKey="sales" stroke="var(--color-brand-500)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSales)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Live Active Tables Panel */}
-        <div className="card-premium flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/50 p-4 sm:p-5 shadow-sm backdrop-blur-md flex flex-col justify-between">
           <div>
-            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg mb-1">Table Load Capacity</h3>
-            <p className="text-xs text-slate-400 font-medium mb-6">Status overview of physical dining seats</p>
+            <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-base sm:text-lg mb-0.5">Table Load Capacity</h3>
+            <p className="text-[11px] sm:text-xs text-slate-400 font-medium mb-4">Status overview of physical dining seats</p>
 
-            <div className="space-y-5">
+            <div className="space-y-3 sm:space-y-3.5">
               <div>
-                <div className="flex justify-between text-xs text-slate-500 font-bold mb-1.5">
+                <div className="flex justify-between text-[11px] sm:text-xs text-slate-500 font-bold mb-1">
                   <span>Occupied ({tables.filter(t => t.status === 'occupied').length})</span>
                   <span className="text-brand-500 font-extrabold">{((tables.filter(t => t.status === 'occupied').length / Math.max(1, tables.length)) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2">
+                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-1.5">
                   <div 
-                    className="bg-brand-500 dark:bg-brand-400 h-2 rounded-full transition-all duration-500 shadow-sm shadow-brand-500/25" 
+                    className="bg-brand-500 dark:bg-brand-400 h-1.5 rounded-full transition-all duration-500 shadow-sm shadow-brand-500/25" 
                     style={{ width: `${(tables.filter(t => t.status === 'occupied').length / Math.max(1, tables.length)) * 100}%` }}
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between text-xs text-slate-500 font-bold mb-1.5">
+                <div className="flex justify-between text-[11px] sm:text-xs text-slate-500 font-bold mb-1">
                   <span>Reserved ({tables.filter(t => t.status === 'reserved').length})</span>
                   <span className="text-rose-500 font-extrabold">{((tables.filter(t => t.status === 'reserved').length / Math.max(1, tables.length)) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2">
+                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-1.5">
                   <div 
-                    className="bg-gradient-to-r from-rose-500 to-pink-650 h-2 rounded-full transition-all duration-500 shadow-sm shadow-rose-500/25" 
+                    className="bg-gradient-to-r from-rose-500 to-pink-650 h-1.5 rounded-full transition-all duration-500 shadow-sm shadow-rose-500/25" 
                     style={{ width: `${(tables.filter(t => t.status === 'reserved').length / Math.max(1, tables.length)) * 100}%` }}
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between text-xs text-slate-500 font-bold mb-1.5">
+                <div className="flex justify-between text-[11px] sm:text-xs text-slate-500 font-bold mb-1">
                   <span>Available ({tables.filter(t => t.status === 'available').length})</span>
                   <span className="text-emerald-500 font-extrabold">{((tables.filter(t => t.status === 'available').length / Math.max(1, tables.length)) * 100).toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2">
+                <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-1.5">
                   <div 
-                    className="bg-gradient-to-r from-emerald-500 to-green-600 h-2 rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/25" 
+                    className="bg-gradient-to-r from-emerald-500 to-green-600 h-1.5 rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/25" 
                     style={{ width: `${(tables.filter(t => t.status === 'available').length / Math.max(1, tables.length)) * 100}%` }}
                   />
                 </div>
@@ -445,8 +447,8 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-6 border border-slate-100/50 dark:border-slate-800/50 p-3.5 rounded-2xl text-[11px] text-slate-500 font-medium flex gap-2 items-start bg-slate-50/60 dark:bg-slate-850/30">
-            <AlertCircle className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
+          <div className="mt-4 border border-slate-100/50 dark:border-slate-800/50 p-2.5 sm:p-3 rounded-xl text-[10.5px] text-slate-500 font-medium flex gap-2 items-start bg-slate-50/60 dark:bg-slate-850/30">
+            <AlertCircle className="w-3.5 h-3.5 text-brand-500 flex-shrink-0 mt-0.5" />
             <span>Use the <strong>Table & QR Manager</strong> in the sidebar to print QR codes and change table capacity limits.</span>
           </div>
         </div>
