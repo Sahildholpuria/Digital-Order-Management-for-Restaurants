@@ -126,32 +126,52 @@ export const AdminDashboard: React.FC = () => {
   const pendingBillsCount = pendingBills.length;
   const pendingBillsAmount = pendingBills.reduce((acc, curr) => acc + curr.grandTotal, 0);
 
-  // 3. Adaptive Chart Data based on Date Range
-  const chartData = useMemo(() => {
-    if (dateRange === 'today' || dateRange === 'yesterday') {
-      // Hourly slots (e.g. 09:00 to 23:00)
-      const hourlyData: { [key: string]: number } = {};
-      
-      // Initialize slots from 9 AM to 11 PM
-      for (let h = 9; h <= 23; h++) {
-        const hourLabel = `${h.toString().padStart(2, '0')}:00`;
-        hourlyData[hourLabel] = 0;
-      }
+  // 12-Hour format formatter (e.g., 9 AM, 12 PM, 3 PM, 10 PM)
+  const formatHour12 = (hour24: number): string => {
+    const period = hour24 >= 12 ? 'PM' : 'AM';
+    const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+    return `${hour12} ${period}`;
+  };
 
-      filteredOrders.forEach(o => {
-        const d = new Date(o.createdAt);
-        const hourLabel = `${d.getHours().toString().padStart(2, '0')}:00`;
-        if (hourlyData[hourLabel] !== undefined) {
-          hourlyData[hourLabel] += o.grandTotal;
-        } else {
-          hourlyData[hourLabel] = o.grandTotal;
-        }
+  // 3. Adaptive Chart Data based on Date Range (Accurate Revenue Stream & 12-Hour Time Format)
+  const chartData = useMemo(() => {
+    // Determine authoritative revenue records (prefer settled payments; otherwise use completed/non-cancelled orders)
+    const validOrders = filteredOrders.filter(o => o.status !== 'cancelled');
+    const revenueItems = filteredPayments.length > 0
+      ? filteredPayments.map(p => ({ timestamp: p.createdAt, amount: p.grandTotal }))
+      : validOrders.map(o => ({ timestamp: o.createdAt, amount: o.grandTotal }));
+
+    if (dateRange === 'today' || dateRange === 'yesterday') {
+      // Find range of operating hours with sensible default: 9 AM to 11 PM
+      let minHour = 9;
+      let maxHour = 23;
+
+      revenueItems.forEach(item => {
+        if (!item.timestamp) return;
+        const h = new Date(item.timestamp).getHours();
+        if (h < minHour) minHour = Math.max(0, h);
+        if (h > maxHour) maxHour = Math.min(23, h);
       });
 
-      return Object.keys(hourlyData).map(hour => ({
-        label: hour,
-        sales: Math.round(hourlyData[hour])
-      }));
+      const hourlyMap: { [hour: number]: number } = {};
+      for (let h = minHour; h <= maxHour; h++) {
+        hourlyMap[h] = 0;
+      }
+
+      revenueItems.forEach(item => {
+        if (!item.timestamp) return;
+        const h = new Date(item.timestamp).getHours();
+        hourlyMap[h] = (hourlyMap[h] || 0) + item.amount;
+      });
+
+      return Object.keys(hourlyMap)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map(h => ({
+          label: formatHour12(h),
+          rawHour: h,
+          sales: Math.round(hourlyMap[h])
+        }));
     }
 
     if (dateRange === 'week') {
@@ -161,14 +181,15 @@ export const AdminDashboard: React.FC = () => {
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
         const dateKey = d.toISOString().split('T')[0];
-        const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+        const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
         daysMap[dateKey] = { label: dayLabel, sales: 0 };
       }
 
-      filteredOrders.forEach(o => {
-        const dateKey = new Date(o.createdAt).toISOString().split('T')[0];
+      revenueItems.forEach(item => {
+        if (!item.timestamp) return;
+        const dateKey = new Date(item.timestamp).toISOString().split('T')[0];
         if (daysMap[dateKey]) {
-          daysMap[dateKey].sales += o.grandTotal;
+          daysMap[dateKey].sales += item.amount;
         }
       });
 
@@ -179,10 +200,9 @@ export const AdminDashboard: React.FC = () => {
     }
 
     if (dateRange === 'month') {
-      // Group by days of the month
+      // Group by days of current month
       const daysMap: { [key: string]: { label: string; sales: number } } = {};
       const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const totalDays = now.getDate();
 
       for (let i = 1; i <= totalDays; i++) {
@@ -192,10 +212,11 @@ export const AdminDashboard: React.FC = () => {
         daysMap[dateKey] = { label: dayLabel, sales: 0 };
       }
 
-      filteredOrders.forEach(o => {
-        const dateKey = new Date(o.createdAt).toISOString().split('T')[0];
+      revenueItems.forEach(item => {
+        if (!item.timestamp) return;
+        const dateKey = new Date(item.timestamp).toISOString().split('T')[0];
         if (daysMap[dateKey]) {
-          daysMap[dateKey].sales += o.grandTotal;
+          daysMap[dateKey].sales += item.amount;
         }
       });
 
@@ -205,20 +226,21 @@ export const AdminDashboard: React.FC = () => {
       }));
     }
 
-    // 'all' - Group by recent dates or months
+    // 'all' - Group by recent dates
     const dateMap: { [key: string]: number } = {};
-    filteredOrders.forEach(o => {
-      const d = new Date(o.createdAt);
+    revenueItems.forEach(item => {
+      if (!item.timestamp) return;
+      const d = new Date(item.timestamp);
       const key = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      dateMap[key] = (dateMap[key] || 0) + o.grandTotal;
+      dateMap[key] = (dateMap[key] || 0) + item.amount;
     });
 
-    const entries = Object.entries(dateMap).slice(-10);
+    const entries = Object.entries(dateMap).slice(-12);
     return entries.map(([key, val]) => ({
       label: key,
       sales: Math.round(val)
     }));
-  }, [filteredOrders, dateRange]);
+  }, [filteredOrders, filteredPayments, dateRange]);
 
   // Metrics Grid Config
   const metrics = [
