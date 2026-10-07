@@ -557,48 +557,48 @@ export const ReportsManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Reports Overview Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+      {/* Reports Overview Cards (Compact & Crisp) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
         
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
-          <div className="p-3 bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400 rounded-xl sm:rounded-2xl shrink-0">
-            <DollarSign className="w-4 h-4 sm:w-6 sm:h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-2xs flex items-center gap-2.5">
+          <div className="p-2 bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400 rounded-lg sm:rounded-xl shrink-0">
+            <DollarSign className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Total Sales Value</p>
-            <h3 className="text-lg sm:text-2xl font-black text-slate-855 dark:text-slate-100 truncate">{currency}{totalRevenue.toFixed(0)}</h3>
+            <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">{currency}{totalRevenue.toFixed(0)}</h3>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-xl sm:rounded-2xl shrink-0">
-            <ShoppingBag className="w-4 h-4 sm:w-6 sm:h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-2xs flex items-center gap-2.5">
+          <div className="p-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-lg sm:rounded-xl shrink-0">
+            <ShoppingBag className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">AOV (Avg Bill)</p>
-            <h3 className="text-lg sm:text-2xl font-black text-slate-855 dark:text-slate-100 truncate">{currency}{averageOrderValue.toFixed(0)}</h3>
+            <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">{currency}{averageOrderValue.toFixed(0)}</h3>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 rounded-xl sm:rounded-2xl shrink-0">
-            <Coffee className="w-4 h-4 sm:w-6 sm:h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-2xs flex items-center gap-2.5">
+          <div className="p-2 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 rounded-lg sm:rounded-xl shrink-0">
+            <Coffee className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Busiest Category</p>
-            <h3 className="text-lg font-black text-slate-855 dark:text-slate-105 truncate max-w-[150px]" title={topCategoryName}>
+            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate" title={topCategoryName}>
               {topCategoryName}
             </h3>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-3 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
-          <div className="p-3 bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 rounded-xl sm:rounded-2xl shrink-0">
-            <Award className="w-4 h-4 sm:w-6 sm:h-6" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-2xs flex items-center gap-2.5">
+          <div className="p-2 bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 rounded-lg sm:rounded-xl shrink-0">
+            <Award className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Bestseller Dish</p>
-            <h3 className="text-lg font-black text-slate-855 dark:text-slate-105 truncate max-w-[150px]" title={topSellingItemName}>
+            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate" title={topSellingItemName}>
               {topSellingItemName}
             </h3>
           </div>
@@ -607,10 +607,10 @@ export const ReportsManager: React.FC = () => {
       </div>
 
       {/* Charts Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-4">
         
         {/* Daily Sales Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-3.5 sm:p-4 rounded-2xl shadow-sm space-y-3">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Weekly Revenue Flow</h3>
@@ -619,7 +619,7 @@ export const ReportsManager: React.FC = () => {
             <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
 
-          <div className="h-64">
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <RechartsBarChart data={dailySalesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -633,7 +633,7 @@ export const ReportsManager: React.FC = () => {
         </div>
 
         {/* Top 5 Dishes Quantities Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-3.5 sm:p-4 rounded-2xl shadow-sm space-y-3">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Top 5 Selling Items</h3>
@@ -642,7 +642,7 @@ export const ReportsManager: React.FC = () => {
             <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
           </div>
 
-          <div className="h-64">
+          <div className="h-52">
             {topItems.length === 0 ? (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">No sales data logged yet</div>
             ) : (
@@ -660,7 +660,7 @@ export const ReportsManager: React.FC = () => {
         </div>
 
         {/* Peak Ordering Hours */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-3.5 sm:p-4 rounded-2xl shadow-sm space-y-3">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Peak Dining Hours</h3>
@@ -669,7 +669,7 @@ export const ReportsManager: React.FC = () => {
             <Clock className="w-5 h-5 text-indigo-500" />
           </div>
 
-          <div className="h-64">
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={peakHoursData} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -683,7 +683,7 @@ export const ReportsManager: React.FC = () => {
         </div>
 
         {/* Share of Sales by Categories */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-3.5 sm:p-4 rounded-2xl shadow-sm space-y-3">
           <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-205">Category Share Value</h3>
           <p className="text-[11px] text-slate-400">Total revenue generated by category</p>
 
