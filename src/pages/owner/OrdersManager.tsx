@@ -254,39 +254,39 @@ export const OrdersManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter and search panel - Perfectly Arranged & Responsive */}
-      <div className="card-premium flex flex-col lg:flex-row gap-2.5 sm:gap-3.5 items-stretch lg:items-center justify-between p-3.5 sm:p-4">
+      {/* Filter and search panel - Compact & Clean */}
+      <div className="card-premium flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between p-2.5 sm:p-3 rounded-2xl">
         
         {/* Search Input */}
-        <div className="relative w-full lg:w-72 xl:w-80 shadow-2xs rounded-2xl">
-          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-4 h-4" />
+        <div className="relative w-full lg:w-64 xl:w-72 shadow-2xs rounded-xl">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <Search className="w-3.5 h-3.5" />
           </span>
           <input
             type="text"
             placeholder="Search order ID, table, or token..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl py-2 pl-9.5 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-900 dark:text-white"
+            className="w-full bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl py-1.5 pl-8.5 pr-7 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all font-medium text-slate-900 dark:text-white"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           )}
         </div>
 
         {/* Filter Controls: Structured Rows on Mobile, Responsive Wrap on Desktop */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full lg:w-auto">
           
           {/* Order Type Toggle (Dine-In / Takeaway / All) */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
+          <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
             <button
               onClick={() => setOrderTypeFilter("all")}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                 orderTypeFilter === "all" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -296,7 +296,7 @@ export const OrdersManager: React.FC = () => {
             </button>
             <button
               onClick={() => setOrderTypeFilter("dine_in")}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 whitespace-nowrap ${
                 orderTypeFilter === "dine_in" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -307,7 +307,7 @@ export const OrdersManager: React.FC = () => {
             </button>
             <button
               onClick={() => setOrderTypeFilter("takeaway")}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 whitespace-nowrap ${
                 orderTypeFilter === "takeaway" 
                   ? "bg-orange-600 text-white shadow-xs font-black"
                   : "text-orange-600/80 hover:text-orange-600"
@@ -319,10 +319,10 @@ export const OrdersManager: React.FC = () => {
           </div>
 
           {/* Status Filter Tabs (Active / Completed / All) */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
             <button
               onClick={() => setStatusFilter("active")}
-              className={`flex-1 sm:flex-initial min-w-[72px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+              className={`flex-1 sm:flex-initial min-w-[64px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                 statusFilter === "active" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40"
@@ -332,7 +332,7 @@ export const OrdersManager: React.FC = () => {
             </button>
             <button
               onClick={() => setStatusFilter("completed")}
-              className={`flex-1 sm:flex-initial min-w-[85px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+              className={`flex-1 sm:flex-initial min-w-[76px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                 statusFilter === "completed" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40"
@@ -342,7 +342,7 @@ export const OrdersManager: React.FC = () => {
             </button>
             <button
               onClick={() => setStatusFilter("all")}
-              className={`flex-1 sm:flex-initial min-w-[55px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
+              className={`flex-1 sm:flex-initial min-w-[48px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                 statusFilter === "all" 
                   ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs font-black"
                   : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-700/40"
@@ -357,7 +357,7 @@ export const OrdersManager: React.FC = () => {
             <select
               value={selectedTableFilter}
               onChange={(e) => setSelectedTableFilter(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none font-bold cursor-pointer shadow-2xs"
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-700 dark:text-slate-200 focus:outline-none font-bold cursor-pointer shadow-2xs"
             >
               <option value="all">All Dining Tables</option>
               {activeTables.map((t, idx) => (
@@ -370,22 +370,22 @@ export const OrdersManager: React.FC = () => {
 
       </div>
 
-      {/* Kanban Board View */}
+      {/* Kanban Board View (Compact & Proportional) */}
       {statusFilter === "active" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {boardColumns.map((col, index) => (
-            <div key={index} className={`rounded-3xl border-t-4 p-5 space-y-4 flex flex-col min-h-[500px] border border-slate-200/60 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/10 backdrop-blur-sm ${col.color}`}>
+            <div key={index} className={`rounded-2xl border-t-4 p-3.5 sm:p-4 space-y-3 flex flex-col min-h-[420px] border border-slate-200/70 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/10 backdrop-blur-sm ${col.color}`}>
               
               <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/50">
-                <h3 className="font-extrabold text-slate-700 dark:text-slate-200 text-xs uppercase tracking-wider">{col.title}</h3>
-                <span className={`font-black text-xs px-2.5 py-0.5 rounded-full ${col.badge}`}>
+                <h3 className="font-extrabold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider">{col.title}</h3>
+                <span className={`font-black text-[11px] px-2 py-0.5 rounded-full ${col.badge}`}>
                   {col.list.length}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-4 max-h-[70vh] pr-1">
+              <div className="flex-1 overflow-y-auto space-y-3 max-h-[70vh] pr-1">
                 {col.list.length === 0 ? (
-                  <div className="h-40 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                  <div className="h-32 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
                     No orders in this stage
                   </div>
                 ) : (
@@ -407,9 +407,9 @@ export const OrdersManager: React.FC = () => {
         </div>
       ) : (
         /* Regular Flat List View for historical/filtered orders */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {filteredOrders.length === 0 ? (
-            <div className="col-span-full card-premium p-10 text-center text-slate-400 text-xs font-bold uppercase tracking-wider">
+            <div className="col-span-full card-premium p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-wider">
               No orders found matching filters.
             </div>
           ) : (
@@ -545,7 +545,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
       : "text-slate-500 bg-slate-500/10 border border-slate-205/10 dark:bg-slate-800/40";
 
   return (
-    <div className={`card-premium space-y-4 flex flex-col justify-between p-5 ${
+    <div className={`card-premium space-y-3 flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl ${
       isTakeaway ? "border-2 border-orange-500/40 shadow-xs" : ""
     }`}>
       
@@ -553,17 +553,17 @@ const OrderCard: React.FC<OrderCardProps> = ({
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-extrabold text-slate-800 dark:text-slate-105 text-sm font-mono">{order.orderNumber}</span>
+            <span className="font-extrabold text-slate-800 dark:text-slate-100 text-xs font-mono">{order.orderNumber}</span>
             
             {/* Takeaway Tag */}
             {isTakeaway && (
-              <span className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1">
+              <span className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-500/30 text-[8.5px] font-black px-1.5 py-0.5 rounded flex items-center gap-1">
                 <ShoppingBag className="w-2.5 h-2.5" />
                 <span>{order.tokenNumber ? `TK #${order.tokenNumber}` : "TAKEAWAY"}</span>
               </span>
             )}
 
-            <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+            <span className={`text-[8.5px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${
               order.status === "pending" ? "bg-red-500/10 text-red-700 dark:text-red-400" :
               order.status === "accepted" ? "bg-blue-500/10 text-blue-700 dark:text-blue-400" :
               order.status === "preparing" ? "bg-amber-500/10 text-amber-705 dark:text-amber-400" :
@@ -575,7 +575,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
             </span>
           </div>
 
-          <h4 className="font-black text-base text-slate-800 dark:text-slate-100 mt-1">
+          <h4 className="font-black text-sm sm:text-base text-slate-800 dark:text-slate-100 mt-0.5">
             {isTakeaway
               ? (order.tokenNumber ? `Takeaway • Token #${order.tokenNumber}` : order.tableName)
               : (order.tableName.toLowerCase().startsWith("table") 
