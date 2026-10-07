@@ -198,13 +198,13 @@ export const SettingsManager: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4">
         
         {/* ================= LEFT MAIN COLUMN (Brand + Invoicing + QZ Tray Station) ================= */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-3.5 sm:space-y-4">
 
           {/* BRAND INFORMATION & INVOICING CARD */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-5 sm:p-7 rounded-2xl sm:rounded-3xl shadow-xs space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-3.5 sm:p-5 rounded-2xl shadow-xs space-y-6">
             
             {/* Section 1: Brand Information Header */}
             <div>
@@ -236,7 +236,7 @@ export const SettingsManager: React.FC = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Demo Restaurant"
-                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export const SettingsManager: React.FC = () => {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="e.g. 123 Food Street, Downtown"
-                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                 </div>
@@ -277,7 +277,7 @@ export const SettingsManager: React.FC = () => {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="e.g. 9876543210"
-                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                       />
                     </div>
                   </div>
@@ -296,7 +296,7 @@ export const SettingsManager: React.FC = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="e.g. info@restaurant.com"
-                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
                       />
                     </div>
                   </div>
@@ -312,7 +312,7 @@ export const SettingsManager: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-xl p-2.5 flex items-center justify-between gap-2.5">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                           <Clock className="w-4 h-4" />
@@ -331,7 +331,7 @@ export const SettingsManager: React.FC = () => {
                       />
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-xl p-2.5 flex items-center justify-between gap-2.5">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                           <Clock className="w-4 h-4" />
@@ -386,7 +386,7 @@ export const SettingsManager: React.FC = () => {
                         placeholder="e.g. 22AAAAA1111A1Z1"
                         value={gstNumber}
                         onChange={(e) => setGstNumber(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
@@ -406,7 +406,7 @@ export const SettingsManager: React.FC = () => {
                         placeholder="e.g. www.yourrestaurant.com"
                         value={websiteUrl}
                         onChange={(e) => setWebsiteUrl(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
@@ -430,7 +430,7 @@ export const SettingsManager: React.FC = () => {
                         placeholder="0"
                         value={taxPercentage}
                         onChange={(e) => setTaxPercentage(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-2 pl-9 pr-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
@@ -443,7 +443,7 @@ export const SettingsManager: React.FC = () => {
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-2xl py-3 px-4 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-750 rounded-xl py-2 px-3 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                     >
                       {currencies.map(c => (
                         <option key={c.symbol} value={c.symbol}>{c.label}</option>
@@ -458,7 +458,7 @@ export const SettingsManager: React.FC = () => {
           </div>
 
           {/* ================= UPI & AT-TABLE PAYMENT QR CODE SETTINGS ================= */}
-          <div className="bg-gradient-to-br from-white to-purple-500/5 dark:from-slate-900 dark:to-purple-950/20 border-2 border-purple-500/30 dark:border-purple-500/20 p-5 sm:p-7 rounded-2xl sm:rounded-3xl shadow-sm space-y-6">
+          <div className="bg-gradient-to-br from-white to-purple-500/5 dark:from-slate-900 dark:to-purple-950/20 border-2 border-purple-500/30 dark:border-purple-500/20 p-3.5 sm:p-5 rounded-2xl shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-purple-500/15">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
@@ -591,7 +591,7 @@ export const SettingsManager: React.FC = () => {
                   Waiter At-Table Preview
                 </span>
 
-                <div className="w-48 h-48 bg-white rounded-2xl p-3 shadow-md border border-slate-200 flex items-center justify-center overflow-hidden">
+                <div className="w-40 h-40 bg-white rounded-xl p-2.5 shadow-md border border-slate-200 flex items-center justify-center overflow-hidden">
                   {paymentQrType === "custom" && paymentQrImage ? (
                     <img
                       src={paymentQrImage}
@@ -601,7 +601,7 @@ export const SettingsManager: React.FC = () => {
                   ) : (
                     <QRCodeCanvas
                       value={`upi://pay?pa=${upiId || "merchant@upi"}&pn=${encodeURIComponent(name || "RestaurantsOS")}&am=999.00&cu=INR&tn=Table_1_Bill`}
-                      size={160}
+                      size={130}
                       level="M"
                       includeMargin={false}
                     />
@@ -621,7 +621,7 @@ export const SettingsManager: React.FC = () => {
           </div>
 
           {/* ================= PROMINENT QZ TRAY SILENT THERMAL PRINTING STATION ================= */}
-          <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/35 dark:border-emerald-500/25 p-5 sm:p-7 rounded-2xl sm:rounded-3xl shadow-sm space-y-6">
+          <div className="bg-gradient-to-br from-white to-emerald-500/5 dark:from-slate-900 dark:to-emerald-950/20 border-2 border-emerald-500/35 dark:border-emerald-500/25 p-3.5 sm:p-5 rounded-2xl shadow-sm space-y-6">
             
             {/* Header with Live Status & Action */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-emerald-500/15">
@@ -875,11 +875,11 @@ export const SettingsManager: React.FC = () => {
         </div>
 
         {/* ================= RIGHT COLUMN (Subscription, Customer Controls, Audio) ================= */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-3.5 sm:space-y-4">
           
           {/* Subscription Plan & Renewal Card */}
           {/* Customer Menu Feature Toggles */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xs space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-3.5 sm:p-4 rounded-2xl shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <Bell className="w-5 h-5 text-brand-500" />
               <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">
@@ -893,7 +893,7 @@ export const SettingsManager: React.FC = () => {
 
             <div className="space-y-3">
               {/* Waiter Call Toggle */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Call Waiter Button</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">Customers can ring for a waiter from their phone</p>
@@ -916,7 +916,7 @@ export const SettingsManager: React.FC = () => {
               </div>
 
               {/* Bill Request Toggle */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Request Bill Button</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">Customers can request their bill from their phone</p>
@@ -939,7 +939,7 @@ export const SettingsManager: React.FC = () => {
               </div>
 
               {/* Thermal Bill Printing Toggle */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                     <Printer className="w-4 h-4 text-brand-500" />
@@ -967,7 +967,7 @@ export const SettingsManager: React.FC = () => {
           </div>
 
           {/* Audio Alerts Controls */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-xs space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-3.5 sm:p-4 rounded-2xl shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <Volume2 className="w-5 h-5 text-brand-500" />
               <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">
@@ -980,7 +980,7 @@ export const SettingsManager: React.FC = () => {
             </p>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Order Alert Sound</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">Play sound chime + speech text on new orders and guest calls</p>
