@@ -32,6 +32,27 @@ interface AtTableSettlementModalProps {
   takeawayOrder?: RestaurantOrder | null;
 }
 
+const isOrderForTable = (o: RestaurantOrder, targetTable: RestaurantTable): boolean => {
+  if (!o || !targetTable) return false;
+  if (["completed", "cancelled"].includes(o.status)) return false;
+  if (o.orderType === "takeaway" || !!o.tokenNumber || o.tableId === "takeaway") return false;
+
+  const cleanNum = String(targetTable.number).replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+  const orderTableNum = (o.tableName || "").replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+  const orderTableId = (o.tableId || "").replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+
+  return (
+    o.tableId === targetTable.id ||
+    o.tableId === `table-${targetTable.id}` ||
+    o.tableId === `table-${targetTable.number}` ||
+    o.tableId === String(targetTable.number) ||
+    orderTableId === cleanNum ||
+    orderTableNum === cleanNum ||
+    (o.tableName || '').toLowerCase().trim() === `table ${cleanNum}` ||
+    (o.tableName || '').toLowerCase().trim() === String(targetTable.number).toLowerCase().trim()
+  );
+};
+
 export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
   isOpen,
   onClose,
@@ -70,16 +91,7 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
   const activeOrders = useMemo(() => {
     if (takeawayOrder) return [takeawayOrder];
     if (!table) return [];
-    const cleanNum = String(table.number).replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
-    return orders.filter(
-      (o) =>
-        (o.tableId === table.id ||
-          o.tableId === `table-${table.number}` ||
-          o.tableId === String(table.number) ||
-          o.tableName === `Table ${table.number}` ||
-          (o.tableName || '').replace(/^table[\s\-_]*/i, '').trim().toLowerCase() === cleanNum) &&
-        !["completed", "cancelled"].includes(o.status)
-    );
+    return orders.filter(o => isOrderForTable(o, table));
   }, [orders, table, takeawayOrder]);
 
   // Aggregate items across all KOT orders for consolidated billing
@@ -87,7 +99,7 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
     const itemMap = new Map<string, OrderItem>();
     activeOrders.forEach((o) => {
       (o.items || []).forEach((item) => {
-        const key = `${item.itemId}_${item.price}_${item.portion || ''}_${item.specialInstructions || ''}`;
+        const key = `${item.itemId || item.name}_${item.price}_${item.portion || ''}_${item.specialInstructions || ''}`;
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
           existing.quantity += item.quantity;

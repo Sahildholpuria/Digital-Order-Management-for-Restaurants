@@ -41,6 +41,27 @@ interface WaiterDashboardProps {
   isStandalone?: boolean;
 }
 
+const isOrderForTable = (o: RestaurantOrder, targetTable: RestaurantTable): boolean => {
+  if (!o || !targetTable) return false;
+  if (["completed", "cancelled"].includes(o.status)) return false;
+  if (o.orderType === "takeaway" || !!o.tokenNumber || o.tableId === "takeaway") return false;
+
+  const cleanNum = String(targetTable.number).replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+  const orderTableNum = (o.tableName || "").replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+  const orderTableId = (o.tableId || "").replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
+
+  return (
+    o.tableId === targetTable.id ||
+    o.tableId === `table-${targetTable.id}` ||
+    o.tableId === `table-${targetTable.number}` ||
+    o.tableId === String(targetTable.number) ||
+    orderTableId === cleanNum ||
+    orderTableNum === cleanNum ||
+    (o.tableName || '').toLowerCase().trim() === `table ${cleanNum}` ||
+    (o.tableName || '').toLowerCase().trim() === String(targetTable.number).toLowerCase().trim()
+  );
+};
+
 export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone = false }) => {
   const {
     tables,
@@ -178,14 +199,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
   // Find active orders for selected table
   const selectedTableOrders = useMemo(() => {
     if (!selectedTable) return [];
-    return orders.filter(
-      o =>
-        (o.tableId === selectedTable.id ||
-          o.tableId === `table-${selectedTable.number}` ||
-          o.tableName === `Table ${selectedTable.number}` ||
-          o.tableName === selectedTable.number) &&
-        !["completed", "cancelled"].includes(o.status)
-    );
+    return orders.filter(o => isOrderForTable(o, selectedTable));
   }, [selectedTable, orders]);
 
   const handleResolveAlert = async (id: string, e: React.MouseEvent) => {
@@ -730,14 +744,7 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                 const isOccupied = table.status === "occupied";
                 const isCalling = callingTableIds.has(table.id);
 
-                const activeOrders = orders.filter(
-                  o =>
-                    (o.tableId === table.id ||
-                      o.tableId === `table-${table.number}` ||
-                      o.tableName === `Table ${table.number}` ||
-                      o.tableName === table.number) &&
-                    !["completed", "cancelled"].includes(o.status)
-                );
+                const activeOrders = orders.filter(o => isOrderForTable(o, table));
 
                 const totalAmount = activeOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
                 const itemCount = activeOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0);
