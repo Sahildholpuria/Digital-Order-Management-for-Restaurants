@@ -272,10 +272,20 @@ class QZTrayService {
       this.setupSecurity();
 
       if (!qz.websocket.isActive()) {
-        await qz.websocket.connect({
-          retries: 2,
-          delay: 1,
-        });
+        // Try localhost and 127.0.0.1 across secure WSS (8181) and fallback WS (8182)
+        try {
+          await qz.websocket.connect({
+            retries: 2,
+            delay: 1,
+            host: "localhost"
+          });
+        } catch (firstErr) {
+          // Fallback retry with default settings
+          await qz.websocket.connect({
+            retries: 1,
+            delay: 1
+          });
+        }
       }
 
       this.status = "connected";
@@ -389,7 +399,7 @@ class QZTrayService {
 
       const printConfig = qz.configs.create(targetPrinter, {
         colorType: "grayscale",
-        rasterize: true,
+        rasterize: false,
         scaleContent: true,
         size: {
           width: inchWidth,

@@ -105,17 +105,29 @@ class PrintQueueManager {
         }
       }
 
-      const res = await qzTrayService.printHTML({
-        printerName: targetPrinter,
-        html: task.html,
-        paperWidth: task.paperWidth,
-        jobName: task.jobName,
-      });
+      try {
+        const res = await qzTrayService.printHTML({
+          printerName: targetPrinter,
+          html: task.html,
+          paperWidth: task.paperWidth,
+          jobName: task.jobName,
+        });
 
-      if (res.success) {
-        return { success: true, mode: "qz-tray", message: res.message };
+        if (res.success) {
+          return { success: true, mode: "qz-tray", message: res.message };
+        }
+        console.warn("[PrintQueue] QZ Tray printHTML returned unsuccessful:", res.message);
+      } catch (qzErr) {
+        console.warn("[PrintQueue] QZ Tray direct print error:", qzErr);
       }
-      throw new Error(res.message || "QZ Tray printing failed");
+
+      // If QZ Tray direct print failed and user explicitly requested print, fallback to browser print dialog
+      if (task.forcePrint) {
+        await this.printViaBrowserIframe(task.html, task.type === "kot" ? "pos-kot-print-frame" : "pos-receipt-print-frame");
+        return { success: true, mode: "browser" };
+      }
+
+      return { success: false, mode: "none", message: "QZ Tray printing failed" };
     }
 
     // 2. Mobile device suppression for silent background KOTs
