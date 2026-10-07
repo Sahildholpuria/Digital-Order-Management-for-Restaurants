@@ -850,11 +850,35 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     if (qzTrayService.isConnected() && qzConfig.autoPrintBill !== false && p.orderId) {
                       dbService.getOrder(restaurantId, p.orderId).then(orderObj => {
                         if (orderObj) {
+                          let finalItems = orderObj.items || [];
+                          // Consolidate dishes across multiple KOTs for this table session if available
+                          if (orderObj.tableId && orderObj.tableId !== "takeaway") {
+                            const tableOrders = (orders || []).filter(o => 
+                              (o.tableId === orderObj.tableId || o.tableName === orderObj.tableName) &&
+                              (o.id === orderObj.id || Math.abs(new Date(o.createdAt).getTime() - new Date(orderObj.createdAt).getTime()) < 24 * 60 * 60 * 1000)
+                            );
+                            if (tableOrders.length > 1) {
+                              const itemMap = new Map<string, OrderItem>();
+                              tableOrders.forEach(to => {
+                                (to.items || []).forEach(it => {
+                                  const key = `${it.itemId}_${it.price}_${it.portion || ''}_${it.specialInstructions || ''}`;
+                                  if (itemMap.has(key)) {
+                                    itemMap.get(key)!.quantity += it.quantity;
+                                  } else {
+                                    itemMap.set(key, { ...it });
+                                  }
+                                });
+                              });
+                              finalItems = Array.from(itemMap.values());
+                            }
+                          }
+
                           const receiptPrintOrder: RestaurantOrder = {
                             ...orderObj,
                             tableName: p.tableName,
                             customerName: p.customerName || orderObj.customerName,
                             customerPhone: p.customerPhone || orderObj.customerPhone,
+                            items: finalItems,
                             subtotal: p.subtotal,
                             discount: p.discount,
                             tax: p.tax,

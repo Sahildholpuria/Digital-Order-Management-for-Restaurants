@@ -70,12 +70,14 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
   const activeOrders = useMemo(() => {
     if (takeawayOrder) return [takeawayOrder];
     if (!table) return [];
+    const cleanNum = String(table.number).replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
     return orders.filter(
       (o) =>
         (o.tableId === table.id ||
           o.tableId === `table-${table.number}` ||
+          o.tableId === String(table.number) ||
           o.tableName === `Table ${table.number}` ||
-          o.tableName === table.number) &&
+          (o.tableName || '').replace(/^table[\s\-_]*/i, '').trim().toLowerCase() === cleanNum) &&
         !["completed", "cancelled"].includes(o.status)
     );
   }, [orders, table, takeawayOrder]);
@@ -85,7 +87,7 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
     const itemMap = new Map<string, OrderItem>();
     activeOrders.forEach((o) => {
       (o.items || []).forEach((item) => {
-        const key = `${item.itemId}_${item.price}`;
+        const key = `${item.itemId}_${item.price}_${item.portion || ''}_${item.specialInstructions || ''}`;
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
           existing.quantity += item.quantity;
@@ -194,10 +196,11 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
       for (const order of activeOrders) {
         const settledOrder: RestaurantOrder = {
           ...order,
-          subtotal: activeOrders.length === 1 ? subtotal : order.subtotal,
-          discount: activeOrders.length === 1 ? discountAmount : 0,
-          tax: activeOrders.length === 1 ? taxAmount : order.tax,
-          grandTotal: activeOrders.length === 1 ? grandTotal : order.grandTotal,
+          items: order.id === primaryOrder.id ? consolidatedItems : order.items,
+          subtotal: order.id === primaryOrder.id ? subtotal : order.subtotal,
+          discount: order.id === primaryOrder.id ? discountAmount : 0,
+          tax: order.id === primaryOrder.id ? taxAmount : order.tax,
+          grandTotal: order.id === primaryOrder.id ? grandTotal : order.grandTotal,
           status: "completed",
         };
         await saveOrder(settledOrder);

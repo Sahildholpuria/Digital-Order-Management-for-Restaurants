@@ -25,6 +25,7 @@ import html2canvas from "html2canvas-pro";
 export const BillingManager: React.FC = () => {
   const { 
     orders, 
+    tables, 
     settings, 
     addPaymentRecord, 
     updateOrderStatus,
@@ -75,11 +76,11 @@ export const BillingManager: React.FC = () => {
     const tableMap = new Map<string, typeof groups[0]>();
 
     activeOrdersList.forEach(order => {
-      const isTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
+      const isTakeaway = order.orderType === "takeaway" || !!order.tokenNumber || order.tableId === "takeaway";
       
       if (isTakeaway) {
         // Each takeaway parcel is an independent bill
-        const items = order.items || [];
+        const items = (order.items || []).map(i => ({ ...i }));
         const sub = Math.round(items.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 100) / 100;
         const taxRate = settings?.taxPercentage ?? 0;
         const tax = Math.round(sub * (taxRate / 100) * 100) / 100;
@@ -105,21 +106,30 @@ export const BillingManager: React.FC = () => {
           isTakeaway: true
         });
       } else {
-        // Consolidate all orders for this table into 1 master bill
+        // Find matching canonical table across tables list or table name
         const cleanTableNum = (order.tableName || "").replace(/^table[\s\-_]*/i, '').trim().toLowerCase();
-        const groupKey = order.tableId && order.tableId !== "takeaway" ? order.tableId : `table-${cleanTableNum || '1'}`;
+        const matchedTable = (tables || []).find(t => 
+          t.id === order.tableId || 
+          t.number.toString().toLowerCase() === cleanTableNum ||
+          t.number.toString() === order.tableId ||
+          `table ${t.number}`.toLowerCase() === (order.tableName || '').toLowerCase().trim()
+        );
+
+        const groupKey = matchedTable ? `table-${matchedTable.id}` : (order.tableId ? `table-${order.tableId}` : `table-${cleanTableNum || '1'}`);
+        const displayTableName = matchedTable ? `Table ${matchedTable.number}` : (order.tableName.toLowerCase().startsWith("table") ? order.tableName : `Table ${order.tableName}`);
+        const tableFloor = matchedTable?.floor || order.tableFloor;
 
         if (tableMap.has(groupKey)) {
           const grp = tableMap.get(groupKey)!;
           grp.orders.push(order);
           if (order.customerName && !grp.customerName) grp.customerName = order.customerName;
           if (order.customerPhone && !grp.customerPhone) grp.customerPhone = order.customerPhone;
-          if (order.tableFloor && !grp.tableFloor) grp.tableFloor = order.tableFloor;
+          if (tableFloor && !grp.tableFloor) grp.tableFloor = tableFloor;
 
-          // Merge item quantities
+          // Merge all dishes from additional rounds/KOTs
           (order.items || []).forEach(newItem => {
-            const key = `${newItem.itemId}_${newItem.price}_${newItem.portion || ''}_${newItem.specialInstructions || ''}`;
-            const existingIdx = grp.items.findIndex(i => `${i.itemId}_${i.price}_${i.portion || ''}_${i.specialInstructions || ''}` === key);
+            const itemKey = `${newItem.itemId}_${newItem.price}_${newItem.portion || ''}_${newItem.specialInstructions || ''}`;
+            const existingIdx = grp.items.findIndex(i => `${i.itemId}_${i.price}_${i.portion || ''}_${i.specialInstructions || ''}` === itemKey);
             if (existingIdx > -1) {
               grp.items[existingIdx].quantity += newItem.quantity;
             } else {
@@ -131,9 +141,9 @@ export const BillingManager: React.FC = () => {
           const grp = {
             id: groupKey,
             key: groupKey,
-            tableName: order.tableName.toLowerCase().startsWith("table") ? order.tableName : `Table ${order.tableName}`,
-            tableId: order.tableId,
-            tableFloor: order.tableFloor,
+            tableName: displayTableName,
+            tableId: matchedTable ? matchedTable.id : order.tableId,
+            tableFloor,
             orderType: "dine_in" as OrderType,
             customerName: order.customerName,
             customerPhone: order.customerPhone,
@@ -164,7 +174,7 @@ export const BillingManager: React.FC = () => {
     });
 
     return groups;
-  }, [activeOrdersList, settings]);
+  }, [activeOrdersList, tables, settings]);
 
   const filteredBillableGroups = useMemo(() => {
     return billableGroups.filter(g => {
@@ -244,6 +254,7 @@ export const BillingManager: React.FC = () => {
         try {
           const updatedOrd: RestaurantOrder = {
             ...ord,
+            items: ord.id === primaryOrder.id ? selectedGroup.items : ord.items,
             status: "completed" as const,
             subtotal: ord.id === primaryOrder.id ? subtotal : ord.subtotal,
             discount: ord.id === primaryOrder.id ? discountAmount : 0,
