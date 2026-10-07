@@ -373,15 +373,15 @@ export const MenuManager: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-5 animate-fade-in max-w-7xl mx-auto">
       
       {/* Title block */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight font-sans">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-sans">
             Menu Organizer
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Structure your dishes by category, set spicy metrics, discount margins, and manage stocks.
           </p>
         </div>
@@ -389,40 +389,40 @@ export const MenuManager: React.FC = () => {
         <button
           onClick={handleOpenAddItem}
           disabled={categories.length === 0}
-          className="bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-brand-500/10"
+          className="bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-brand-500/20 cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span>Add Food Item</span>
         </button>
       </div>
 
       {/* Main menu content layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3.5 sm:gap-4">
         
         {/* Categories Manager list */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 p-5 rounded-3xl shadow-sm space-y-4 lg:col-span-1 flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-850">
-              <h3 className="font-extrabold text-slate-700 dark:text-slate-205 text-sm uppercase tracking-wider">Categories</h3>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 p-3.5 sm:p-4 rounded-2xl shadow-sm space-y-3 lg:col-span-1 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-extrabold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">Categories</h3>
               <button 
                 onClick={handleOpenAddCat}
-                className="text-brand-650 hover:text-brand-800 p-1 bg-brand-50 hover:bg-brand-100 dark:bg-slate-800 dark:text-brand-405 dark:hover:bg-slate-750 rounded-xl"
+                className="text-brand-650 hover:text-brand-800 p-1 bg-brand-50 hover:bg-brand-100 dark:bg-slate-800 dark:text-brand-400 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="space-y-2 max-h-[50vh] lg:max-h-none overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[50vh] lg:max-h-none overflow-y-auto pr-1">
               <button
                 onClick={() => setActiveCategoryId('all')}
-                className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-between ${
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
                   activeCategoryId === 'all'
                     ? 'bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400'
                     : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40'
                 }`}
               >
                 <span>All Food Items</span>
-                <span className="bg-slate-200 dark:bg-slate-800 text-slate-650 dark:text-slate-350 text-[10px] font-black px-2 py-0.5 rounded-full">
+                <span className="bg-slate-200 dark:bg-slate-800 text-slate-650 dark:text-slate-350 text-[10px] font-black px-1.5 py-0.5 rounded-md">
                   {foodItems.length}
                 </span>
               </button>
@@ -433,7 +433,7 @@ export const MenuManager: React.FC = () => {
                   <div 
                     key={cat.id}
                     onClick={() => setActiveCategoryId(cat.id)}
-                    className={`w-full px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer group ${
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer group ${
                       activeCategoryId === cat.id
                         ? 'bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400'
                         : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/40'
@@ -442,34 +442,34 @@ export const MenuManager: React.FC = () => {
                     <span className="truncate pr-2">{cat.name}</span>
                     
                     <div className="flex items-center gap-1.5">
-                      <span className="bg-slate-105 dark:bg-slate-800 group-hover:bg-white text-slate-655 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                      <span className="bg-slate-100 dark:bg-slate-800 group-hover:bg-white text-slate-600 dark:text-slate-400 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
                         {count}
                       </span>
                       
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMoveCategory(cat, 'up'); }}
                           className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 rounded"
                         >
-                          <ChevronUp className="w-3.5 h-3.5" />
+                          <ChevronUp className="w-3 h-3" />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMoveCategory(cat, 'down'); }}
                           className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 rounded"
                         >
-                          <ChevronDown className="w-3.5 h-3.5" />
+                          <ChevronDown className="w-3 h-3" />
                         </button>
                         <button
                           onClick={(e) => handleOpenEditCat(cat, e)}
                           className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 rounded"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
+                          <Edit3 className="w-3 h-3" />
                         </button>
                         <button
                           onClick={(e) => handleDeleteCat(cat.id, e)}
                           className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-red-500 rounded"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -480,14 +480,14 @@ export const MenuManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Menu Items Grid */}
+        {/* Menu Items Grid (Compact & Dense) */}
         <div className="lg:col-span-3">
           {filteredItems.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-150/60 dark:border-slate-850 rounded-3xl p-12 text-center text-slate-400">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-8 text-center text-xs text-slate-400">
               No food items found in this category. Click "Add Food Item" to start creating.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-3.5">
               {filteredItems.map(item => {
                 const discPrice = item.price * (1 - (item.discountPercentage || 0) / 100);
                 const parsedAttrs = parseFoodItemDescription(item.description || '');
@@ -498,40 +498,40 @@ export const MenuManager: React.FC = () => {
                 return (
                   <div 
                     key={item.id}
-                    className={`bg-white dark:bg-slate-900 border rounded-3xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all ${
-                      item.isAvailable ? 'border-slate-150/60 dark:border-slate-850' : 'border-dashed border-slate-200 dark:border-slate-800 opacity-60'
+                    className={`bg-white dark:bg-slate-900 border rounded-2xl p-3 shadow-sm flex flex-col justify-between hover:shadow-md transition-all ${
+                      item.isAvailable ? 'border-slate-200/70 dark:border-slate-800/80' : 'border-dashed border-slate-200 dark:border-slate-800 opacity-60'
                     }`}
                   >
                     <div>
                       {/* Image Box */}
-                      <div className="relative w-full h-40 bg-slate-50 dark:bg-slate-800 rounded-2xl overflow-hidden mb-3.5">
+                      <div className="relative w-full h-32 sm:h-36 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden mb-2.5">
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                         
                         {/* Authentic Dietary Badge */}
-                        <div className="absolute top-2.5 left-2.5 shadow-sm">
+                        <div className="absolute top-2 left-2 shadow-sm scale-90 origin-top-left">
                           <FSSAIIndicator type={itemDietary} size="sm" showLabel={true} bg="white" />
                         </div>
 
                         {/* Discount Tag */}
                         {item.discountPercentage > 0 && (
-                          <span className="absolute bottom-2.5 left-2.5 bg-red-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
-                            <Tag className="w-3 h-3" />
+                          <span className="absolute bottom-2 left-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                            <Tag className="w-2.5 h-2.5" />
                             <span>{item.discountPercentage}% OFF</span>
                           </span>
                         )}
 
                         {/* Availability override banner */}
                         {!item.isAvailable && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xs font-bold uppercase tracking-wider">
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-[11px] font-bold uppercase tracking-wider">
                             Out of Stock
                           </div>
                         )}
                       </div>
 
                       {/* Item content details */}
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         <div className="flex justify-between items-start gap-1">
-                          <h3 className="font-extrabold text-sm text-slate-850 dark:text-slate-105 leading-snug line-clamp-1">
+                          <h3 className="font-extrabold text-xs sm:text-sm text-slate-850 dark:text-slate-100 leading-snug line-clamp-1">
                             {item.name}
                           </h3>
                         </div>
@@ -542,14 +542,14 @@ export const MenuManager: React.FC = () => {
                             : '';
 
                           return (
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                               {cleanText ? (
-                                <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-2 leading-relaxed">
                                   {cleanText}
                                 </p>
                               ) : null}
                               {variantNames ? (
-                                <span className="inline-block bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                <span className="inline-block bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/20">
                                   Variants: {variantNames}
                                 </span>
                               ) : null}
@@ -559,91 +559,91 @@ export const MenuManager: React.FC = () => {
                       </div>
 
                       {/* Tags & Badges */}
-                      <div className="flex flex-wrap gap-1.5 mt-3">
+                      <div className="flex flex-wrap gap-1 mt-2">
                         {servesInfo && (
-                          <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/25 dark:text-blue-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-blue-200/50 dark:border-blue-800/40">
+                          <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/25 dark:text-blue-300 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-blue-200/50 dark:border-blue-800/40">
                             👥 {servesInfo.toLowerCase().startsWith('serves') ? servesInfo : `Serves ${servesInfo}`}
                           </span>
                         )}
                         {calCount !== undefined && (
-                          <span className="bg-rose-50 text-rose-700 dark:bg-rose-950/25 dark:text-rose-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-rose-200/50 dark:border-rose-800/40">
+                          <span className="bg-rose-50 text-rose-700 dark:bg-rose-950/25 dark:text-rose-300 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-rose-200/50 dark:border-rose-800/40">
                             🔥 {calCount} kcal
                           </span>
                         )}
                         {allergenList.length > 0 && (
-                          <span className="bg-amber-50 text-amber-800 dark:bg-amber-950/25 dark:text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5 border border-amber-200/50 dark:border-amber-800/40" title={allergenList.join(', ')}>
+                          <span className="bg-amber-50 text-amber-800 dark:bg-amber-950/25 dark:text-amber-300 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-amber-200/50 dark:border-amber-800/40" title={allergenList.join(', ')}>
                             ⚠️ {allergenList.slice(0, 2).join(', ')}{allergenList.length > 2 ? ` +${allergenList.length - 2}` : ''}
                           </span>
                         )}
                         {item.isPopular && (
-                          <span className="bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                            <Sparkles className="w-2.5 h-2.5" />
+                          <span className="bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <Sparkles className="w-2 h-2" />
                             Popular
                           </span>
                         )}
                         {item.isRecommended && (
-                          <span className="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                            <Sparkles className="w-2.5 h-2.5" />
+                          <span className="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <Sparkles className="w-2 h-2" />
                             Recommended
                           </span>
                         )}
                         {item.spicyLevel > 0 && (
-                          <span className="bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                            <Flame className="w-2.5 h-2.5 fill-current" />
+                          <span className="bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <Flame className="w-2 h-2 fill-current" />
                             <span>Spicy {item.spicyLevel}</span>
                           </span>
                         )}
-                        <span className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[9px] font-semibold px-2 py-0.5 rounded-md">
+                        <span className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[8.5px] font-semibold px-1.5 py-0.5 rounded">
                           {item.preparationTime}m prep
                         </span>
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-50 dark:border-slate-850/40 flex items-center justify-between">
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                       <div>
-                        <span className="text-base font-extrabold text-slate-800 dark:text-slate-100">
+                        <span className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100">
                           {currency}{discPrice.toFixed(0)}
                         </span>
                         {item.discountPercentage > 0 && (
-                          <span className="text-[11px] text-slate-400 line-through block leading-tight">
+                          <span className="text-[10px] text-slate-400 line-through block leading-tight">
                             {currency}{item.price}
                           </span>
                         )}
                       </div>
 
                       {/* Card Operations */}
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1">
                         <button
                           onClick={() => handleToggleAvailable(item)}
-                          className={`p-2 border rounded-xl transition-all ${
+                          className={`p-1.5 border rounded-lg transition-all cursor-pointer ${
                             item.isAvailable 
-                              ? 'border-slate-205 text-slate-400 hover:text-slate-600 dark:border-slate-800' 
+                              ? 'border-slate-200 text-slate-400 hover:text-slate-600 dark:border-slate-700' 
                               : 'bg-red-500 border-red-500 text-white'
                           }`}
                           title={item.isAvailable ? "Set Unavailable" : "Set Available"}
                         >
-                          {item.isAvailable ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          {item.isAvailable ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                         </button>
                         <button
                           onClick={() => handleDuplicateItem(item)}
-                          className="p-2 border border-slate-205 dark:border-slate-800 text-slate-400 hover:text-slate-655 rounded-xl transition-colors"
+                          className="p-1.5 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
                           title="Clone Item"
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => handleOpenEditItem(item)}
-                          className="p-2 border border-slate-205 dark:border-slate-800 text-slate-400 hover:text-slate-655 rounded-xl transition-colors"
+                          className="p-1.5 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
                           title="Edit"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
+                          <Edit3 className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => handleDeleteItem(item.id)}
-                          className="p-2 border border-slate-205 dark:border-slate-800 text-slate-400 hover:text-red-500 rounded-xl transition-colors"
+                          className="p-1.5 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
                           title="Delete"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
