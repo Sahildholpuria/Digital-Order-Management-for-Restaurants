@@ -216,7 +216,10 @@ export const generateKOTHtml = (
   restaurantName: string = "Main Kitchen",
   paperWidth: "80mm" | "58mm" = "80mm"
 ): string => {
-  const bodyWidth = paperWidth === "58mm" ? "58mm" : "80mm";
+  const printableWidth = paperWidth === "58mm" ? "48mm" : "72mm";
+  const rollWidth = paperWidth === "58mm" ? "58mm" : "80mm";
+
+  const isTakeaway = order.orderType === "takeaway" || (!order.tableId && !order.tableName);
 
   const itemsHtml = order.items
     .map((item) => {
@@ -227,11 +230,11 @@ export const generateKOTHtml = (
       
       let portionBadge = "";
       if (isHalf) {
-        portionBadge = '<span style="background: #000; color: #fff; padding: 2px 6px; font-size: 11px; font-weight: 900; border-radius: 3px; margin-left: 6px;">[ HALF ]</span>';
+        portionBadge = '<span style="background: #000; color: #fff; padding: 1px 5px; font-size: 10.5px; font-weight: 900; border-radius: 2px; margin-left: 4px;">[HALF]</span>';
       } else if (isFull) {
-        portionBadge = '<span style="border: 1.5px solid #000; padding: 1px 5px; font-size: 11px; font-weight: 900; border-radius: 3px; margin-left: 6px;">[ FULL ]</span>';
+        portionBadge = '<span style="border: 1.5px solid #000; padding: 0.5px 4px; font-size: 10.5px; font-weight: 900; border-radius: 2px; margin-left: 4px;">[FULL]</span>';
       } else if (item.portion) {
-        portionBadge = `<span style="border: 1.5px solid #000; padding: 1px 5px; font-size: 11px; font-weight: 900; border-radius: 3px; margin-left: 6px;">[ ${item.portion.toUpperCase()} ]</span>`;
+        portionBadge = `<span style="border: 1.5px solid #000; padding: 0.5px 4px; font-size: 10.5px; font-weight: 900; border-radius: 2px; margin-left: 4px;">[${item.portion.toUpperCase()}]</span>`;
       }
 
       const cleanName = item.name
@@ -240,26 +243,26 @@ export const generateKOTHtml = (
         .trim();
 
       return `
-    <tr style="border-bottom: 1px dashed #555;">
-      <td style="padding: 6px 0; vertical-align: top;">
-        <div style="font-size: 14px; font-weight: 900; text-transform: uppercase;">
-          ${cleanName} ${portionBadge}
-        </div>
-        ${
-          item.specialInstructions
-            ? `<div style="font-size: 11px; font-weight: bold; color: #000; margin-top: 2px;">*** NOTE: ${item.specialInstructions} ***</div>`
-            : ""
-        }
-      </td>
-      <td style="text-align: right; vertical-align: top; padding: 6px 0; font-size: 18px; font-weight: 900;">
-        x${item.quantity}
-      </td>
-    </tr>
-  `;
+        <tr style="border-bottom: 1.5px dashed #000;">
+          <td style="padding: 5px 0; vertical-align: top; text-align: left;">
+            <div style="font-size: 13.5px; font-weight: 900; text-transform: uppercase; color: #000; line-height: 1.25;">
+              ${cleanName} ${portionBadge}
+            </div>
+            ${
+              item.specialInstructions
+                ? `<div style="font-size: 11px; font-weight: 800; color: #000; margin-top: 2px; background: #eee; padding: 2px 4px; border-radius: 2px;">*** NOTE: ${item.specialInstructions} ***</div>`
+                : ""
+            }
+          </td>
+          <td style="text-align: right; vertical-align: top; padding: 5px 0 5px 4px; font-size: 18px; font-weight: 900; font-family: ui-monospace, monospace; color: #000; white-space: nowrap;">
+            x${item.quantity}
+          </td>
+        </tr>
+      `;
     })
     .join("");
 
-  const totalItemsCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItemsCount = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
 
   return `
     <!DOCTYPE html>
@@ -269,115 +272,103 @@ export const generateKOTHtml = (
         <meta charset="utf-8" />
         <style>
           @page {
-            size: ${bodyWidth} auto;
+            size: ${rollWidth} auto;
             margin: 0;
           }
           @media print {
             html, body {
-              width: ${bodyWidth};
-              margin: 0;
-              padding: 0;
+              width: 100%;
+              margin: 0 !important;
+              padding: 0 !important;
+              display: flex;
+              justify-content: center;
+            }
+            .kot-container {
+              width: ${printableWidth} !important;
+              margin: 0 auto !important;
             }
           }
-          body {
-            font-family: 'Courier New', Courier, monospace;
-            width: ${bodyWidth};
-            margin: 0 auto;
-            padding: 8px 6px;
-            color: #000;
-            background: #fff;
+          * {
             box-sizing: border-box;
           }
-          .header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-          }
-          .title {
-            font-size: 20px;
-            font-weight: 900;
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
-            letter-spacing: 1px;
-          }
-          .subtitle {
-            font-size: 12px;
-            font-weight: bold;
-            margin: 2px 0;
-          }
-          .meta-row {
+            padding: 4px;
+            color: #000;
+            background: #fff;
             display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            font-weight: bold;
-            margin: 3px 0;
+            justify-content: center;
           }
-          .table-badge {
-            font-size: 18px;
-            font-weight: 900;
+          .kot-container {
+            width: ${printableWidth};
+            max-width: 100%;
+            margin: 0 auto;
             text-align: center;
-            background: #000;
-            color: #fff;
-            padding: 5px;
-            margin: 6px 0;
-            border-radius: 4px;
           }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 8px 0;
-          }
-          .footer {
-            border-top: 2px solid #000;
-            padding-top: 6px;
-            margin-top: 8px;
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-          }
+          .center { text-align: center; }
+          .bold { font-weight: 900; }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="title">KITCHEN ORDER TICKET</div>
-          <div class="subtitle">${restaurantName.toUpperCase()}</div>
-        </div>
-
-        <div class="meta-row">
-          <span>KOT #: <strong>${order.orderNumber}</strong></span>
-          <span>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-        </div>
-        <div class="meta-row">
-          <span>Date: ${new Date(order.createdAt).toLocaleDateString()}</span>
-          <span>Type: <strong>${order.orderType === 'takeaway' ? 'TAKEAWAY' : 'DINE-IN'}</strong></span>
-        </div>
-
-        <div class="table-badge">
-          ${order.orderType === 'takeaway' ? `TAKEAWAY ${order.tokenNumber ? '#' + order.tokenNumber : ''}` : order.tableName.toUpperCase()}
-          ${order.tableFloor ? ` (${order.tableFloor.toUpperCase()})` : ''}
-        </div>
-
-        ${order.customerName ? `<div class="meta-row"><span>Customer: ${order.customerName}</span>${order.customerPhone ? `<span>Ph: ${order.customerPhone}</span>` : ''}</div>` : ''}
-
-        <table class="items-table">
-          <thead>
-            <tr style="border-bottom: 2px solid #000; font-size: 13px;">
-              <th style="text-align: left; padding-bottom: 4px;">ITEM</th>
-              <th style="text-align: right; padding-bottom: 4px;">QTY</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-
-        <div class="footer">
-          <div style="font-size: 14px; font-weight: 900; margin-bottom: 4px;">
-            TOTAL ITEMS: ${totalItemsCount}
+        <div class="kot-container">
+          <!-- HEADER -->
+          <div style="border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
+            <div style="font-size: 18px; font-weight: 900; letter-spacing: 1px; color: #000; text-transform: uppercase;">
+              KITCHEN ORDER TICKET
+            </div>
+            <div style="font-size: 11.5px; font-weight: 800; color: #000; margin-top: 1px; text-transform: uppercase;">
+              ${restaurantName}
+            </div>
           </div>
-          ${order.orderNotes ? `<div style="border: 1px dashed #000; padding: 4px; margin-top: 4px; font-weight: bold;">ORDER NOTE: ${order.orderNotes}</div>` : ''}
+
+          <!-- TABLE / TOKEN HERO BANNER -->
+          <div style="background: #000; color: #fff; padding: 6px 4px; margin: 5px 0; border-radius: 3px; font-size: 17px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
+            ${isTakeaway ? `TAKEAWAY ${order.tokenNumber ? '#' + order.tokenNumber : '(PARCEL)'}` : order.tableName.toUpperCase()}
+            ${order.tableFloor ? ` - ${order.tableFloor.toUpperCase()}` : ''}
+          </div>
+
+          <!-- META DETAILS -->
+          <div style="font-size: 10.5px; font-weight: 700; border-bottom: 1.5px solid #000; padding-bottom: 4px; margin-bottom: 5px; text-align: left;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>KOT No: <strong>#${order.orderNumber}</strong></span>
+              <span>Time: <strong>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+              <span>Date: <strong>${new Date(order.createdAt).toLocaleDateString()}</strong></span>
+              <span>Type: <strong>${isTakeaway ? 'TAKEAWAY' : 'DINE-IN'}</strong></span>
+            </div>
+            ${order.customerName ? `
+              <div style="margin-top: 2px; font-size: 10px;">
+                Customer: <strong>${order.customerName}${order.customerPhone ? ' (' + order.customerPhone + ')' : ''}</strong>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- ITEMS TABLE -->
+          <table style="width: 100%; border-collapse: collapse; margin: 4px 0 6px 0;">
+            <thead>
+              <tr style="border-bottom: 2px solid #000; font-size: 10.5px; font-weight: 900;">
+                <th style="text-align: left; padding: 2px 0;">ITEM NAME</th>
+                <th style="text-align: right; padding: 2px 0;">QTY</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <!-- FOOTER / SUMMARY -->
+          <div style="border-top: 2px solid #000; padding-top: 4px; margin-top: 4px; font-size: 12px; font-weight: 900; display: flex; justify-content: space-between; align-items: center;">
+            <span>TOTAL QUANTITY:</span>
+            <span style="font-size: 16px; font-family: ui-monospace, monospace;">${totalItemsCount} ITEMS</span>
+          </div>
+
+          <div style="margin-top: 8px; font-size: 9px; font-weight: 700; color: #444; border-top: 1px dashed #000; padding-top: 4px;">
+            *** DISPATCHED TO KITCHEN STATION ***
+          </div>
+          <div style="height: 25px;"></div>
         </div>
-        <div style="height: 25px;"></div>
       </body>
     </html>
   `;
@@ -388,24 +379,26 @@ export const generateBillReceiptHtml = (
   settings?: RestaurantSettings | null,
   paperWidth: "80mm" | "58mm" = "80mm"
 ): string => {
-  const bodyWidth = paperWidth === "58mm" ? "58mm" : "80mm";
+  const printableWidth = paperWidth === "58mm" ? "48mm" : "72mm";
+  const rollWidth = paperWidth === "58mm" ? "58mm" : "80mm";
+
   const currency = settings?.currency || "₹";
   const restName = settings?.name || "RESTAURANT";
   const address = settings?.address || "";
   const phone = settings?.phone || "";
   const email = settings?.email || "";
   const gstin = settings?.gstNumber || "";
+  
   const websiteStr = settings?.websiteUrl || "";
-  const taxRate = settings?.taxPercentage ?? 0;
 
-  const isTakeaway = order.orderType === "takeaway" || !!order.tokenNumber;
-  const paymentModeStr = (order.paymentMethod || "PAID").toUpperCase();
+  const isTakeaway = order.orderType === "takeaway" || (!order.tableId && !order.tableName);
+  const paymentModeStr = (order.paymentMethod || "CASH").toUpperCase();
 
-  // Calculate taxes breakdown if applicable
-  const taxableAmount = Math.max(0, order.subtotal - (order.discount || 0));
+  const taxRate = settings?.taxPercentage || 5;
   const hasTax = (order.tax && order.tax > 0) || taxRate > 0;
   const halfTaxRate = (taxRate / 2);
-  const halfTaxAmount = hasTax ? ((order.tax || 0) / 2) : 0;
+  const halfTaxAmount = (order.tax || 0) / 2;
+  const taxableAmount = Math.max(0, (order.subtotal || 0) - (order.discount || 0));
 
   const itemsHtml = (order.items || [])
     .map((item) => {
@@ -416,11 +409,11 @@ export const generateBillReceiptHtml = (
 
       let portionBadge = "";
       if (isHalf) {
-        portionBadge = ' <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 0 2px; border-radius: 2px;">HALF</span>';
+        portionBadge = ' <span style="background: #000; color: #fff; padding: 0 4px; font-size: 9px; font-weight: 800; border-radius: 2px;">H</span>';
       } else if (isFull) {
-        portionBadge = ' <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 0 2px; border-radius: 2px;">FULL</span>';
+        portionBadge = ' <span style="border: 1px solid #000; padding: 0 3px; font-size: 9px; font-weight: 800; border-radius: 2px;">F</span>';
       } else if (item.portion) {
-        portionBadge = ` <span style="font-size: 8.5px; font-weight: 800; border: 1px solid #000; padding: 0 2px; border-radius: 2px;">${item.portion.toUpperCase()}</span>`;
+        portionBadge = ` <span style="border: 1px solid #000; padding: 0 3px; font-size: 9px; font-weight: 800; border-radius: 2px;">${item.portion.toUpperCase().slice(0, 4)}</span>`;
       }
 
       const cleanName = item.name
@@ -431,17 +424,17 @@ export const generateBillReceiptHtml = (
       const itemTotal = item.price * item.quantity;
 
       return `
-        <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 11px;">
-          <td style="padding: 4px 0; text-align: left; vertical-align: top; font-weight: 700; word-break: break-word;">
+        <tr style="border-bottom: 1px dashed #777; font-size: 10.5px; color: #000;">
+          <td style="padding: 3.5px 0; text-align: left; vertical-align: top; font-weight: 700; word-break: break-word;">
             ${cleanName}${portionBadge}
           </td>
-          <td style="padding: 4px 2px; text-align: center; vertical-align: top; font-weight: 900; font-family: ui-monospace, monospace;">
+          <td style="padding: 3.5px 2px; text-align: center; vertical-align: top; font-weight: 900; font-family: ui-monospace, monospace;">
             ${item.quantity}
           </td>
-          <td style="padding: 4px 2px; text-align: right; vertical-align: top; font-family: ui-monospace, monospace;">
+          <td style="padding: 3.5px 2px; text-align: right; vertical-align: top; font-family: ui-monospace, monospace; font-weight: 600;">
             ${currency}${item.price.toFixed(2)}
           </td>
-          <td style="padding: 4px 0; text-align: right; vertical-align: top; font-weight: 800; font-family: ui-monospace, monospace;">
+          <td style="padding: 3.5px 0; text-align: right; vertical-align: top; font-weight: 900; font-family: ui-monospace, monospace;">
             ${currency}${itemTotal.toFixed(2)}
           </td>
         </tr>
@@ -459,131 +452,150 @@ export const generateBillReceiptHtml = (
         <meta charset="utf-8" />
         <style>
           @page {
-            size: ${bodyWidth} auto;
+            size: ${rollWidth} auto;
             margin: 0;
           }
           @media print {
             html, body {
-              width: ${bodyWidth};
-              margin: 0;
-              padding: 0;
+              width: 100%;
+              margin: 0 !important;
+              padding: 0 !important;
+              display: flex;
+              justify-content: center;
             }
+            .receipt-container {
+              width: ${printableWidth} !important;
+              margin: 0 auto !important;
+            }
+          }
+          * {
+            box-sizing: border-box;
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            width: ${bodyWidth};
-            margin: 0 auto;
-            padding: 8px 6px;
+            margin: 0;
+            padding: 4px;
             color: #000;
             background: #fff;
-            box-sizing: border-box;
-            line-height: 1.35;
+            display: flex;
+            justify-content: center;
+            line-height: 1.3;
+          }
+          .receipt-container {
+            width: ${printableWidth};
+            max-width: 100%;
+            margin: 0 auto;
+            text-align: left;
           }
           .center { text-align: center; }
-          .bold { font-weight: 800; }
+          .bold { font-weight: 900; }
         </style>
       </head>
       <body>
-        <!-- RESTAURANT BRAND & TAX HEADER -->
-        <div class="center" style="margin-bottom: 6px; border-bottom: 2px dashed #000; padding-bottom: 6px;">
-          <h2 style="margin: 0 0 2px 0; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">${restName}</h2>
-          ${address ? `<p style="margin: 1px 0; font-size: 10px; color: #222;">${address}</p>` : ''}
-          ${phone ? `<p style="margin: 1px 0; font-size: 10px; font-weight: bold; color: #111;">Ph: ${phone}${email ? ' | ' + email : ''}</p>` : (email ? `<p style="margin: 1px 0; font-size: 10px; color: #222;">${email}</p>` : '')}
-          ${gstin ? `<p style="margin: 2px 0 0 0; font-size: 10.5px; font-weight: 900; letter-spacing: 0.5px;">GSTIN: ${gstin}</p>` : ''}
-          <div style="font-size: 11px; font-weight: 900; margin-top: 5px; padding: 2px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; letter-spacing: 1px;">
-            *** TAX INVOICE ***
+        <div class="receipt-container">
+          <!-- RESTAURANT BRAND & TAX HEADER (CENTERED) -->
+          <div class="center" style="margin-bottom: 5px; border-bottom: 2px dashed #000; padding-bottom: 5px;">
+            <h2 style="margin: 0 0 2px 0; font-size: 16.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000;">${restName}</h2>
+            ${address ? `<p style="margin: 1px 0; font-size: 9.5px; font-weight: 600; color: #111;">${address}</p>` : ''}
+            ${phone ? `<p style="margin: 1px 0; font-size: 9.5px; font-weight: 800; color: #000;">Ph: ${phone}${email ? ' | ' + email : ''}</p>` : (email ? `<p style="margin: 1px 0; font-size: 9.5px; color: #222;">${email}</p>` : '')}
+            ${gstin ? `<p style="margin: 2px 0 0 0; font-size: 10px; font-weight: 900; letter-spacing: 0.5px;">GSTIN: ${gstin}</p>` : ''}
+            
+            
+            <div style="font-size: 11.5px; font-weight: 900; margin-top: 5px; padding: 2.5px 0; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; letter-spacing: 1.5px;">
+              *** TAX INVOICE ***
+            </div>
           </div>
+
+          <!-- INVOICE META DETAILS -->
+          <div style="font-size: 9.5px; font-weight: 600; margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px dashed #000;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>Invoice: <strong>#${order.orderNumber}</strong></span>
+              <span>Date: <strong>${new Date(order.createdAt).toLocaleDateString()}</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 1.5px;">
+              <span>${isTakeaway ? `Type: <strong>TAKEAWAY ${order.tokenNumber ? '#' + order.tokenNumber : ''}</strong>` : `Table: <strong>${order.tableName.replace(/^table\s*-\s*/gi, 'Table ')}</strong>`}</span>
+              <span>Time: <strong>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></span>
+            </div>
+            ${order.customerName ? `
+              <div style="margin-top: 1.5px; font-weight: 700;">
+                Customer: ${order.customerName}${order.customerPhone ? ' (' + order.customerPhone + ')' : ''}
+              </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; margin-top: 1.5px;">
+              <span>Pay Mode: <strong>${paymentModeStr}</strong></span>
+              <span>Total Items: <strong>${totalItemsCount}</strong></span>
+            </div>
+          </div>
+
+          <!-- BILLING ITEMS TABLE -->
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+            <thead>
+              <tr style="border-bottom: 1.5px solid #000; font-size: 9.5px; font-weight: 900;">
+                <th style="text-align: left; padding: 3px 0; width: 50%;">ITEM</th>
+                <th style="text-align: center; padding: 3px 2px; width: 14%;">QTY</th>
+                <th style="text-align: right; padding: 3px 2px; width: 18%;">RATE</th>
+                <th style="text-align: right; padding: 3px 0; width: 18%;">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <!-- TOTALS & TAX BREAKDOWN -->
+          <div style="border-top: 1.5px solid #000; padding-top: 4px; font-size: 10px; font-weight: 600;">
+            <div style="display: flex; justify-content: space-between; margin: 1px 0;">
+              <span>Subtotal:</span>
+              <span style="font-family: ui-monospace, monospace; font-weight: 800;">${currency}${order.subtotal.toFixed(2)}</span>
+            </div>
+
+            ${order.discount && order.discount > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin: 1px 0; font-weight: 800;">
+                <span>Discount:</span>
+                <span style="font-family: ui-monospace, monospace;">-${currency}${order.discount.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 1px 0; font-size: 9px; color: #222;">
+                <span>Taxable Amount:</span>
+                <span style="font-family: ui-monospace, monospace;">${currency}${taxableAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+
+            ${hasTax && halfTaxRate > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin: 1px 0; font-size: 9.5px;">
+                <span>CGST (${halfTaxRate}%):</span>
+                <span style="font-family: ui-monospace, monospace;">${currency}${halfTaxAmount.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 1px 0; font-size: 9.5px;">
+                <span>SGST (${halfTaxRate}%):</span>
+                <span style="font-family: ui-monospace, monospace;">${currency}${halfTaxAmount.toFixed(2)}</span>
+              </div>
+            ` : (order.tax && order.tax > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin: 1px 0;">
+                <span>GST / Tax (${taxRate}%):</span>
+                <span style="font-family: ui-monospace, monospace;">${currency}${order.tax.toFixed(2)}</span>
+              </div>
+            ` : '')}
+
+            <!-- PROMINENT GRAND TOTAL BOX -->
+            <div style="display: flex; justify-content: space-between; margin: 4px 0 3px 0; font-size: 14.5px; font-weight: 900; border-top: 1.5px dashed #000; border-bottom: 1.5px dashed #000; padding: 4px 0;">
+              <span>GRAND TOTAL:</span>
+              <span style="font-family: ui-monospace, monospace;">${currency}${order.grandTotal.toFixed(2)}</span>
+            </div>
+
+            <div style="text-align: center; font-size: 9.5px; font-weight: 900; margin: 3px 0 2px 0; letter-spacing: 0.5px;">
+              *** PAID VIA ${paymentModeStr} ***
+            </div>
+          </div>
+
+          <!-- FOOTER & BRANDING (CENTERED) -->
+          <div class="center" style="margin-top: 6px; border-top: 1px solid #000; padding-top: 4px; font-size: 9px; color: #111;">
+            <p style="margin: 1px 0; font-weight: 800;">${isTakeaway ? "Thank you for ordering with us!" : "Thank you for dining with us!"}</p>
+            <p style="margin: 1px 0;">Please visit again!</p>
+            ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 800; color: #000;">${websiteStr}</p>` : ''}
+            <p style="margin: 3px 0 0 0; font-size: 8px; color: #444;">*** Computer Generated Tax Invoice ***</p>
+          </div>
+          <div style="height: 25px;"></div>
         </div>
-
-        <!-- INVOICE META DETAILS -->
-        <div style="font-size: 10px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #000;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Invoice No: <strong>${order.orderNumber}</strong></span>
-            <span>Date: <strong>${new Date(order.createdAt).toLocaleDateString()}</strong></span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 1px;">
-            <span>${isTakeaway ? `Type: <strong>TAKEAWAY PARCEL${order.tokenNumber ? ' (Token #' + order.tokenNumber + ')' : ''}</strong>` : `Table: <strong>${order.tableName.replace(/^table\s*-\s*/gi, 'Table ')}</strong>`}</span>
-            <span>Time: <strong>${new Date(order.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></span>
-          </div>
-          ${order.customerName ? `
-            <div style="margin-top: 1px; font-weight: bold;">
-              Customer: ${order.customerName}${order.customerPhone ? ' (' + order.customerPhone + ')' : ''}
-            </div>
-          ` : ''}
-          <div style="display: flex; justify-content: space-between; margin-top: 1px;">
-            <span>Payment Mode: <strong>${paymentModeStr}</strong></span>
-            <span>Total Items: <strong>${totalItemsCount}</strong></span>
-          </div>
-        </div>
-
-        <!-- BILLING ITEMS TABLE -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
-          <thead>
-            <tr style="border-bottom: 1.5px solid #000; font-size: 9.5px; font-weight: 900;">
-              <th style="text-align: left; padding: 3px 0;">ITEM</th>
-              <th style="text-align: center; padding: 3px 2px;">QTY</th>
-              <th style="text-align: right; padding: 3px 2px;">RATE</th>
-              <th style="text-align: right; padding: 3px 0;">AMOUNT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-
-        <!-- TOTALS & TAX BREAKDOWN -->
-        <div style="border-top: 1.5px solid #000; padding-top: 4px; font-size: 10.5px;">
-          <div style="display: flex; justify-content: space-between; margin: 1.5px 0;">
-            <span>Subtotal:</span>
-            <span style="font-family: ui-monospace, monospace; font-weight: 700;">${currency}${order.subtotal.toFixed(2)}</span>
-          </div>
-
-          ${order.discount && order.discount > 0 ? `
-            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-weight: bold;">
-              <span>Discount:</span>
-              <span style="font-family: ui-monospace, monospace;">-${currency}${order.discount.toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-size: 9.5px; color: #333;">
-              <span>Taxable Amount:</span>
-              <span style="font-family: ui-monospace, monospace;">${currency}${taxableAmount.toFixed(2)}</span>
-            </div>
-          ` : ''}
-
-          ${hasTax && halfTaxRate > 0 ? `
-            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-size: 9.5px;">
-              <span>CGST (${halfTaxRate}%):</span>
-              <span style="font-family: ui-monospace, monospace;">${currency}${halfTaxAmount.toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 1.5px 0; font-size: 9.5px;">
-              <span>SGST (${halfTaxRate}%):</span>
-              <span style="font-family: ui-monospace, monospace;">${currency}${halfTaxAmount.toFixed(2)}</span>
-            </div>
-          ` : (order.tax && order.tax > 0 ? `
-            <div style="display: flex; justify-content: space-between; margin: 1.5px 0;">
-              <span>GST / Tax (${taxRate}%):</span>
-              <span style="font-family: ui-monospace, monospace;">${currency}${order.tax.toFixed(2)}</span>
-            </div>
-          ` : '')}
-
-          <!-- PROMINENT GRAND TOTAL -->
-          <div style="display: flex; justify-content: space-between; margin: 4px 0 2px 0; font-size: 14px; font-weight: 900; border-top: 1.5px dashed #000; border-bottom: 1.5px dashed #000; padding: 4px 0;">
-            <span>GRAND TOTAL:</span>
-            <span style="font-family: ui-monospace, monospace;">${currency}${order.grandTotal.toFixed(2)}</span>
-          </div>
-
-          <div style="text-align: right; font-size: 9px; font-weight: 800; margin-top: 2px;">
-            STATUS: SETTLED VIA ${paymentModeStr}
-          </div>
-        </div>
-
-        <!-- FOOTER & BRANDING -->
-        <div class="center" style="margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-size: 9.5px; color: #333;">
-          <p style="margin: 1px 0; font-weight: bold;">${isTakeaway ? "Thank you for ordering with us!" : "Thank you for dining with us!"}</p>
-          <p style="margin: 1px 0;">Please visit again!</p>
-          ${websiteStr ? `<p style="margin: 2px 0; font-family: ui-monospace, monospace; font-weight: 700; color: #000;">${websiteStr}</p>` : ''}
-          <p style="margin: 3px 0 0 0; font-size: 8px; color: #666;">*** Computer Generated Tax Invoice ***</p>
-        </div>
-        <div style="height: 30px;"></div>
       </body>
     </html>
   `;
