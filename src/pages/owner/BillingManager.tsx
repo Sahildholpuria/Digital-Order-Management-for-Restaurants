@@ -336,9 +336,20 @@ export const BillingManager: React.FC = () => {
 
   // Trigger POS Thermal Receipt Print (80mm / 58mm POS billing machine)
   const triggerPrint = async (paperWidth: "80mm" | "58mm" = "80mm", forcePrint: boolean = true) => {
-    if (!selectedOrder) return;
+    if (!selectedGroup || !selectedOrder) return;
     try {
-      const res = await printBillReceipt(selectedOrder, settings, paperWidth, forcePrint);
+      const primaryOrder = selectedGroup.orders[0] || selectedOrder;
+      const consolidatedReceiptOrder: RestaurantOrder = {
+        ...primaryOrder,
+        tableName: selectedGroup.tableName,
+        items: selectedGroup.items, // Consolidated all KOT items for this dining session
+        subtotal,
+        discount: discountAmount,
+        tax: taxAmount,
+        grandTotal,
+        paymentMethod: paymentMethod.toUpperCase(),
+      };
+      const res = await printBillReceipt(consolidatedReceiptOrder, settings, paperWidth, forcePrint);
       if (res.mode === "qz-tray") {
         showToast("⚡ Silent thermal receipt sent directly to printer!", "success");
       }
@@ -567,7 +578,7 @@ export const BillingManager: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedOrder.items.map((i, index) => (
+                    {(selectedGroup?.items || selectedOrder.items).map((i, index) => (
                       <tr key={index}>
                         <td className="py-1">{i.name}</td>
                         <td className="py-1 text-center">{i.quantity}</td>
