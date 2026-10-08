@@ -657,9 +657,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
           <>
             <button
               onClick={async () => {
-                // 1. Accept order
-                await onUpdateStatus(order.id, "accepted");
-                // 2. Transition to preparing for kitchen cooking
+                // Directly transition to preparing so only a single KOT is generated and dispatched
                 await onUpdateStatus(order.id, "preparing");
               }}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"

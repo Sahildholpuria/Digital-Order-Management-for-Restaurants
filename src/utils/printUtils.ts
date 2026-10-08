@@ -81,12 +81,13 @@ class PrintQueueManager {
   }
 
   private async executePrintTask(task: PrintTask): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "none"; message?: string }> {
-    // Global duplicate print suppression (suppresses rapid duplicate print triggers within 3.5s)
+    // Global duplicate print suppression (suppresses accidental double clicks and duplicate auto-dispatches)
     const printKey = `${task.type}-${task.orderId || task.orderNumber || 'generic'}`;
     const now = Date.now();
     const last = this.lastPrintedMap.get(printKey) || 0;
-    if (now - last < 3500) {
-      console.log(`[PrintQueue] Rapid duplicate print suppressed for ${task.jobName} (${printKey})`);
+    const suppressWindow = task.forcePrint ? 2500 : 20000;
+    if (now - last < suppressWindow) {
+      console.log(`[PrintQueue] Duplicate print suppressed for ${task.jobName} (${printKey})`);
       return { success: true, mode: "none", message: "Duplicate print suppressed" };
     }
     this.lastPrintedMap.set(printKey, now);
