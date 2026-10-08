@@ -222,7 +222,10 @@ export const BillingManager: React.FC = () => {
   const taxAmount = Math.round(taxableAmount * (taxPercentage / 100) * 100) / 100;
   const grandTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
 
-  const [autoPrintOnSettle, setAutoPrintOnSettle] = useState(true);
+  const [autoPrintOnSettle, setAutoPrintOnSettle] = useState<boolean>(() => {
+    const saved = localStorage.getItem("restaurantsos_autoprint_on_settle");
+    return saved !== null ? saved === "true" : false;
+  });
 
   const handleMarkPaid = async () => {
     if (!selectedGroup || !selectedOrder) return;
@@ -698,7 +701,10 @@ export const BillingManager: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={autoPrintOnSettle}
-                          onChange={(e) => setAutoPrintOnSettle(e.target.checked)}
+                          onChange={(e) => {
+                            setAutoPrintOnSettle(e.target.checked);
+                            localStorage.setItem("restaurantsos_autoprint_on_settle", String(e.target.checked));
+                          }}
                           className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
                         />
                         <span>Auto-print receipt on settlement</span>
