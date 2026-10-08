@@ -379,17 +379,37 @@ export const generateBillReceiptHtml = (
   settings?: RestaurantSettings | null,
   paperWidth: "80mm" | "58mm" = "80mm"
 ): string => {
+  // Always ensure full restaurant profile is hydrated even if settings object is initially loading
+  let resolvedSettings = settings;
+  if (!resolvedSettings || !resolvedSettings.name) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("cached_settings_")) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.name) {
+              resolvedSettings = { ...parsed, ...(settings || {}) };
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   const printableWidth = paperWidth === "58mm" ? "48mm" : "72mm";
   const rollWidth = paperWidth === "58mm" ? "58mm" : "80mm";
 
-  const currency = settings?.currency || "₹";
-  const restName = settings?.name || "RESTAURANT";
-  const address = settings?.address || "";
-  const phone = settings?.phone || "";
-  const email = settings?.email || "";
-  const gstin = settings?.gstNumber || "";
+  const currency = resolvedSettings?.currency || "₹";
+  const restName = resolvedSettings?.name || "DEMO RESTAURANT";
+  const address = resolvedSettings?.address || "";
+  const phone = resolvedSettings?.phone || "";
+  const email = resolvedSettings?.email || "";
+  const gstin = resolvedSettings?.gstNumber || "";
   
-  const websiteStr = settings?.websiteUrl || "";
+  const websiteStr = resolvedSettings?.websiteUrl || "";
 
   const isTakeaway = order.orderType === "takeaway" || (!order.tableId && !order.tableName);
   const paymentModeStr = (order.paymentMethod || "CASH").toUpperCase();
