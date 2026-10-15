@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../../services/supabase';
 import { useRestaurant, clearTenantCache } from '../../context/RestaurantContext';
 import { RestaurantsOSLogo } from '../../components/RestaurantsOSLogo';
+import { Backdrop } from '../../components/common/Backdrop';
 import { 
   Lock, 
   Mail, 
@@ -118,25 +119,22 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070B14] relative overflow-hidden flex items-center justify-center p-4 font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Sleek Emerald / Mint Glow Orbs matching restaurantsos.in */}
-      <div className="absolute top-1/4 -left-20 w-[450px] h-[450px] bg-gradient-to-br from-emerald-600/15 to-emerald-900/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-[450px] h-[450px] bg-gradient-to-tl from-teal-500/15 to-emerald-800/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/[0.04] rounded-full blur-[160px] pointer-events-none" />
+    <div className="min-h-screen bg-background text-foreground relative isolate overflow-x-clip flex items-center justify-center p-4 font-sans selection:bg-brand selection:text-white">
+      <Backdrop />
 
-      {/* Main Glass Card */}
-      <div className="max-w-md w-full bg-[#0B1120]/80 border border-emerald-500/25 rounded-3xl p-8 sm:p-9 shadow-[0_0_50px_-10px_rgba(16,185,129,0.18)] backdrop-blur-2xl relative z-10 animate-fade-in">
+      {/* Main ChaiUI Card */}
+      <div className="max-w-md w-full card-chai p-8 sm:p-9 relative z-10 animate-fade-in">
         
         {/* Brand Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <RestaurantsOSLogo size="lg" showText={true} theme="dark" subtitle="Cloud POS & Restaurant Management" />
           </div>
-          <h2 className="text-2xl font-black text-white font-sans tracking-tight mt-3">
-            Staff Portal Login
+          <h2 className="text-2xl font-medium text-foreground tracking-tight mt-3">
+            Staff portal login
           </h2>
-          <p className="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
-            Sign in to access your live POS, Kitchen Display System (KDS), and Table Analytics.
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed font-normal">
+            Sign in to access your live POS, <span className="highlight">kitchen display system (KDS)</span>, and table analytics.
           </p>
         </div>
 
@@ -164,7 +162,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
                   placeholder="name@restaurant.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#070B14]/90 border border-white/10 rounded-2xl py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500/50 transition-all"
+                  className="w-full bg-black/20 dark:bg-black/40 border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-brand transition-all"
                 />
               </div>
             </div>
@@ -183,7 +181,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#070B14]/90 border border-white/10 rounded-2xl py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500/50 transition-all font-mono"
+                  className="w-full bg-black/20 dark:bg-black/40 border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-brand transition-all font-mono"
                 />
               </div>
             </div>
@@ -206,7 +204,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 disabled:opacity-50 text-white font-black py-3.5 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2 mt-6 text-sm cursor-pointer active:scale-[0.99]"
+              className="btn-asym w-full bg-neutral-900 hover:bg-black text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200 font-semibold py-3 px-6 text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-6"
             >
               <span>{loading ? 'Authenticating...' : 'Sign In to Portal'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -248,7 +246,7 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
             href="https://www.restaurantsos.in" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-slate-400 hover:text-emerald-400 transition-colors uppercase tracking-wider"
+            className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-brand transition-colors uppercase tracking-wider"
           >
             <span>Powered by Restaurants OS</span>
             <span className="text-emerald-500">•</span>

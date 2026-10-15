@@ -34,19 +34,20 @@ export const RestaurantsOSLogo: React.FC<RestaurantsOSLogoProps> = ({
     : theme === 'dark' 
       ? 'text-white' 
       : theme === 'light' 
-        ? 'text-slate-900' 
-        : 'text-slate-900 dark:text-white';
+        ? 'text-neutral-900' 
+        : 'text-neutral-900 dark:text-white';
 
   const subColor = theme === 'dark' 
-    ? 'text-emerald-300' 
-    : 'text-emerald-600 dark:text-emerald-400';
+    ? 'text-neutral-400' 
+    : 'text-neutral-500 dark:text-neutral-400';
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      {/* Brand Icon Box matching restaurantsos.in */}
+      {/* Brand Icon Box: ChaiUI style with subtle warm outline and orange accent */}
       <div 
-        className={`${current.box} bg-gradient-to-br from-[#065f46] via-[#047857] to-[#059669] border border-emerald-400/40 flex items-center justify-center text-white shadow-[0_0_16px_rgba(16,185,129,0.35)] shrink-0 transition-transform duration-200 hover:scale-105`}
+        className={`${current.box} bg-neutral-900/90 dark:bg-black/90 border border-orange-50/20 dark:border-orange-50/15 flex items-center justify-center text-white shrink-0 transition-transform duration-200 hover:scale-105 relative overflow-hidden`}
       >
+        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500/80 blur-[2px] pointer-events-none" />
         <svg 
           width={current.icon} 
           height={current.icon} 
@@ -56,25 +57,26 @@ export const RestaurantsOSLogo: React.FC<RestaurantsOSLogoProps> = ({
           strokeWidth="2.2" 
           strokeLinecap="round" 
           strokeLinejoin="round"
+          className="text-neutral-200"
         >
           {/* Cutlery QR Glyphs */}
-          <rect x="3" y="3" width="7" height="7" rx="1.5" />
-          <rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" />
-          <path d="M14 14h3v3h-3z" />
-          <path d="M20 14v7" />
-          <path d="M17 21h4" />
+          <rect x="3" y="3" width="7" height="7" rx="1.5" className="stroke-white" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" className="stroke-white" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" className="stroke-white" />
+          <path d="M14 14h3v3h-3z" className="stroke-orange-400 fill-orange-400/40" />
+          <path d="M20 14v7" className="stroke-orange-400" />
+          <path d="M17 21h4" className="stroke-orange-400" />
         </svg>
       </div>
 
-      {/* Brand Text */}
+      {/* Brand Text: Onest font for the wordmark as specified by ChaiUI */}
       {showText && !iconOnly && (
         <div className="flex flex-col leading-tight text-left">
-          <span className={`font-black font-sans tracking-tight ${titleColor} ${current.text}`}>
-            Restaurants <span className="text-emerald-400">OS</span>
+          <span className={`font-brand font-semibold tracking-tight ${titleColor} ${current.text}`}>
+            Restaurants <span className="text-orange-500 dark:text-brand font-bold">OS</span>
           </span>
           {subtitle && (
-            <span className={`font-extrabold tracking-wider uppercase ${subColor} ${current.sub}`}>
+            <span className={`font-montserrat tracking-wide ${subColor} ${current.sub}`}>
               {subtitle}
             </span>
           )}

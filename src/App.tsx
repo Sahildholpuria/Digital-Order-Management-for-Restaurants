@@ -81,6 +81,7 @@ import { getRoleProfile, isTabAllowedForRole } from './config/rolePermissions';
 import { UserProfile } from './types';
 import { PageLoader } from './components/PageLoader';
 import { RestaurantsOSLogo } from './components/RestaurantsOSLogo';
+import { Backdrop } from './components/common/Backdrop';
 import dbService from './services/database';
 import { SaaSAnnouncement } from './types';
 
@@ -826,12 +827,13 @@ export const App: React.FC = () => {
             const activeOrdersCount = orders ? orders.filter(o => o.status === "pending" || o.status === "preparing" || o.status === "ready").length : 0;
 
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col animate-fade-in text-slate-800 dark:text-slate-100">
+        <div className="min-h-screen bg-background text-foreground flex flex-col animate-fade-in relative isolate overflow-x-clip font-sans selection:bg-brand selection:text-white">
+          <Backdrop />
           
           {/* ========================================================= */}
           {/* TOP NAVIGATION HEADER BAR (Clean, Sticky & Glassmorphic)   */}
           {/* ========================================================= */}
-          <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/75 dark:border-slate-800 transition-colors shadow-2xs">
+          <header className="sticky top-0 z-40 w-full bg-background/85 backdrop-blur-md border-b border-[var(--card-edge)] transition-colors">
             <div className="max-w-[1680px] mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-[70px] flex items-center justify-between gap-3">
               
               {/* Left Brand Identity & Restaurant Badge */}
@@ -843,10 +845,10 @@ export const App: React.FC = () => {
                   <RestaurantsOSLogo size="sm" showText={false} />
                   <div className="flex flex-col leading-none">
                     <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight font-sans flex items-center gap-1">
-                      Restaurants <span className="text-emerald-500 dark:text-emerald-400">OS</span>
+                      Restaurants <span className="text-orange-500 dark:text-brand font-bold">OS</span>
                     </span>
                     <span 
-                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-wider mt-0.5 truncate max-w-[150px] sm:max-w-[200px]" 
+                      className="text-[10px] text-muted-foreground font-medium font-montserrat tracking-wider mt-0.5 truncate max-w-[150px] sm:max-w-[200px]" 
                       title={currentUser?.isSuperAdmin ? (isImpersonating ? `Tenant: ${settings?.name || impersonatedTenantId}` : "Super Admin") : (settings?.name || "POS Portal")}
                     >
                       {currentUser?.isSuperAdmin ? (isImpersonating ? `Tenant: ${settings?.name || impersonatedTenantId}` : "Super Admin") : (settings?.name || "POS Portal")}
@@ -858,7 +860,7 @@ export const App: React.FC = () => {
               </div>
 
               {/* Center Navigation Links (Desktop xl Screens) */}
-              <nav className="hidden xl:flex items-center gap-1 bg-slate-100/80 dark:bg-slate-800/60 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-750/70 shadow-2xs">
+              <nav className="hidden xl:flex items-center gap-1 bg-black/10 dark:bg-black/35 p-1 rounded-xl border border-[var(--card-edge)] backdrop-blur-xs">
                 {sidebarItems.map(item => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
@@ -867,21 +869,23 @@ export const App: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => handleSelectTab(item.id)}
-                      className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                      className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                         isActive
-                          ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/20 font-black"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/60 dark:hover:bg-slate-700/50"
+                          ? "bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border dark:border-orange-500/40 shadow-xs"
+                          : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-medium"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
-                      <span>{item.label}</span>
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-neutral-950 dark:text-orange-200" : "text-neutral-400 dark:text-neutral-500"}`} />
+                      <span className={isActive ? "text-neutral-950 dark:text-orange-100 font-bold" : "text-neutral-600 dark:text-neutral-400"}>
+                        {item.label}
+                      </span>
                       
                       {/* Real-time Live Orders Count Badge */}
                       {isOrders && activeOrdersCount > 0 && (
-                        <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full leading-tight ${
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full leading-tight ${
                           isActive 
-                            ? "bg-white text-emerald-700" 
-                            : "bg-emerald-500 text-white animate-pulse"
+                            ? "bg-neutral-200 text-neutral-900 dark:bg-orange-500/30 dark:text-orange-200 dark:border dark:border-orange-500/40" 
+                            : "bg-orange-500/20 text-orange-400 border border-orange-500/30 animate-pulse"
                         }`}>
                           {activeOrdersCount}
                         </span>
@@ -1133,7 +1137,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Sub-Header Horizontal Tabs for Tablets / Medium Screens (md to xl) */}
-            <div className="hidden md:flex xl:hidden border-t border-slate-200/60 dark:border-slate-800 px-4 py-2 overflow-x-auto no-scrollbar gap-1.5 bg-slate-50/70 dark:bg-slate-900/50">
+            <div className="hidden md:flex xl:hidden border-t border-[var(--card-edge)] px-4 py-2 overflow-x-auto no-scrollbar gap-1.5 bg-background/80 backdrop-blur-md">
               {sidebarItems.map(item => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -1142,17 +1146,17 @@ export const App: React.FC = () => {
                   <button
                     key={item.id}
                     onClick={() => handleSelectTab(item.id)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                       isActive
-                        ? "bg-emerald-600 text-white shadow-xs font-black"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800"
+                        ? "bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border dark:border-orange-500/40 shadow-xs"
+                        : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 font-medium"
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{item.label}</span>
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-neutral-950 dark:text-orange-200" : "text-neutral-400"}`} />
+                    <span className={isActive ? "text-neutral-950 dark:text-orange-100 font-bold" : "text-neutral-600 dark:text-neutral-400"}>{item.label}</span>
                     {isOrders && activeOrdersCount > 0 && (
-                      <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
-                        isActive ? "bg-white text-emerald-700" : "bg-emerald-500 text-white"
+                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        isActive ? "bg-neutral-200 text-neutral-900 dark:bg-orange-500/30 dark:text-orange-200" : "bg-orange-500/20 text-orange-400"
                       }`}>
                         {activeOrdersCount}
                       </span>
@@ -1392,7 +1396,7 @@ export const App: React.FC = () => {
           {/* BOTTOM MOBILE NAVIGATION DOCK (Phones < 768px)             */}
           {/* ========================================================= */}
           <div 
-            className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 px-1 py-1 shadow-lg"
+            className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/90 backdrop-blur-xl border-t border-[var(--card-edge)] px-1 py-1 shadow-lg"
             style={{ paddingBottom: "max(0.4rem, env(safe-area-inset-bottom))" }}
           >
             <div className="grid grid-cols-5 items-center w-full">
@@ -1401,7 +1405,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("superadmin")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "superadmin" || activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "superadmin" || activeTab === "dashboard" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <Building className="w-4 h-4 shrink-0" />
@@ -1411,7 +1415,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("superadmin-staff")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "superadmin-staff" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "superadmin-staff" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <Users className="w-4 h-4 shrink-0" />
@@ -1421,7 +1425,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("superadmin-broadcasts")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "superadmin-broadcasts" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "superadmin-broadcasts" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <Megaphone className="w-4 h-4 shrink-0" />
@@ -1431,7 +1435,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("superadmin-settings")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "superadmin-settings" || activeTab === "saas-subscriptions" || activeTab === "settings" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "superadmin-settings" || activeTab === "saas-subscriptions" || activeTab === "settings" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <SettingsIcon className="w-4 h-4 shrink-0" />
@@ -1451,7 +1455,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("dashboard")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "dashboard" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "dashboard" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <TrendingUp className="w-4 h-4 shrink-0" />
@@ -1461,7 +1465,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("orders")}
                     className={`relative flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "orders" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "orders" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <div className="relative flex items-center justify-center">
@@ -1479,7 +1483,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("tables")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "tables" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "tables" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <QrCode className="w-4 h-4 shrink-0" />
@@ -1489,7 +1493,7 @@ export const App: React.FC = () => {
                   <button
                     onClick={() => handleSelectTab("billing")}
                     className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer active:scale-95 w-full min-w-0 ${
-                      activeTab === "billing" ? "text-emerald-600 dark:text-emerald-400 font-black" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                      activeTab === "billing" ? "text-orange-500 dark:text-orange-300 font-bold" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
                     <Receipt className="w-4 h-4 shrink-0" />

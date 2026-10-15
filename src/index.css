@@ -1,34 +1,111 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
-
+/*
+ * ChaiUI Design System for RestaurantsOS
+ * Typography: Manrope (Sans), Montserrat (Display/Highlight), Onest (Brand), Geist Mono (Mono)
+ * Neutral near-black, warm hairlines, and highlight accents.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Montserrat:wght@400..800&family=Onest:wght@400..700&family=Geist+Mono:wght@400..600&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --brand: oklch(66.6% 0.179 58.318);
+
+  --highlight: oklch(0.476 0.114 61.907); /* yellow-800 */
+  --card-edge: rgb(120 53 15 / 0.15); /* amber-900/15 */
+  --card-edge-hover: rgb(120 53 15 / 0.25);
+  --card-fill: rgb(255 255 255 / 0.7);
+
   --primary-emerald: #064E3B;
   --secondary-mint: #10B981;
-
-  --brand-50: #ecfdf5;
-  --brand-100: #d1fae5;
-  --brand-400: #34d399;
-  --brand-500: #10b981;
-  --brand-600: #059669;
-  --brand-700: #047857;
+  --brand-50: #f5f5f5;
+  --brand-100: #e5e5e5;
+  --brand-400: #525252;
+  --brand-500: #262626;
+  --brand-600: #171717;
+  --brand-700: #0a0a0a;
 }
 
 .dark {
+  --background: oklch(0.145 0 0); /* #0a0a0a - ChaiUI near-black background */
+  --foreground: oklch(0.985 0 0); /* #fbfbfb - ChaiUI text */
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --brand: oklch(75% 0.183 55.934);
+
+  --highlight: oklch(0.954 0.038 75.164); /* orange-100 */
+  --card-edge: rgb(255 247 237 / 0.12); /* orange-50/12 */
+  --card-edge-hover: rgb(255 247 237 / 0.25);
+  --card-fill: rgb(18 18 18 / 0.85);
+
   --primary-emerald: #064E3B;
   --secondary-mint: #10B981;
-
-  --brand-50: #064e3b;
-  --brand-100: #065f46;
-  --brand-400: #34d399;
-  --brand-500: #10b981;
-  --brand-600: #059669;
-  --brand-700: #047857;
+  --brand-50: #1c1917;
+  --brand-100: #292524;
+  --brand-400: #a8a29e;
+  --brand-500: #e7e5e4;
+  --brand-600: #171717;
+  --brand-700: #0a0a0a;
 }
 
 @theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-highlight: var(--highlight);
+  --color-card-edge: var(--card-edge);
+  --color-card-edge-hover: var(--card-edge-hover);
+  --color-card-fill: var(--card-fill);
+
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-405: var(--brand-400);
@@ -38,26 +115,38 @@
   --color-brand-650: var(--brand-600);
   --color-brand-655: var(--brand-600);
   --color-brand-700: var(--brand-700);
-  
-  /* Custom/Legacy Theme Color Mapping Extensions */
-  --color-slate-105: #f1f5f9;
-  --color-slate-150: #e2e8f0;
-  --color-slate-205: #cbd5e1;
-  --color-slate-350: #cbd5e1;
-  --color-slate-405: #94a3b8;
-  --color-slate-450: #94a3b8;
-  --color-slate-455: #64748b;
-  --color-slate-505: #475569;
-  --color-slate-550: #475569;
-  --color-slate-555: #334155;
-  --color-slate-650: #334155;
-  --color-slate-655: #1e293b;
-  --color-slate-750: #1e293b;
-  --color-slate-805: #0f172a;
-  --color-slate-850: #0b1120;
-  --color-slate-855: #020617;
-  --color-slate-955: #020617;
-  
+
+  /* ChaiUI Chroma-0 Neutral Palette */
+  --color-slate-955: #050505;
+  --color-slate-950: #0a0a0a;
+  --color-slate-900: #121212;
+  --color-slate-855: #151515;
+  --color-slate-850: #181818;
+  --color-slate-805: #1e1e1e;
+  --color-slate-800: #222222;
+  --color-slate-750: #2a2a2a;
+  --color-slate-700: #333333;
+  --color-slate-655: #3c3c3c;
+  --color-slate-650: #444444;
+  --color-slate-600: #525252;
+  --color-slate-555: #5e5e5e;
+  --color-slate-550: #686868;
+  --color-slate-505: #737373;
+  --color-slate-500: #737373;
+  --color-slate-455: #8c8c8c;
+  --color-slate-450: #969696;
+  --color-slate-405: #a3a3a3;
+  --color-slate-400: #a3a3a3;
+  --color-slate-350: #c6c6c6;
+  --color-slate-300: #d4d4d4;
+  --color-slate-205: #e2e2e2;
+  --color-slate-200: #e5e5e5;
+  --color-slate-150: #f0f0f0;
+  --color-slate-105: #f5f5f5;
+  --color-slate-100: #f5f5f5;
+  --color-slate-50:  #fafafa;
+
+  /* Meaning colors: text and thin outlines */
   --color-amber-105: #fef3c7;
   --color-amber-705: #d97706;
   --color-red-650: #e11d48;
@@ -65,32 +154,37 @@
   --color-pink-650: #db2777;
   --color-green-550: #16a34a;
   --color-orange-550: #ea580c;
-  
-  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", SFMono-Regular, Consolas, Menlo, monospace;
-  
-  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
-  --shadow-glass-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
-  
+
+  /* ChaiUI Typography Families */
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-montserrat: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-brand: 'Onest', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'Geist Mono', SFMono-Regular, Consolas, Menlo, monospace;
+
+  /* ChaiUI shadows: subtle hairlines */
+  --shadow-glass: 0 0 0 1px var(--card-edge);
+  --shadow-glass-dark: 0 0 0 1px var(--card-edge);
+
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-fade-in: fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-up: slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-scale-in: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   --animate-loading-bar: loading-bar 1.5s infinite ease-in-out;
-  
+
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
   @keyframes slide-up {
-    from { transform: translateY(20px); opacity: 0; }
+    from { transform: translateY(16px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
   @keyframes scale-in {
-    from { transform: scale(0.95); opacity: 0; }
+    from { transform: scale(0.97); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
   }
-    @keyframes scan-sweep {
+  @keyframes scan-sweep {
     0%, 100% {
       top: 6px;
       opacity: 0.3;
@@ -158,8 +252,15 @@
 }
 
 @layer base {
+  * {
+    border-color: var(--border);
+  }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased selection:bg-slate-200 dark:selection:bg-slate-800 dark:bg-slate-955 dark:text-slate-100;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
@@ -179,49 +280,88 @@
   }
 }
 
-/* Custom Scrollbar Styles */
+/* Custom Scrollbar Styles: Minimalist neutral */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700;
+  border-radius: 9999px;
+  background-color: rgba(120, 120, 120, 0.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 120, 120, 0.35);
 }
 
-/* Mesh background gradient for premium aesthetic */
-.bg-mesh {
-  background-attachment: fixed;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.04) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.03) 0px, transparent 50%);
+/* ChaiUI Signature Utilities */
+
+/* The highlight phrase: one per paragraph */
+@utility highlight {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  text-transform: capitalize;
+  color: var(--highlight);
 }
 
-.dark .bg-mesh {
-  background-attachment: fixed;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(5, 150, 105, 0.06) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(2, 6, 23, 0.05) 0px, transparent 50%);
+/* The warm hairline card: no shadow, faint fill, slight blur */
+@utility card-chai {
+  border-radius: calc(var(--radius) + 4px);
+  border: 1px solid var(--card-edge);
+  background: var(--card-fill);
+  backdrop-filter: blur(4px);
+  transition: border-color 300ms, opacity 300ms;
+  &:hover {
+    border-color: var(--card-edge-hover);
+  }
 }
 
-/* Premium Card Styles */
+/* Asymmetric corners: solid takes top-right + bottom-left, outline the mirror */
+@utility btn-asym {
+  border-radius: 0 var(--radius) 0 var(--radius);
+}
+@utility btn-asym-mirror {
+  border-radius: var(--radius) 0 var(--radius) 0;
+}
+
+/* Card and glass styling mapped to warm hairlines without harsh drop shadows */
 .card-premium {
-  @apply rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white/85 p-3.5 sm:p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/50 backdrop-blur-md hover:-translate-y-0.5;
+  border-radius: calc(var(--radius) + 6px);
+  border: 1px solid var(--card-edge);
+  background-color: var(--card-fill);
+  backdrop-filter: blur(4px);
+  transition: border-color 300ms;
+}
+.card-premium:hover {
+  border-color: var(--card-edge-hover);
 }
 
-/* Glassmorphism Styles */
 .glass {
-  @apply border border-white/20 bg-white/75 shadow-glass backdrop-blur-md dark:border-slate-800/40 dark:bg-slate-955/60 dark:shadow-glass-dark;
+  border: 1px solid var(--card-edge);
+  background-color: var(--card-fill);
+  backdrop-filter: blur(8px);
 }
 
 .glass-card {
-  @apply rounded-2xl sm:rounded-3xl border border-white/25 bg-white/60 p-3.5 sm:p-6 shadow-glass backdrop-blur-md dark:border-slate-800/30 dark:bg-slate-955/40 dark:shadow-glass-dark;
+  border-radius: calc(var(--radius) + 6px);
+  border: 1px solid var(--card-edge);
+  background-color: var(--card-fill);
+  backdrop-filter: blur(8px);
+  transition: border-color 300ms;
+}
+.glass-card:hover {
+  border-color: var(--card-edge-hover);
+}
+
+/* Background mesh: clean & subtle, letting ChaiUI backdrop shine */
+.bg-mesh {
+  background-color: transparent;
+}
+.dark .bg-mesh {
+  background-color: transparent;
 }
 
 /* Hide Spin Buttons in Inputs */
@@ -245,12 +385,12 @@ input[type=number] {
   animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-/* Prevent iOS Safari from auto-zooming / distorting viewport when tapping search & form inputs */
+/* Prevent iOS Safari from auto-zooming when tapping search & form inputs */
 input, select, textarea {
   font-size: 16px !important;
 }
 
-/* Safe Area Utilities for Mobile (iOS Home Indicator & Notch) */
+/* Safe Area Utilities for Mobile */
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 16px));
 }
@@ -264,13 +404,11 @@ input, select, textarea {
   bottom: max(1rem, env(safe-area-inset-bottom, 16px));
 }
 
-/* Instant tap responsiveness on touch devices */
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-/* iOS Safari time and date input styling & overflow prevention */
 input[type="time"],
 input[type="date"] {
   min-width: 0 !important;
@@ -284,14 +422,10 @@ input[type="time"]::-webkit-date-and-time-value {
   text-align: center;
 }
 
-
-/* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
-
-/* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

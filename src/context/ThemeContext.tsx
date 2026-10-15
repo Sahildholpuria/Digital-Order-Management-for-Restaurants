@@ -13,7 +13,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('admin_theme');
     if (saved === 'light' || saved === 'dark') return saved;
-    return 'light';
+    return 'dark';
   });
 
   useEffect(() => {
