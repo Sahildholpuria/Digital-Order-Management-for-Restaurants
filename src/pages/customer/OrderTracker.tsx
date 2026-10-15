@@ -4,6 +4,7 @@ import { Clock, Check, UtensilsCrossed, ChevronLeft, RefreshCw, Flame, CheckCirc
 import { OrderStatus } from '../../types';
 import { translations, Language } from '../../translations';
 import { PageLoader } from '../../components/PageLoader';
+import { Backdrop } from '../../components/common/Backdrop';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -76,8 +77,9 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-955 pb-20">
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 py-3 shadow-sm">
+    <div className="min-h-screen bg-background text-foreground pb-20 relative isolate overflow-x-clip font-sans selection:bg-brand selection:text-white">
+      <Backdrop />
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-[var(--card-edge)] px-4 py-3">
         <div className="max-w-md md:max-w-4xl mx-auto flex items-center gap-3">
           <button 
             onClick={() => window.location.pathname = `/menu/${tableId}`}
@@ -105,7 +107,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
                 <p className="text-xs mt-1">{t.orderCancelledSubtitle}</p>
               </div>
             ) : (
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-glass border border-slate-100 dark:border-slate-800">
+              <div className="card-chai rounded-2xl p-6">
                 <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-6 text-sm">{t.cookingTimeline}</h3>
                 
                 <div className="relative pl-8 space-y-8">
@@ -128,10 +130,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
                         {/* Circle Node */}
                         <span className={`absolute -left-8 w-7.5 h-7.5 rounded-full border-2 flex items-center justify-center z-10 transition-colors ${
                           isPassed 
-                            ? 'bg-brand-600 border-brand-600 text-white' 
+                            ? 'bg-white text-neutral-950 dark:bg-white dark:text-neutral-950 border-white' 
                             : isCurrent 
-                              ? 'bg-white border-brand-500 text-brand-600 dark:bg-slate-900 dark:text-brand-400 animate-pulse'
-                              : 'bg-white border-slate-200 text-slate-300 dark:bg-slate-900 dark:border-slate-800'
+                              ? 'bg-orange-500/20 border-orange-500 text-orange-500 dark:text-orange-400 animate-pulse'
+                              : 'bg-card border-border text-muted-foreground'
                         }`}>
                           {isPassed ? (
                             <Check className="w-4 h-4 stroke-[3px]" />
@@ -143,10 +145,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
                         <div>
                           <h4 className={`font-bold text-sm ${
                             isPassed 
-                              ? 'text-slate-700 dark:text-slate-350' 
+                              ? 'text-foreground font-semibold' 
                               : isCurrent 
-                                ? 'text-brand-600 dark:text-brand-400 text-base'
-                                : 'text-slate-400 dark:text-slate-655'
+                                ? 'text-orange-500 dark:text-orange-400 font-bold text-base'
+                                : 'text-muted-foreground'
                           }`}>
                             {s.label}
                           </h4>
@@ -163,12 +165,12 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
           {/* Right Column: Status Summary & Items */}
           <div className="md:col-span-5 space-y-6">
             {/* Status Header Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-glass border border-slate-100 dark:border-slate-800">
+            <div className="card-chai rounded-2xl p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-xs text-slate-455 uppercase tracking-wider font-bold mb-1">{t.statusReport}</p>
                   <h2 className={`text-2xl font-black ${
-                    isCancelled ? 'text-red-500' : 'text-brand-600 dark:text-brand-400'
+                    isCancelled ? 'text-red-500' : 'text-orange-500 dark:text-orange-300 font-bold'
                   }`}>
                     {getStatusText(order.status)}
                   </h2>
@@ -199,7 +201,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId, tableId }) 
             </div>
 
             {/* Order Details Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-glass border border-slate-100 dark:border-slate-800">
+            <div className="card-chai rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <UtensilsCrossed className="w-5 h-5 text-slate-400" />
                 <h3 className="font-bold text-slate-805 dark:text-slate-200 text-sm">{t.orderSummary}</h3>

@@ -8,6 +8,7 @@ import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
 import { PageLoader } from '../../components/PageLoader';
 import { FSSAIIndicator } from '../../components/FSSAIIndicator';
 import { RestaurantsOSLogo } from '../../components/RestaurantsOSLogo';
+import { Backdrop } from '../../components/common/Backdrop';
 import { parseFoodItemDescription } from '../../services/database';
 
 interface CustomerMenuProps {
@@ -562,8 +563,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   // Friendly error screen for invalid or expired table links
   if (isTableResolutionFailed) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-slate-100 dark:border-slate-800/80 animate-scale-in">
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 text-center animate-fade-in relative isolate overflow-x-clip font-sans selection:bg-brand selection:text-white"><Backdrop />
+        <div className="max-w-md w-full card-chai p-8 relative z-10 animate-scale-in">
           <div className="w-20 h-20 bg-rose-500/10 dark:bg-rose-950/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/20 text-rose-600 dark:text-rose-400">
             <AlertCircle className="w-10 h-10" />
           </div>
@@ -640,8 +641,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   if (orderSuccess) {
     const isSuccessTakeaway = orderSuccess.orderType === "takeaway" || !!orderSuccess.tokenNumber;
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-100 dark:border-slate-800/80 animate-scale-in">
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 text-center animate-fade-in relative isolate overflow-x-clip font-sans selection:bg-brand selection:text-white"><Backdrop />
+        <div className="max-w-md w-full card-chai p-8 relative z-10 animate-scale-in">
           <div className={`w-20 h-20 ${isSuccessTakeaway ? "bg-orange-500/10 dark:bg-orange-950/30 border-orange-500/20" : "bg-green-500/10 dark:bg-green-950/30 border-green-500/20"} rounded-full flex items-center justify-center mx-auto mb-6 border`}>
             {isSuccessTakeaway ? (
               <ShoppingBag className="w-10 h-10 text-orange-600 dark:text-orange-400" />
@@ -704,7 +705,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             onClick={() => {
               window.location.pathname = `/menu/${tableId}/track/${orderSuccess.id}`;
             }}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg hover:shadow-brand-500/20 text-sm flex items-center justify-center gap-1.5"
+            className="btn-asym w-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-semibold py-3.5 px-6 text-sm flex items-center justify-center gap-1.5 hover:opacity-90 transition-all"
           >
             <span>Track Cooking Status</span>
             <ArrowRight className="w-4 h-4" />
@@ -904,10 +905,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           type="button"
           onClick={handlePlaceOrder}
           disabled={isSubscriptionExpired() || isPlacingOrder}
-          className={`w-full font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-xs cursor-pointer ${
+          className={`btn-asym w-full font-semibold py-3.5 px-4 transition-all flex items-center justify-center gap-2 text-xs cursor-pointer ${
             isSubscriptionExpired() || isPlacingOrder
-              ? 'bg-slate-350 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-80 shadow-none'
-              : 'bg-brand-600 hover:bg-brand-700 text-white hover:shadow-brand-500/10'
+              ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-80'
+              : 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90'
           }`}
         >
           {isPlacingOrder ? (
@@ -926,13 +927,14 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 bg-mesh pb-36">
+    <div className="min-h-screen bg-background text-foreground pb-36 relative isolate overflow-x-clip font-sans selection:bg-brand selection:text-white">
+      <Backdrop />
       {/* Sticky Top Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/80 px-2.5 sm:px-4 py-2 sm:py-2.5 shadow-sm">
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-[var(--card-edge)] px-2.5 sm:px-4 py-2 sm:py-2.5">
         <div className="max-w-md md:max-w-5xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-[#10B981]/15 text-[#10B981] dark:text-[#10B981] rounded-xl sm:rounded-2xl flex items-center justify-center border border-[#10B981]/30 shadow-sm flex-shrink-0">
-              <Utensils className="w-4 h-4 text-[#10B981]" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-card text-foreground rounded-xl flex items-center justify-center border border-[var(--card-edge)] flex-shrink-0">
+              <Utensils className="w-4 h-4 text-orange-400 dark:text-brand" />
             </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-base font-black tracking-tight text-slate-900 dark:text-slate-100 font-sans leading-tight truncate max-w-[120px] xs:max-w-[170px] sm:max-w-none">
@@ -940,7 +942,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </h1>
               <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
-                <span className="text-[#10B981] font-mono">Table #{getTableDisplayNumber()}</span>
+                <span className="text-orange-500 dark:text-orange-300 font-mono font-bold">Table #{getTableDisplayNumber()}</span>
               </div>
             </div>
           </div>
@@ -1167,8 +1169,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   dietaryFilter === 'all' && !vegOnly
-                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
+                    ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 shadow-xs'
+                    : 'bg-card border-border text-foreground hover:border-card-edge-hover'
                 }`}
               >
                 All Dishes
@@ -1182,8 +1184,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   dietaryFilter === 'veg'
-                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
+                    ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 shadow-xs'
+                    : 'bg-card border-border text-foreground hover:border-card-edge-hover'
                 }`}
               >
                 <FSSAIIndicator type="veg" size={13} bg={dietaryFilter === 'veg' ? 'white' : 'auto'} />
@@ -1197,8 +1199,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   dietaryFilter === 'non_veg'
-                    ? 'bg-red-600 border-red-500 text-white shadow-red-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
+                    ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 shadow-xs'
+                    : 'bg-card border-border text-foreground hover:border-card-edge-hover'
                 }`}
               >
                 <FSSAIIndicator type="non_veg" size={13} bg={dietaryFilter === 'non_veg' ? 'white' : 'auto'} />
@@ -1209,8 +1211,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 onClick={() => setPopularOnly(!popularOnly)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   popularOnly
-                    ? 'bg-amber-500 border-amber-500 text-white shadow-amber-500/20'
-                    : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 hover:bg-slate-50'
+                    ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 shadow-xs'
+                    : 'bg-card border-border text-foreground hover:border-card-edge-hover'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-current" />
@@ -1230,8 +1232,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                   onClick={() => setSelectedCategory('all')}
                   className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
-                      ? 'bg-[#10B981] border-[#10B981] text-white shadow-lg shadow-[#10B981]/25 scale-[1.02]'
-                      : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-[#10B981]'
+                      ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 font-semibold shadow-xs'
+                      : 'bg-card text-foreground border-border hover:border-card-edge-hover font-medium'
                   }`}
                 >
                   {t.allItems}
@@ -1242,8 +1244,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                     onClick={() => setSelectedCategory(cat.id)}
                     className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
-                        ? 'bg-[#10B981] border-[#10B981] text-white shadow-lg shadow-[#10B981]/25 scale-[1.02]'
-                        : 'bg-white text-slate-900 border-slate-250 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 hover:border-[#10B981]'
+                        ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 font-semibold shadow-xs'
+                        : 'bg-card text-foreground border-border hover:border-card-edge-hover font-medium'
                     }`}
                   >
                     {cat.name}
@@ -1273,7 +1275,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                       <div
                         key={item.id}
                         onClick={() => handleOpenItem(item)}
-                        className="relative bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 flex gap-4 cursor-pointer transition-all duration-300 ease-out shadow-sm hover:shadow-xl hover:shadow-emerald-600/10 hover:-translate-y-1 hover:border-emerald-500/60 dark:hover:border-emerald-500/50 group backdrop-blur-md overflow-hidden"
+                        className="card-chai rounded-2xl p-4 flex gap-4 cursor-pointer transition-all duration-300 group overflow-hidden"
                       >
                         {/* Hover Gradient Top Line */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1398,7 +1400,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                       e.stopPropagation();
                                       handleOpenItem(item);
                                     }}
-                                    className="bg-[#10B981] hover:bg-[#059669] text-white text-[11px] font-black px-3.5 py-1.5 rounded-xl shadow-md shadow-[#10B981]/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                    className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 text-[11px] font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs"
                                   >
                                     <span>+ ADD</span>
                                   </button>
@@ -1444,7 +1446,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           </div>
 
           {/* Right Column: Embedded Basket on Desktop */}
-          <div className="hidden md:block md:col-span-4 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-805 p-6 rounded-3xl shadow-sm sticky top-24 max-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
+          <div className="hidden md:block md:col-span-4 card-chai p-6 rounded-2xl sticky top-24 max-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
               <ShoppingBag className="w-5 h-5 text-brand-600 dark:text-brand-400" />
               <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">Your Basket</h3>
@@ -1487,7 +1489,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
       {/* Cart Summary Floating Bar (Mobile Only) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] inset-x-4 z-40 bg-[#064E3B]/95 dark:bg-[#064E3B]/95 backdrop-blur-xl border border-[#10B981]/40 text-white p-3.5 pl-4 pr-3 shadow-2xl shadow-[#064E3B]/60 max-w-md mx-auto rounded-3xl animate-slide-up md:hidden">
+        <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] inset-x-4 z-40 bg-neutral-900/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-[var(--card-edge)] text-white p-3.5 pl-4 pr-3 max-w-md mx-auto rounded-2xl animate-slide-up md:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative bg-[#10B981]/20 p-2.5 rounded-2xl text-[#10B981] border border-[#10B981]/40">
@@ -1506,7 +1508,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             
             <button
               onClick={() => setIsCartOpen(true)}
-              className="bg-[#10B981] hover:bg-[#059669] text-white font-black px-5 py-3 rounded-2xl transition-all duration-200 active:scale-95 flex items-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-[#10B981]/20 cursor-pointer"
+              className="btn-asym bg-white text-neutral-950 font-semibold px-4 py-2.5 text-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
             >
               <span>Review Cart</span>
               <ArrowRight className="w-4 h-4 text-white" />
@@ -1810,7 +1812,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg hover:shadow-brand-500/10 mt-5 flex items-center justify-center gap-2 text-sm cursor-pointer"
+                className="btn-asym w-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-semibold py-3.5 px-6 mt-5 flex items-center justify-center gap-2 text-sm cursor-pointer hover:opacity-90 transition-all"
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span>{t.addToBasket}</span>
