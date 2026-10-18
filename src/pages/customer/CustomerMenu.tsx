@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { FoodItem, MenuCategory, DietaryType } from '../../types';
-import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, AlertCircle, Globe, RefreshCw } from 'lucide-react';
+import { Search, ShoppingBag, Flame, Sparkles, Utensils, X, Bell, Receipt, CheckCircle, ArrowRight, ClipboardList, ChevronRight, Clock, AlertCircle, Globe, RefreshCw, ChevronUp } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { translations, Language } from '../../translations';
 import { CustomerMenuLoader } from '../../components/CustomerMenuLoader';
@@ -203,6 +203,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       setCurrentTableById(tableId);
     }
   }, [tableId, setCurrentTableById, tables]);
+
+  // Smooth scroll to top detection
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      setShowScrollTop(window.scrollY > 350);
+    };
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleWindowScroll);
+  }, []);
 
   // Filter items memoized for zero-lag UI response
   const filteredItems = useMemo(() => {
@@ -789,7 +800,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               {t.pairsWellWithOrder || 'Pairs Well With Your Order'}
             </span>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar touch-pan-x scroll-smooth overscroll-x-contain">
             {cartPairedRecommendations.map(item => (
               <div
                 key={item.id}
@@ -1161,11 +1172,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
             </div>
 
             {/* Quick Filter Tags */}
-            <div className="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar touch-pan-x">
+            <div className="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar touch-pan-x scroll-smooth overscroll-x-contain">
               <button
-                onClick={() => {
+                onClick={(e) => {
                   setDietaryFilter('all');
                   setVegOnly(false);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   dietaryFilter === 'all' && !vegOnly
@@ -1177,10 +1189,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </button>
 
               <button
-                onClick={() => {
+                onClick={(e) => {
                   const next = dietaryFilter === 'veg' ? 'all' : 'veg';
                   setDietaryFilter(next);
                   setVegOnly(next === 'veg');
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   dietaryFilter === 'veg'
@@ -1193,9 +1206,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </button>
 
               <button
-                onClick={() => {
+                onClick={(e) => {
                   setDietaryFilter(dietaryFilter === 'non_veg' ? 'all' : 'non_veg');
                   setVegOnly(false);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   dietaryFilter === 'non_veg'
@@ -1208,7 +1222,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </button>
 
               <button
-                onClick={() => setPopularOnly(!popularOnly)}
+                onClick={(e) => {
+                  setPopularOnly(!popularOnly);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black border transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer shadow-sm ${
                   popularOnly
                     ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 shadow-xs'
@@ -1227,9 +1244,12 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{categories.length + 1} sections</span>
               </div>
 
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar touch-pan-x scroll-smooth">
+              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar touch-pan-x scroll-smooth overscroll-x-contain">
                 <button
-                  onClick={() => setSelectedCategory('all')}
+                  onClick={(e) => {
+                  setSelectedCategory('all');
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }}
                   className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                     selectedCategory === 'all'
                       ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 font-semibold shadow-xs'
@@ -1241,7 +1261,10 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 {categories.map(cat => (
                   <button
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
+                    onClick={(e) => {
+                    setSelectedCategory(cat.id);
+                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                  }}
                     className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap border cursor-pointer active:scale-95 ${
                       selectedCategory === cat.id
                         ? 'bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border-orange-500/40 font-semibold shadow-xs'
@@ -1517,6 +1540,23 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
         </div>
       )}
 
+      {/* Smooth Scroll to Top Floating Button */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className={
+            cart.length > 0
+              ? 'fixed z-30 flex items-center justify-center w-11 h-11 rounded-full bg-white/95 dark:bg-neutral-900/95 text-neutral-800 dark:text-neutral-100 border border-neutral-200/90 dark:border-neutral-800 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer animate-fade-in bottom-[max(5.75rem,calc(5rem+env(safe-area-inset-bottom)))] sm:bottom-6 left-4 sm:left-6'
+              : 'fixed z-30 flex items-center justify-center w-11 h-11 rounded-full bg-white/95 dark:bg-neutral-900/95 text-neutral-800 dark:text-neutral-100 border border-neutral-200/90 dark:border-neutral-800 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer animate-fade-in bottom-[max(1.25rem,calc(0.75rem+env(safe-area-inset-bottom)))] sm:bottom-6 left-4 sm:left-6'
+          }
+          title="Scroll to Top"
+          aria-label="Scroll to Top"
+        >
+          <ChevronUp className="w-5 h-5 text-orange-500 dark:text-orange-400" />
+        </button>
+      )}
+
       {/* Floating Quick-Actions: Call Waiter & Request Bill */}
       <div className={`fixed z-30 flex items-center gap-2 pointer-events-auto transition-all duration-300 right-4 ${
         cart.length > 0 ? 'bottom-[max(5.75rem,calc(5rem+env(safe-area-inset-bottom)))] sm:bottom-6 sm:right-6' : 'bottom-[max(1.25rem,calc(0.75rem+env(safe-area-inset-bottom)))] sm:bottom-6 sm:right-6'
@@ -1593,7 +1633,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               </button>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+            <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar touch-pan-x scroll-smooth overscroll-x-contain">
               {upsellState.pairedItems.map(paired => (
                 <div
                   key={paired.id}

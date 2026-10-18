@@ -608,12 +608,15 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                 )}
 
                 {/* Dietary Filter & Categories Horizontal Carousel */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 pb-0.5 touch-pan-x overscroll-x-contain">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 pb-0.5 touch-pan-x overscroll-x-contain scroll-smooth">
                   {/* Dietary Quick Toggles */}
                   <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-0.5 shrink-0 shadow-2xs">
                     <button
                       type="button"
-                      onClick={() => setDietaryFilter("all")}
+                      onClick={(e) => {
+                        setDietaryFilter("all");
+                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                      }}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                         dietaryFilter === "all"
                           ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs font-black"
@@ -624,7 +627,10 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDietaryFilter("veg")}
+                      onClick={(e) => {
+                        setDietaryFilter("veg");
+                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                      }}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
                         dietaryFilter === "veg"
                           ? "bg-emerald-600 text-white shadow-xs font-black"
@@ -636,7 +642,10 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDietaryFilter("non_veg")}
+                      onClick={(e) => {
+                        setDietaryFilter("non_veg");
+                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                      }}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
                         dietaryFilter === "non_veg"
                           ? "bg-rose-600 text-white shadow-xs font-black"
@@ -651,7 +660,10 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                   {/* Category Pills */}
                   <button
                     type="button"
-                    onClick={() => setSelectedCategoryId("all")}
+                    onClick={(e) => {
+                      setSelectedCategoryId("all");
+                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
                     className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       selectedCategoryId === "all"
                         ? "bg-emerald-600 text-white shadow-xs font-black"
@@ -667,7 +679,10 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
                       <button
                         key={cat.id}
                         type="button"
-                        onClick={() => setSelectedCategoryId(cat.id)}
+                        onClick={(e) => {
+                          setSelectedCategoryId(cat.id);
+                          e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        }}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           selectedCategoryId === cat.id
                             ? "bg-emerald-600 text-white shadow-xs font-black"

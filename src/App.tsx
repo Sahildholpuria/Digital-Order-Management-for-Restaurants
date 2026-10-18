@@ -868,7 +868,10 @@ export const App: React.FC = () => {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => handleSelectTab(item.id)}
+                      onClick={(e) => {
+                      handleSelectTab(item.id);
+                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
                       className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                         isActive
                           ? "bg-white text-neutral-950 dark:bg-orange-950/60 dark:text-orange-100 dark:border dark:border-orange-500/40 shadow-xs"
@@ -1137,7 +1140,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Sub-Header Horizontal Tabs for Tablets / Medium Screens (md to xl) */}
-            <div className="hidden md:flex xl:hidden border-t border-[var(--card-edge)] px-4 py-2 overflow-x-auto no-scrollbar gap-1.5 bg-background/80 backdrop-blur-md">
+            <div className="hidden md:flex xl:hidden border-t border-[var(--card-edge)] px-4 py-2 overflow-x-auto no-scrollbar gap-1.5 bg-background/80 backdrop-blur-md touch-pan-x scroll-smooth overscroll-x-contain">
               {sidebarItems.map(item => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;

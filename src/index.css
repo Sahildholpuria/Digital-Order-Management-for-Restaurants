@@ -404,9 +404,30 @@ input, select, textarea {
   bottom: max(1rem, env(safe-area-inset-bottom, 16px));
 }
 
-html {
+/* Global Smooth Scrolling with Reduced Motion Respect */
+html,
+body {
+  scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Touch and Momentum Smooth Scrolling Utilities */
+.scroll-smooth,
+.overflow-x-auto,
+.overflow-y-auto {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 input[type="time"],

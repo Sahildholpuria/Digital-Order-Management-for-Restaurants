@@ -281,7 +281,7 @@ export const TablesManager: React.FC = () => {
 
       {/* MULTI-FLOOR / DINING SECTION FILTER CAROUSEL (Compact) */}
       <div className="bg-white dark:bg-slate-900 p-1.5 sm:p-2 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 touch-pan-x overscroll-x-contain">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 touch-pan-x overscroll-x-contain scroll-smooth">
           <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-1 pr-2 shrink-0 border-r border-slate-200 dark:border-slate-800">
             <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500" />
             <span className="hidden sm:inline">Floors:</span>
@@ -291,7 +291,10 @@ export const TablesManager: React.FC = () => {
           {/* All Tables Button */}
           <button
             type="button"
-            onClick={() => setSelectedFloorFilter("all")}
+            onClick={(e) => {
+              setSelectedFloorFilter("all");
+              e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }}
             className={`px-2.5 sm:px-3 py-1 rounded-lg text-[11px] font-black transition-all shrink-0 cursor-pointer active:scale-95 ${
               selectedFloorFilter === "all"
                 ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs"
@@ -310,7 +313,10 @@ export const TablesManager: React.FC = () => {
               <button
                 key={fl}
                 type="button"
-                onClick={() => setSelectedFloorFilter(fl)}
+                onClick={(e) => {
+                  setSelectedFloorFilter(fl);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }}
                 className={`px-2.5 sm:px-3 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                   isSelected
                     ? "bg-emerald-600 text-white shadow-xs font-black"

@@ -211,7 +211,7 @@ export const OrdersManager: React.FC = () => {
           </div>
 
           {/* Secondary Utilities Row */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto touch-pan-x scroll-smooth overscroll-x-contain">
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}

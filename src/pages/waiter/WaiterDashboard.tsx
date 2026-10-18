@@ -310,7 +310,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
           {/* Available Tables */}
           <div 
-            onClick={() => setFilterStatus("available")}
+            onClick={(e) => {
+                setFilterStatus("available");
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
             className="p-2 sm:p-2.5 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-emerald-500/50 transition-all cursor-pointer flex items-center gap-2.5"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black shrink-0">
@@ -326,7 +329,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
           {/* Occupied Tables */}
           <div 
-            onClick={() => setFilterStatus("occupied")}
+            onClick={(e) => {
+                setFilterStatus("occupied");
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
             className="p-2 sm:p-2.5 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-amber-500/50 transition-all cursor-pointer flex items-center gap-2.5"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black shrink-0">
@@ -342,7 +348,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
           {/* Active Takeaways */}
           <div 
-            onClick={() => setFilterStatus("takeaway")}
+            onClick={(e) => {
+                setFilterStatus("takeaway");
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
             className="p-2 sm:p-2.5 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-orange-500/50 transition-all cursor-pointer flex items-center gap-2.5"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black shrink-0">
@@ -478,10 +487,13 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             
             {/* Status Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5 touch-pan-x scroll-smooth overscroll-x-contain">
               <button
                 type="button"
-                onClick={() => setFilterStatus("all")}
+                onClick={(e) => {
+                setFilterStatus("all");
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
                   filterStatus === "all"
                     ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
@@ -572,14 +584,17 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
           {/* Horizontal Floor Filter Carousel */}
           {availableFloors.length > 0 && filterStatus !== "takeaway" && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs touch-pan-x scroll-smooth overscroll-x-contain">
               <span className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1 pr-1 shrink-0">
                 <Layers className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Floor:</span>
               </span>
               <button
                 type="button"
-                onClick={() => setSelectedFloorFilter("all")}
+                onClick={(e) => {
+                setSelectedFloorFilter("all");
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all shrink-0 cursor-pointer ${
                   selectedFloorFilter === "all"
                     ? "bg-emerald-600 text-white shadow-2xs"
@@ -594,7 +609,10 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                   <button
                     key={fl}
                     type="button"
-                    onClick={() => setSelectedFloorFilter(fl)}
+                    onClick={(e) => {
+                    setSelectedFloorFilter(fl);
+                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                  }}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
                       selectedFloorFilter === fl
                         ? "bg-emerald-600 text-white shadow-2xs font-black"

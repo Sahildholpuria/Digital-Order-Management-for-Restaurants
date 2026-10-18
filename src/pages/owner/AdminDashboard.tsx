@@ -320,14 +320,17 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
 
           {/* Segmented Date Range Picker */}
-          <div className="flex items-center p-0.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar max-w-full w-full sm:w-auto">
+          <div className="flex items-center p-0.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar max-w-full w-full sm:w-auto touch-pan-x scroll-smooth overscroll-x-contain">
             <div className="flex items-center gap-1 px-1.5 text-slate-400">
               <Filter className="w-3 h-3" />
             </div>
             {dateFilterTabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setDateRange(tab.id)}
+                onClick={(e) => {
+                  setDateRange(tab.id);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }}
                 className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   dateRange === tab.id
                     ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/25'
