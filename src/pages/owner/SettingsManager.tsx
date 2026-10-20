@@ -28,10 +28,47 @@ import {
   Radio,
   QrCode,
   Upload,
-  Trash2
+  Trash2,
+  Bluetooth
 } from "lucide-react";
+import { bluetoothPrinterService, BluetoothPrinterDevice } from "../../services/bluetoothPrinterService";
 
 export const SettingsManager: React.FC = () => {
+  const [btDevice, setBtDevice] = useState<BluetoothPrinterDevice | null>(bluetoothPrinterService.getConnectedDevice());
+  const [isBtConnecting, setIsBtConnecting] = useState(false);
+
+  useEffect(() => {
+    return bluetoothPrinterService.subscribe(setBtDevice);
+  }, []);
+
+  const handleConnectBluetooth = async () => {
+    setIsBtConnecting(true);
+    try {
+      const res = await bluetoothPrinterService.connect();
+      if (res.success) {
+        showToast(res.message, "success");
+      } else {
+        showToast(res.message, "error");
+      }
+    } finally {
+      setIsBtConnecting(false);
+    }
+  };
+
+  const handleDisconnectBluetooth = async () => {
+    await bluetoothPrinterService.disconnect();
+    showToast("Bluetooth printer disconnected", "info");
+  };
+
+  const handleTestBluetoothPrint = async () => {
+    const ok = await bluetoothPrinterService.testPrint();
+    if (ok) {
+      showToast("Test ticket sent via Bluetooth!", "success");
+    } else {
+      showToast("Failed to print via Bluetooth. Please reconnect printer.", "error");
+    }
+  };
+
   const { 
     settings, 
     updateSettings, 
@@ -763,28 +800,42 @@ export const SettingsManager: React.FC = () => {
                   </span>
                   <span className="text-[10px] text-slate-400 block">Thermal roll size</span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 mt-1">
+                <div className="grid grid-cols-3 gap-1.5 mt-1">
                   <button
                     type="button"
                     onClick={() => saveQZConfig({ paperWidth: "80mm" })}
-                    className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer text-center ${
                       qzConfig.paperWidth === "80mm"
                         ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs"
                         : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
                     }`}
+                    title="Standard POS thermal roll (Epson, Star, TVS, Rongta, NGX)"
                   >
-                    80mm (3-inch)
+                    80mm (3")
                   </button>
                   <button
                     type="button"
                     onClick={() => saveQZConfig({ paperWidth: "58mm" })}
-                    className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer text-center ${
                       qzConfig.paperWidth === "58mm"
                         ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs"
                         : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
                     }`}
+                    title="Mini handheld POS and portable Bluetooth thermal printer"
                   >
-                    58mm (2-inch)
+                    58mm (2")
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveQZConfig({ paperWidth: "A4" })}
+                    className={`py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer text-center ${
+                      qzConfig.paperWidth === "A4"
+                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                    }`}
+                    title="Standard A4 / Letter office desktop printer (LaserJet, InkJet)"
+                  >
+                    A4 (Full Page)
                   </button>
                 </div>
               </div>
@@ -870,6 +921,105 @@ export const SettingsManager: React.FC = () => {
               </a>
             </div>
 
+          </div>
+
+          {/* ================= WIRELESS BLUETOOTH THERMAL PRINTER CARD ================= */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-150/70 dark:border-slate-850 p-4 sm:p-5 rounded-2xl shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Bluetooth className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm uppercase tracking-wider">
+                    Wireless Bluetooth Thermal Printers
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Direct ESC/POS printing to mobile & handheld printers without drivers or cables
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    btDevice ? "bg-blue-500 animate-pulse" : "bg-slate-400"
+                  }`}
+                />
+                <span className={btDevice ? "text-blue-600 dark:text-blue-400" : "text-slate-500"}>
+                  {btDevice ? btDevice.name : "Disconnected"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="text-xs text-slate-600 dark:text-slate-300">
+                {btDevice ? (
+                  <p>Paired with <strong>{btDevice.name}</strong>. Ready for wireless mobile KOT and bill dispatch.</p>
+                ) : (
+                  <p>Compatible with battery-powered portable thermal printers (Sunmi, MPT-II, PT-210, POS-5802, Rongta, etc.) on Chrome.</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {btDevice ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleTestBluetoothPrint}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition-all active:scale-95 shadow-xs flex items-center gap-1"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Test Print</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectBluetooth}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                    >
+                      Disconnect
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectBluetooth}
+                    disabled={isBtConnecting}
+                    className="px-4 py-2 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition-all active:scale-95 shadow-xs flex items-center gap-1.5"
+                  >
+                    <Bluetooth className="w-4 h-4" />
+                    <span>{isBtConnecting ? "Searching..." : "Pair Bluetooth Printer"}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ================= UNIVERSAL PRINTER COMPATIBILITY OVERVIEW ================= */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Supported Printer Types & Connection Methods</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-800">
+                <strong className="text-slate-900 dark:text-slate-100 block mb-0.5">1. Thermal POS (80mm / 3-inch)</strong>
+                Epson TM-T82, Star TSP100, TVS, NGX, Posiflex, Rongta, Xprinter via USB, Ethernet/LAN, Wi-Fi, or QZ Tray.
+              </div>
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-800">
+                <strong className="text-slate-900 dark:text-slate-100 block mb-0.5">2. Mini Portable (58mm / 2-inch)</strong>
+                Handheld billing machines, Sunmi, MPT-II, mobile Bluetooth thermal printers & pocket devices.
+              </div>
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-800">
+                <strong className="text-slate-900 dark:text-slate-100 block mb-0.5">3. Standard Office (A4 / Letter)</strong>
+                HP LaserJet, Canon, Brother, Epson InkJet & network office printers for full-page official GST Tax Invoices.
+              </div>
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-800">
+                <strong className="text-slate-900 dark:text-slate-100 block mb-0.5">4. Mobile AirPrint & System Print</strong>
+                Instant driverless printing on iPhone, iPad (AirPrint), Android Print Service, Windows & macOS print dialogs.
+              </div>
+            </div>
           </div>
 
         </div>

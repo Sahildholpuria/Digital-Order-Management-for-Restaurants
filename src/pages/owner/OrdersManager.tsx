@@ -723,7 +723,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
         {["pending", "accepted", "preparing", "ready", "served"].includes(order.status) && (
           <>
             <button
-              onClick={() => printKOTReceipt(order, restaurantName || "Kitchen", "80mm", true)}
+              onClick={() => printKOTReceipt(order, restaurantName || "Kitchen", undefined, true)}
               className="p-2 border border-slate-205 dark:border-slate-800 text-amber-500 hover:text-amber-600 rounded-xl transition-all font-bold cursor-pointer"
               title="Re-print Kitchen Order Ticket (KOT)"
             >

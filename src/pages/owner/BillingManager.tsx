@@ -292,7 +292,7 @@ export const BillingManager: React.FC = () => {
             tax: taxAmount,
             grandTotal,
           };
-          await printBillReceipt({ ...receiptPrintOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, "80mm", true);
+          await printBillReceipt({ ...receiptPrintOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, undefined, true);
         } catch (err) {
           console.warn("Settlement receipt auto-print notice:", err);
         }
@@ -335,7 +335,7 @@ export const BillingManager: React.FC = () => {
   };
 
   // Trigger POS Thermal Receipt Print (80mm / 58mm POS billing machine)
-  const triggerPrint = async (paperWidth: "80mm" | "58mm" = "80mm", forcePrint: boolean = true) => {
+  const triggerPrint = async (paperWidth: "80mm" | "58mm" | "A4" = "80mm", forcePrint: boolean = true) => {
     if (!selectedGroup || !selectedOrder) return;
     try {
       const primaryOrder = selectedGroup.orders[0] || selectedOrder;
@@ -688,22 +688,33 @@ export const BillingManager: React.FC = () => {
                 {/* POS Thermal Printing & Download Commands */}
                 {settings?.enableBillPrinting !== false ? (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => triggerPrint("80mm")}
-                        className="py-3 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm cursor-pointer"
+                        className="py-2.5 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 font-bold rounded-2xl text-[11px] flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors border border-brand-200 dark:border-brand-800 shadow-sm cursor-pointer"
+                        title="Print on standard 80mm (3-inch) POS thermal roll printer"
                       >
-                        <Printer className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                        <span>Print Bill (80mm)</span>
+                        <Printer className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0" />
+                        <span>80mm Thermal</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => triggerPrint("58mm")}
-                        className="py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
+                        className="py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-[11px] flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
+                        title="Print on compact 58mm (2-inch) mini / Bluetooth thermal printer"
                       >
-                        <Printer className="w-4 h-4 text-slate-500" />
-                        <span>Mini Bill (58mm)</span>
+                        <Printer className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <span>58mm Mini</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerPrint("A4")}
+                        className="py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold rounded-2xl text-[11px] flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors border border-indigo-200 dark:border-indigo-800/80 cursor-pointer"
+                        title="Print official full-page A4 GST Tax Invoice on office / desktop printer"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        <span>A4 Invoice</span>
                       </button>
                     </div>
 

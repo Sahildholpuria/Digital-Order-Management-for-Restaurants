@@ -1,10 +1,12 @@
 import qz from "qz-tray";
 import { RestaurantOrder, RestaurantSettings } from "../types";
 
+export type PaperWidth = "80mm" | "58mm" | "A4";
+
 export interface QZPrinterConfig {
   kotPrinter?: string;
   billPrinter?: string;
-  paperWidth: "80mm" | "58mm";
+  paperWidth: PaperWidth;
   autoPrintKOT: boolean;
   autoPrintBill: boolean;
   autoConnect: boolean;
@@ -366,7 +368,7 @@ class QZTrayService {
   public async printHTML(options: {
     printerName?: string;
     html: string;
-    paperWidth?: "80mm" | "58mm";
+    paperWidth?: PaperWidth;
     jobName?: string;
   }): Promise<{ success: boolean; message?: string }> {
     const width = options.paperWidth || this.config.paperWidth || "80mm";
@@ -395,15 +397,14 @@ class QZTrayService {
     }
 
     try {
-      const inchWidth = width === "58mm" ? 2.28 : 3.14;
+      const inchWidth = width === "58mm" ? 2.28 : width === "A4" ? 8.27 : 3.14;
+      const inchHeight = width === "A4" ? 11.69 : undefined;
 
       const printConfig = qz.configs.create(targetPrinter, {
         colorType: "grayscale",
         rasterize: false,
         scaleContent: true,
-        size: {
-          width: inchWidth,
-        },
+        size: inchHeight ? { width: inchWidth, height: inchHeight } : { width: inchWidth },
         margins: { top: 0, right: 0, bottom: 0, left: 0 },
         units: "in",
         reopenWait: 100,
@@ -418,7 +419,7 @@ class QZTrayService {
           data: options.html,
           options: {
             pageWidth: inchWidth,
-            pageHeight: "auto",
+            pageHeight: inchHeight || "auto",
           },
         },
       ];

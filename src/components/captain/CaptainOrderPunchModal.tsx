@@ -447,7 +447,7 @@ export const CaptainOrderPunchModal: React.FC<CaptainOrderPunchModalProps> = ({
             <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 justify-center w-full max-w-md">
               <button
                 type="button"
-                onClick={() => printKOTReceipt(punchedOrder, settings?.name || "Kitchen", "80mm", true)}
+                onClick={() => printKOTReceipt(punchedOrder, settings?.name || "Kitchen", undefined, true)}
                 className="w-full sm:flex-1 bg-slate-900 hover:bg-slate-800 text-white font-black py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95"
               >
                 <Printer className="w-4 h-4" />

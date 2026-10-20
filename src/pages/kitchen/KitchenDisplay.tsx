@@ -401,7 +401,7 @@ export const KitchenDisplay: React.FC = () => {
                 {/* Primary Action Buttons */}
                 <div className="p-4 bg-slate-950 border-t border-slate-800 flex gap-2.5">
                   <button
-                    onClick={() => printKOTReceipt(order, settings?.name || "Kitchen")}
+                    onClick={() => printKOTReceipt(order, settings?.name || "Kitchen", undefined, true)}
                     className="p-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-black rounded-2xl text-xs flex items-center justify-center transition-colors border border-slate-700 cursor-pointer shadow-sm"
                     title="Print Kitchen Order Ticket (KOT)"
                   >

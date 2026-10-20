@@ -166,7 +166,7 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
         grandTotal,
       };
 
-      await printBillReceipt(receiptOrder, settings);
+      await printBillReceipt(receiptOrder, settings, undefined, true);
       showToast("Thermal receipt printed successfully", "success");
     } catch (err) {
       console.warn("Receipt print warning:", err);
