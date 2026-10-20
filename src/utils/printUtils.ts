@@ -448,6 +448,8 @@ export const generateKOTHtml = (
             .kot-container {
               width: ${printableWidth} !important;
               margin: 0 auto !important;
+              padding-top: 12mm !important;
+              padding-bottom: 12mm !important;
             }
           }
           * {
@@ -456,7 +458,7 @@ export const generateKOTHtml = (
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
-            padding: ${is58mm ? "2px" : "4px"};
+            padding: 0;
             color: #000;
             background: #fff;
             display: flex;
@@ -466,6 +468,8 @@ export const generateKOTHtml = (
             width: ${printableWidth};
             max-width: 100%;
             margin: 0 auto;
+            padding-top: 12mm;
+            padding-bottom: 12mm;
             text-align: center;
           }
           .center { text-align: center; }
@@ -474,6 +478,9 @@ export const generateKOTHtml = (
       </head>
       <body>
         <div class="kot-container">
+          <!-- Top Safe Feed Buffer: Prevents hardware auto-cutter from cutting into the header -->
+          <div style="height: 3mm; width: 100%; font-size: 1px; line-height: 1px;">&nbsp;</div>
+
           <!-- HEADER -->
           <div style="border-bottom: 2px solid #000; padding-bottom: ${is58mm ? "3px" : "5px"}; margin-bottom: 4px;">
             <div style="font-size: ${is58mm ? "14px" : "18px"}; font-weight: 900; letter-spacing: 0.5px; color: #000; text-transform: uppercase;">
@@ -531,7 +538,8 @@ export const generateKOTHtml = (
           <div style="margin-top: 6px; font-size: 8.5px; font-weight: 700; color: #444; border-top: 1px dashed #000; padding-top: 4px;">
             *** DISPATCHED TO KITCHEN STATION ***
           </div>
-          <div style="height: 25px;"></div>
+          <!-- Bottom Safe Feed Buffer: Ensures footer feeds past cutter before slicing -->
+          <div style="height: 15mm; width: 100%; font-size: 1px; line-height: 1px;">&nbsp;</div>
         </div>
       </body>
     </html>
@@ -812,6 +820,8 @@ export const generateBillReceiptHtml = (
             .receipt-container {
               width: ${printableWidth} !important;
               margin: 0 auto !important;
+              padding-top: 12mm !important;
+              padding-bottom: 12mm !important;
             }
           }
           * {
@@ -820,7 +830,7 @@ export const generateBillReceiptHtml = (
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
-            padding: ${is58mm ? "2px" : "4px"};
+            padding: 0;
             color: #000;
             background: #fff;
             display: flex;
@@ -831,6 +841,8 @@ export const generateBillReceiptHtml = (
             width: ${printableWidth};
             max-width: 100%;
             margin: 0 auto;
+            padding-top: 12mm;
+            padding-bottom: 12mm;
             text-align: left;
           }
           .center { text-align: center; }
@@ -839,6 +851,9 @@ export const generateBillReceiptHtml = (
       </head>
       <body>
         <div class="receipt-container">
+          <!-- Top Safe Feed Buffer: Prevents hardware auto-cutter from cutting into restaurant title -->
+          <div style="height: 3mm; width: 100%; font-size: 1px; line-height: 1px;">&nbsp;</div>
+
           <!-- RESTAURANT BRAND & TAX HEADER (CENTERED) -->
           <div class="center" style="margin-bottom: 4px; border-bottom: 2px dashed #000; padding-bottom: ${is58mm ? "3px" : "5px"};">
             <h2 style="margin: 0 0 2px 0; font-size: ${is58mm ? "14px" : "16.5px"}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000;">${restName}</h2>
@@ -944,7 +959,8 @@ export const generateBillReceiptHtml = (
             ${websiteStr ? `<p style="margin: 1px 0; font-family: ui-monospace, monospace; font-weight: 800; color: #000;">${websiteStr}</p>` : ""}
             <p style="margin: 2px 0 0 0; font-size: 7.5px; color: #444;">*** Computer Generated Tax Invoice ***</p>
           </div>
-          <div style="height: 25px;"></div>
+          <!-- Bottom Safe Feed Buffer: Ensures footer feeds past cutter before slicing -->
+          <div style="height: 15mm; width: 100%; font-size: 1px; line-height: 1px;">&nbsp;</div>
         </div>
       </body>
     </html>

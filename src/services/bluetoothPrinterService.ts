@@ -201,6 +201,9 @@ class BluetoothPrinterService {
     // ESC @ : Initialize
     parts.push(0x1b, 0x40);
 
+    // Safe feed buffer to move paper past cutter blade before printing header
+    parts.push(...encoder.encode("\n\n"));
+
     // ESC a 1 : Center
     parts.push(0x1b, 0x61, 0x01);
     // GS ! 0x11 : Double height & width
@@ -271,6 +274,9 @@ class BluetoothPrinterService {
 
     // ESC @ : Initialize
     parts.push(0x1b, 0x40);
+
+    // Safe feed buffer to move paper past cutter blade before printing header
+    parts.push(...encoder.encode("\n\n"));
 
     // ESC a 1 : Center
     parts.push(0x1b, 0x61, 0x01);
