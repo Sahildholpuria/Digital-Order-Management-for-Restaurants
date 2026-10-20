@@ -367,6 +367,17 @@ create policy "Allow public read active announcements" on public.announcements f
 create policy "Allow super admin manage announcements" on public.announcements for all using (public.is_super_admin(auth.uid()));
 create index if not exists idx_announcements_is_active on public.announcements(is_active);
 
+-- 7B. GLOBAL SYSTEM CONFIGURATION (Support channels, feature flags, global toggles)
+create table if not exists public.system_config (
+  key text primary key,
+  value jsonb,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.system_config enable row level security;
+create policy "Allow read access to system_config" on public.system_config for select to anon, authenticated using (true);
+create policy "Allow super admin manage system_config" on public.system_config for all to authenticated using (public.is_super_admin(auth.uid())) with check (public.is_super_admin(auth.uid()));
+
 
 -- ====================================================
 -- 8. SECURITY HARDENING & PRIVILEGE ESCALATION SHIELDS
@@ -424,3 +435,38 @@ grant execute on function public.is_super_admin(uuid) to authenticated, service_
 grant execute on function public.belongs_to_restaurant(uuid, text) to authenticated, service_role;
 grant execute on function public.get_user_restaurant(uuid) to authenticated, service_role;
 grant execute on function public.update_table_status(text, text) to anon, authenticated, service_role;
+
+
+-- ====================================================
+-- 9. EXPLICIT TABLE DATA API GRANTS (SUPABASE 2026+ COMPLIANCE)
+-- Explicit GRANT statements required for PostgREST & supabase-js Data API access
+-- ====================================================
+
+-- 1. Anonymous role (Customer QR menu, table scanning, customer order creation)
+grant select on public.restaurants to anon;
+grant select on public.tables to anon;
+grant select on public.categories to anon;
+grant select on public.food_items to anon;
+grant select, insert, update on public.orders to anon;
+grant select, insert on public.payments to anon;
+grant select, insert on public.notifications to anon;
+grant select on public.announcements to anon;
+grant select on public.system_config to anon;
+
+-- 2. Authenticated role (Restaurant Owners, Staff, Kitchen, Waiters, Super Admin)
+grant select, insert, update, delete on public.restaurants to authenticated;
+grant select, insert, update, delete on public.users to authenticated;
+grant select, insert, update, delete on public.tables to authenticated;
+grant select, insert, update, delete on public.categories to authenticated;
+grant select, insert, update, delete on public.food_items to authenticated;
+grant select, insert, update, delete on public.orders to authenticated;
+grant select, insert, update, delete on public.payments to authenticated;
+grant select, insert, update, delete on public.notifications to authenticated;
+grant select, insert, update, delete on public.subscription_payments to authenticated;
+grant select, insert, update, delete on public.announcements to authenticated;
+grant select, insert, update, delete on public.system_config to authenticated;
+
+-- 3. Service Role (Full administrative access for server-side code & Edge Functions)
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant all on all routines in schema public to service_role;
