@@ -198,8 +198,14 @@ export const SettingsManager: React.FC = () => {
         setLastUpdated(now);
       }
       showToast("Restaurant settings updated successfully!", "success");
-    } catch (err) {
-      showToast("Failed to save settings.", "error");
+    } catch (err: any) {
+      console.error("[SettingsManager] Save error:", err);
+      const msg = err?.message || err?.error_description || "Failed to save settings.";
+      if (msg.includes("permission denied") || msg.includes("JWT") || msg.includes("expired") || msg.includes("401")) {
+        showToast("Your session has expired. Please sign out and sign in again.", "error");
+      } else {
+        showToast(msg, "error");
+      }
     } finally {
       setIsSaving(false);
     }

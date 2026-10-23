@@ -1114,7 +1114,15 @@ export const dbService = {
     } catch (e) {}
 
     if (isSupabaseConfigured) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        throw new Error("Your login session has expired. Please sign out and sign in again.");
+      }
+
       const dbUpdates = mapSettingsToDb(merged);
+      // Never include primary key in UPDATE payload
+      delete dbUpdates.id;
+
       const { error } = await supabase
         .from('restaurants')
         .update(dbUpdates)
