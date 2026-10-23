@@ -34,7 +34,8 @@ import {
   Phone,
   Tag,
   TrendingUp,
-  RefreshCw
+  RefreshCw,
+  WifiOff
 } from "lucide-react";
 
 interface WaiterDashboardProps {
@@ -72,8 +73,31 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
     settings,
     currentUser,
     logoutUser,
-    showToast
+    showToast,
+    syncOfflineQueue,
+    pendingOfflineKOTsCount,
   } = useRestaurant();
+
+  const [isManualSyncing, setIsManualSyncing] = useState<boolean>(false);
+
+  const handleManualSync = async () => {
+    if (isManualSyncing) return;
+    setIsManualSyncing(true);
+    try {
+      const res = await syncOfflineQueue();
+      if (res.syncedCount > 0) {
+        showToast('✓ Successfully synced ' + res.syncedCount + ' offline KOT' + (res.syncedCount === 1 ? '' : 's') + ' with kitchen!', 'success');
+      } else if (res.errors > 0) {
+        showToast('Connection weak or offline. Queued KOTs will retry automatically.', 'info');
+      } else {
+        showToast('All offline KOTs are already synchronized!', 'success');
+      }
+    } catch (err: any) {
+      showToast('Sync notice: Will retry automatically when Wi-Fi connects.', 'info');
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
 
   const { theme, toggleTheme } = useTheme();
 
@@ -305,6 +329,38 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
 
       {/* MAIN CONTENT WRAPPER */}
       <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 pt-3 sm:pt-5 space-y-3.5 sm:space-y-5 flex-1">
+
+        {/* OFFLINE RESILIENCE BANNER (Basement dining Wi-Fi queue) */}
+        {pendingOfflineKOTsCount > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200 shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs animate-pulse">
+                <WifiOff className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-black flex items-center gap-1.5 truncate">
+                  <span>{pendingOfflineKOTsCount} Offline KOT{pendingOfflineKOTsCount === 1 ? '' : 's'} Queued Locally</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Basement Queue Active
+                  </span>
+                </p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                  Punched during Wi-Fi drop. Orders will automatically drain and synchronize with kitchen once connection resumes.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isManualSyncing}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={"w-3.5 h-3.5 " + (isManualSyncing ? "animate-spin" : "")} />
+              <span>{isManualSyncing ? 'Syncing...' : 'Sync Now'}</span>
+            </button>
+          </div>
+        )}
 
         {/* COMPACT SUMMARY METRIC STRIP */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
@@ -837,6 +893,14 @@ export const WaiterDashboard: React.FC<WaiterDashboardProps> = ({ isStandalone =
                         <div className="mt-1 pt-1 border-t border-dashed border-amber-500/25 flex justify-between items-center text-[10px] font-black text-amber-700 dark:text-amber-400">
                           <span>Running:</span>
                           <span>{currency}{totalAmount.toFixed(0)}</span>
+                        </div>
+                      )}
+
+                      {/* Offline Queued KOT Badge */}
+                      {activeOrders.some(o => o.isOfflineQueued) && (
+                        <div className="mt-1 flex items-center gap-1 text-[8px] font-black text-amber-700 dark:text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded-md border border-amber-500/30">
+                          <WifiOff className="w-2.5 h-2.5 animate-pulse text-amber-500" />
+                          <span>Offline KOT Queued</span>
                         </div>
                       )}
                     </div>

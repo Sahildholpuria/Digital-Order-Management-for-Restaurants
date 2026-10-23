@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { WifiOff, Wifi, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { networkHealthService, ConnectionQuality } from '../../services/networkHealthService';
 import { offlineSyncService } from '../../services/offlineSyncService';
+import { indexedDBQueue } from '../../services/indexedDBQueue';
 
 export const NetworkStatusBanner: React.FC = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -29,12 +30,18 @@ export const NetworkStatusBanner: React.FC = () => {
       setPendingSyncs(offlineSyncService.getPendingCount());
     });
 
-    const syncInterval = setInterval(() => {
-      setPendingSyncs(offlineSyncService.getPendingCount());
+    const unsubQueue = indexedDBQueue.subscribe((count) => {
+      setPendingSyncs(count + offlineSyncService.getPendingCount());
+    });
+
+    const syncInterval = setInterval(async () => {
+      const kotCount = await indexedDBQueue.getPendingCount();
+      setPendingSyncs(kotCount + offlineSyncService.getPendingCount());
     }, 4000);
 
     return () => {
       unsubscribe();
+      unsubQueue();
       clearInterval(syncInterval);
     };
   }, []);

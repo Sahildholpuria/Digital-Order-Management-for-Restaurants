@@ -25,7 +25,8 @@ import {
   Tag,
   ArrowRight,
   Receipt,
-  ChevronUp
+  ChevronUp,
+  WifiOff
 } from "lucide-react";
 
 interface CaptainOrderPunchModalProps {

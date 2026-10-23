@@ -22,6 +22,7 @@ import {
 import { translations, Language } from '../translations';
 import { printKOTReceipt, printBillReceipt } from '../utils/printUtils';
 import { offlineSyncService } from '../services/offlineSyncService';
+import { indexedDBQueue } from '../services/indexedDBQueue';
 import { qzTrayService, QZPrinterConfig, QZConnectionStatus } from '../services/qzTrayService';
 
 interface RestaurantContextType {
@@ -82,6 +83,10 @@ interface RestaurantContextType {
   logoutUser: () => Promise<void>;
 
   refreshData: () => Promise<void>;
+
+  // Offline-First Resilience (IndexedDB Queue)
+  syncOfflineQueue: () => Promise<{ syncedCount: number; errors: number }>;
+  pendingOfflineKOTsCount: number;
 
   // Toast & Modal Helper State API
   toasts: ToastConfig[];
@@ -247,6 +252,33 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [tablesLoaded, setTablesLoaded] = useState<boolean>(false);
   const [tableNotFound, setTableNotFound] = useState<boolean>(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<number>(0);
+  const [pendingOfflineKOTsCount, setPendingOfflineKOTsCount] = useState<number>(0);
+
+  // Monitor durable IndexedDB Offline KOT queue
+  useEffect(() => {
+    const unsub = indexedDBQueue.subscribe((count) => {
+      setPendingOfflineKOTsCount(count);
+    });
+
+    const handleSynced = (e: any) => {
+      const orderNumber = e.detail?.orderNumber;
+      const tableName = e.detail?.tableName;
+      if (orderNumber) {
+        showToast('✓ Offline KOT #' + orderNumber + ' (' + (tableName || 'Table') + ') synced with kitchen!', 'success');
+      }
+    };
+
+    window.addEventListener('offline-kot-synced', handleSynced);
+
+    return () => {
+      unsub();
+      window.removeEventListener('offline-kot-synced', handleSynced);
+    };
+  }, []);
+
+  const syncOfflineQueue = async () => {
+    return await offlineSyncService.processQueue();
+  };
 
   // Standard English Translation state
   const [lang, setLangState] = useState<Language>('en');
@@ -1291,13 +1323,16 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       elapsedTimeStart: new Date().toISOString(),
     };
 
-    // Save order to database & queue for background sync guarantee
+    // Save order to database & queue for background sync guarantee (durable IndexedDB queue)
     setOrders(prev => [resultOrder, ...prev.filter(o => o.id !== resultOrder.id)]);
-    offlineSyncService.enqueue('save_order', effectiveRestaurantId, resultOrder);
-    try {
-      await dbService.saveOrder(effectiveRestaurantId, resultOrder);
-    } catch (err) {
-      console.warn("Direct save notice (queued in offlineSyncService):", err);
+    await offlineSyncService.enqueueKOT(effectiveRestaurantId, resultOrder);
+    if (navigator.onLine) {
+      try {
+        await dbService.saveOrder(effectiveRestaurantId, resultOrder);
+        await indexedDBQueue.removeKOT("kot_sync_" + resultOrder.id);
+      } catch (err) {
+        console.warn("Direct save notice (safely buffered in IndexedDB queue):", err);
+      }
     }
     
     // Update table status to occupied if Dine-In
@@ -1410,11 +1445,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Optimistically update orders list immediately
     setOrders(prev => [newOrder, ...prev.filter(o => o.id !== newOrder.id)]);
 
-    // Save order to database
-    try {
-      await dbService.saveOrder(effectiveRestaurantId, newOrder);
-    } catch (err) {
-      console.warn("Takeaway DB save notice (persisted locally):", err);
+    // Save order to database & queue in durable IndexedDB for weak Wi-Fi environments
+    await offlineSyncService.enqueueKOT(effectiveRestaurantId, newOrder);
+    if (navigator.onLine) {
+      try {
+        await dbService.saveOrder(effectiveRestaurantId, newOrder);
+        await indexedDBQueue.removeKOT("kot_sync_" + newOrder.id);
+      } catch (err) {
+        console.warn("Takeaway DB save notice (safely buffered in IndexedDB queue):", err);
+      }
     }
 
     // Dispatch real-time notification
@@ -1519,12 +1558,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Optimistically update orders list immediately so UI updates instantly
     setOrders(prev => [resultOrder, ...prev.filter(o => o.id !== resultOrder.id)]);
 
-    // Save order to database (persists locally & syncs to Supabase)
-    offlineSyncService.enqueue('save_order', effectiveRestaurantId, resultOrder);
-    try {
-      await dbService.saveOrder(effectiveRestaurantId, resultOrder);
-    } catch (err) {
-      console.warn("Table DB save notice (persisted locally):", err);
+    // Save order to database (persists locally & queues in durable IndexedDB for weak Wi-Fi environments)
+    await offlineSyncService.enqueueKOT(effectiveRestaurantId, resultOrder);
+    if (navigator.onLine) {
+      try {
+        await dbService.saveOrder(effectiveRestaurantId, resultOrder);
+        await indexedDBQueue.removeKOT("kot_sync_" + resultOrder.id);
+      } catch (err) {
+        console.warn("Table DB save notice (safely buffered in IndexedDB queue):", err);
+      }
     }
 
     // Update table status to occupied automatically in DB and state
@@ -1872,6 +1914,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       confirmModal,
       askConfirmation,
       closeConfirmation,
+      syncOfflineQueue,
+      pendingOfflineKOTsCount,
       qzStatus,
       qzPrinters,
       qzConfig,

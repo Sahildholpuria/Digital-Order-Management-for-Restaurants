@@ -135,6 +135,7 @@ export interface RestaurantOrder {
     rating: number;
     review?: string;
   };
+  isOfflineQueued?: boolean;
 }
 
 export interface PaymentRecord {
