@@ -101,6 +101,51 @@ const LazyImage: React.FC<LazyImageProps> = ({
   );
 };
 
+export interface ItemPortionOption {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export const getItemPortions = (item: FoodItem | null | undefined): ItemPortionOption[] => {
+  if (!item) return [];
+  const parsed = parseFoodItemDescription(item.description || "");
+  let portionsList: ItemPortionOption[] = [];
+
+  if (item.portions && item.portions.length > 0) {
+    portionsList = item.portions.map(p => ({
+      id: p.id || p.name.toLowerCase().trim(),
+      name: p.name,
+      price: Number(p.price)
+    }));
+  } else if (item.hasPortions) {
+    if (item.halfPrice && item.halfPrice > 0) portionsList.push({ id: "half", name: "Half", price: Number(item.halfPrice) });
+    if (item.fullPrice && item.fullPrice > 0) portionsList.push({ id: "full", name: "Full", price: Number(item.fullPrice) });
+  } else if (parsed.portions && parsed.portions.length > 0) {
+    portionsList = parsed.portions.map(p => ({
+      id: p.id || p.name.toLowerCase().trim(),
+      name: p.name,
+      price: Number(p.price)
+    }));
+  } else if (parsed.variants && parsed.variants.length > 0) {
+    portionsList = parsed.variants.map(v => ({
+      id: v.name.toLowerCase().trim(),
+      name: v.name,
+      price: Number(v.price)
+    }));
+  }
+
+  // Fallback: direct halfPrice / fullPrice on item
+  if (portionsList.length === 0) {
+    if (item.halfPrice && item.halfPrice > 0) portionsList.push({ id: "half", name: "Half", price: Number(item.halfPrice) });
+    if (item.fullPrice && item.fullPrice > 0 && item.halfPrice && item.halfPrice > 0) {
+      portionsList.push({ id: "full", name: "Full", price: Number(item.fullPrice) });
+    }
+  }
+
+  return portionsList.filter(p => p.price > 0);
+};
+
 export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const {
     settings,
@@ -164,7 +209,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
-  const [selectedVariantName, setSelectedVariantName] = useState<string>('');
+  const [selectedVariantName, setSelectedVariantName] = useState<string>("");
+  const [portionError, setPortionError] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [customerOrderType, setCustomerOrderType] = useState<"dine_in" | "takeaway">("dine_in");
   const [customerName, setCustomerName] = useState<string>("");
@@ -246,18 +292,9 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   const handleOpenItem = (item: FoodItem) => {
     setSelectedItem(item);
     setQuantity(1);
-    setSpecialInstructions('');
-
-    // Default selected variant
-    let defaultVariant = '';
-    if (item.description && item.description.includes('||variants:')) {
-      const [, variantsStr] = item.description.split('||variants:');
-      const parts = variantsStr.split(';');
-      if (parts.length > 0) {
-        defaultVariant = parts[0].split('=')[0];
-      }
-    }
-    setSelectedVariantName(defaultVariant);
+    setSpecialInstructions("");
+    setSelectedVariantName(""); // Must be chosen explicitly by user
+    setPortionError(false);
   };
 
   // Anti-spam cooldown timestamps
@@ -414,49 +451,56 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   };
 
   const handleAddToCart = () => {
-    if (selectedItem) {
-      const cleanInstructions = sanitizeInput(specialInstructions, 200);
+    if (!selectedItem) return;
 
-      // Resolve portion pricing
-      let portionObj: { name: string; price: number } | undefined;
-      if (selectedVariantName) {
-        const vNameLower = selectedVariantName.toLowerCase().trim();
-        const parsed = parseFoodItemDescription(selectedItem.description || '');
-        let portionsList: { name: string; price: number }[] = [];
-        if (selectedItem.portions && selectedItem.portions.length > 0) portionsList = selectedItem.portions;
-        else if (selectedItem.hasPortions) {
-          if (selectedItem.halfPrice) portionsList.push({ name: 'Half', price: selectedItem.halfPrice });
-          if (selectedItem.fullPrice) portionsList.push({ name: 'Full', price: selectedItem.fullPrice });
-        } else if (parsed.portions && parsed.portions.length > 0) portionsList = parsed.portions;
-        else if (parsed.variants && parsed.variants.length > 0) portionsList = parsed.variants;
+    const portionsList = getItemPortions(selectedItem);
+    const hasPortions = portionsList.length > 0;
 
-        const matched = portionsList.find(p => p.name.toLowerCase().trim() === vNameLower);
-        if (matched) {
-          portionObj = { name: matched.name, price: matched.price };
-        } else if (vNameLower === 'half' && selectedItem.halfPrice) {
-          portionObj = { name: 'Half', price: selectedItem.halfPrice };
-        } else if (vNameLower === 'full' && (selectedItem.fullPrice || selectedItem.price)) {
-          portionObj = { name: 'Full', price: selectedItem.fullPrice || selectedItem.price };
-        }
+    // Strict requirement: User must choose Half or Full before adding to cart!
+    if (hasPortions && !selectedVariantName) {
+      setPortionError(true);
+      showToast("Please select Half or Full portion before adding to cart!", "info");
+      return;
+    }
+
+    setPortionError(false);
+    const cleanInstructions = sanitizeInput(specialInstructions, 200);
+
+    // Resolve portion pricing
+    let portionObj: { name: string; price: number } | undefined;
+    if (selectedVariantName) {
+      const vNameLower = selectedVariantName.toLowerCase().trim();
+      const matched = portionsList.find(p => p.name.toLowerCase().trim() === vNameLower || p.id.toLowerCase().trim() === vNameLower);
+      if (matched) {
+        portionObj = { name: matched.name, price: matched.price };
+      } else if (vNameLower === "half" && selectedItem.halfPrice) {
+        portionObj = { name: "Half", price: selectedItem.halfPrice };
+      } else if (vNameLower === "full" && (selectedItem.fullPrice || selectedItem.price)) {
+        portionObj = { name: "Full", price: selectedItem.fullPrice || selectedItem.price };
       }
+    }
 
-      addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined, portionObj);
-      const added = selectedItem;
-      setSelectedItem(null);
-      setSpecialInstructions('');
-      
-      // Mini pop confetti on button click
-      confetti({
-        particleCount: 40,
-        spread: 45,
-        origin: { y: 0.9 }
-      });
+    addToCart(selectedItem, quantity, cleanInstructions, selectedVariantName || undefined, portionObj);
+    const added = selectedItem;
+    const addedPortion = portionObj?.name || selectedVariantName;
+    setSelectedItem(null);
+    setSpecialInstructions("");
+    setSelectedVariantName("");
+    setPortionError(false);
 
-      // Trigger Smart Upsell Recommendation Bar
-      const paired = getPairedItems(added);
-      if (paired.length > 0) {
-        setUpsellState({ item: added, pairedItems: paired });
-      }
+    // Mini pop confetti on button click
+    confetti({
+      particleCount: 40,
+      spread: 45,
+      origin: { y: 0.9 }
+    });
+
+    showToast(`Added ${quantity}x ${added.name}${addedPortion ? ` (${addedPortion})` : ""} to basket!`, "success");
+
+    // Trigger Smart Upsell Recommendation Bar
+    const paired = getPairedItems(added);
+    if (paired.length > 0) {
+      setUpsellState({ item: added, pairedItems: paired });
     }
   };
 
@@ -1375,36 +1419,49 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                           <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
                             <div className="flex items-center gap-1.5">
                               {(() => {
-                                if (item.description && item.description.includes('||variants:')) {
-                                  const [, variantsStr] = item.description.split('||variants:');
-                                  const prices = variantsStr.split(';').map(v => Number(v.split('=')[1])).filter(p => !isNaN(p));
-                                  if (prices.length > 0) {
-                                    const minPrice = Math.min(...prices);
-                                    const maxPrice = Math.max(...prices);
-                                    const discMin = minPrice * (1 - (item.discountPercentage || 0) / 100);
-                                    const discMax = maxPrice * (1 - (item.discountPercentage || 0) / 100);
-                                    if (minPrice === maxPrice) {
-                                      return (
-                                        <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
-                                          {settings?.currency || '₹'}{discMin.toFixed(0)}
-                                        </span>
-                                      );
-                                    }
+                                const cardPortions = getItemPortions(item);
+                                if (cardPortions.length > 0) {
+                                  const halfOpt = cardPortions.find(p => p.name.toLowerCase().includes("half"));
+                                  const fullOpt = cardPortions.find(p => p.name.toLowerCase().includes("full"));
+                                  if (halfOpt && fullOpt) {
+                                    const discHalf = halfOpt.price * (1 - (item.discountPercentage || 0) / 100);
+                                    const discFull = fullOpt.price * (1 - (item.discountPercentage || 0) / 100);
+                                    return (
+                                      <div className="flex flex-col">
+                                        <div className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                                          <span className="text-amber-600 dark:text-amber-400 font-extrabold text-[10px]">Half:</span> {settings?.currency || "₹"}{discHalf.toFixed(0)}
+                                          <span className="text-slate-300 dark:text-slate-600">•</span>
+                                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px]">Full:</span> {settings?.currency || "₹"}{discFull.toFixed(0)}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  const prices = cardPortions.map(p => p.price);
+                                  const minPrice = Math.min(...prices);
+                                  const maxPrice = Math.max(...prices);
+                                  const discMin = minPrice * (1 - (item.discountPercentage || 0) / 100);
+                                  const discMax = maxPrice * (1 - (item.discountPercentage || 0) / 100);
+                                  if (minPrice === maxPrice) {
                                     return (
                                       <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
-                                        {settings?.currency || '₹'}{discMin.toFixed(0)} - {settings?.currency || '₹'}{discMax.toFixed(0)}
+                                        {settings?.currency || "₹"}{discMin.toFixed(0)}
                                       </span>
                                     );
                                   }
+                                  return (
+                                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
+                                      {settings?.currency || "₹"}{discMin.toFixed(0)} - {settings?.currency || "₹"}{discMax.toFixed(0)}
+                                    </span>
+                                  );
                                 }
                                 return (
                                   <>
                                     <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
-                                      {settings?.currency || '₹'}{discountedPrice.toFixed(0)}
+                                      {settings?.currency || "₹"}{discountedPrice.toFixed(0)}
                                     </span>
                                     {item.discountPercentage > 0 && (
                                       <span className="text-[10px] text-slate-400 line-through font-semibold">
-                                        {settings?.currency || '₹'}{item.price}
+                                        {settings?.currency || "₹"}{item.price}
                                       </span>
                                     )}
                                   </>
@@ -1414,9 +1471,35 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
                             {/* Touch-Optimized + ADD / Stepper */}
                             {(() => {
-                              const existingInCart = cart.find(c => c.itemId === item.id);
-                              const qty = existingInCart ? existingInCart.quantity : 0;
-                              if (qty === 0) {
+                              const cardPortions = getItemPortions(item);
+                              const hasPortions = cardPortions.length > 0;
+                              const inCartItems = cart.filter(c => c.itemId === item.id || c.itemId.startsWith(`${item.id}-`));
+                              const totalInCart = inCartItems.reduce((acc, c) => acc + c.quantity, 0);
+
+                              if (hasPortions) {
+                                return (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenItem(item);
+                                    }}
+                                    className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                  >
+                                    <span>+ ADD</span>
+                                    {totalInCart > 0 ? (
+                                      <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                                        {totalInCart}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] text-emerald-400 dark:text-emerald-600 font-extrabold uppercase">
+                                        options
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              }
+
+                              if (totalInCart === 0) {
                                 return (
                                   <button
                                     onClick={(e) => {
@@ -1436,20 +1519,20 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                 >
                                   <button
                                     onClick={() => {
-                                      if (qty <= 1) {
+                                      if (totalInCart <= 1) {
                                         removeFromCart(item.id);
                                       } else {
-                                        updateCartQuantity(item.id, qty - 1);
+                                        updateCartQuantity(item.id, totalInCart - 1);
                                       }
                                     }}
                                     className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-[#047857] rounded-md transition-colors cursor-pointer text-[#34D399]"
                                   >
                                     -
                                   </button>
-                                  <span className="text-xs font-black min-w-3 text-center text-white">{qty}</span>
+                                  <span className="text-xs font-black min-w-3 text-center text-white">{totalInCart}</span>
                                   <button
                                     onClick={() => {
-                                      updateCartQuantity(item.id, qty + 1);
+                                      updateCartQuantity(item.id, totalInCart + 1);
                                     }}
                                     className="w-5 h-5 flex items-center justify-center font-black text-xs hover:bg-[#047857] rounded-md transition-colors cursor-pointer text-[#34D399]"
                                   >
@@ -1744,50 +1827,71 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
 
               {/* Portion / Size Selector (Half & Full) */}
               {(() => {
-                const parsed = parseFoodItemDescription(selectedItem.description || '');
-                let portionsList: { name: string; price: number }[] = [];
-
-                if (selectedItem.portions && selectedItem.portions.length > 0) {
-                  portionsList = [...selectedItem.portions];
-                } else if (selectedItem.hasPortions) {
-                  if (selectedItem.halfPrice) portionsList.push({ name: 'Half', price: selectedItem.halfPrice });
-                  if (selectedItem.fullPrice) portionsList.push({ name: 'Full', price: selectedItem.fullPrice });
-                } else if (parsed.portions && parsed.portions.length > 0) {
-                  portionsList = [...parsed.portions];
-                } else if (parsed.variants && parsed.variants.length > 0) {
-                  portionsList = [...parsed.variants];
-                }
-
+                const portionsList = getItemPortions(selectedItem);
                 if (portionsList.length === 0) return null;
 
                 return (
-                  <div className="mb-5 p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2.5">
-                      Select Portion Quantity
-                    </label>
+                  <div className={`mb-5 p-3.5 rounded-2xl border transition-all ${
+                    portionError && !selectedVariantName
+                      ? "bg-rose-50/80 dark:bg-rose-950/20 border-rose-400 dark:border-rose-500/50 ring-2 ring-rose-400/30"
+                      : "bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-700/80"
+                  }`}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <span>Select Portion</span>
+                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          Required
+                        </span>
+                      </label>
+                      {!selectedVariantName && (
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 animate-pulse">
+                          Choose Half or Full
+                        </span>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5">
                       {portionsList.map(p => {
                         const discountedPrice = p.price * (1 - (selectedItem.discountPercentage || 0) / 100);
                         const isSelected = selectedVariantName === p.name;
+                        const isHalf = p.name.toLowerCase().includes("half");
                         return (
                           <button
                             key={p.name}
                             type="button"
-                            onClick={() => setSelectedVariantName(p.name)}
-                            className={`flex flex-col py-2.5 px-3.5 rounded-xl border-2 font-bold text-left transition-all active:scale-95 cursor-pointer ${
+                            onClick={() => {
+                              setSelectedVariantName(p.name);
+                              setPortionError(false);
+                            }}
+                            className={`flex flex-col py-3 px-3.5 rounded-xl border-2 font-bold text-left transition-all active:scale-95 cursor-pointer relative overflow-hidden ${
                               isSelected
-                                ? 'border-brand-600 bg-brand-500/10 text-brand-700 dark:border-brand-500 dark:bg-brand-950/30 dark:text-brand-300 shadow-sm'
-                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                                ? "border-emerald-600 bg-emerald-500/10 text-emerald-800 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-200 shadow-md ring-2 ring-emerald-500/20"
+                                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300"
                             }`}
                           >
-                            <span className="text-xs font-black uppercase tracking-wide">{p.name}</span>
-                            <span className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                              {settings?.currency || '₹'}{discountedPrice.toFixed(0)}
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-black uppercase tracking-wide">
+                                {isHalf ? "⚡ " : "👑 "}
+                                {p.name}
+                              </span>
+                              {isSelected && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              )}
+                            </div>
+                            <span className="text-sm font-black text-slate-900 dark:text-white mt-1">
+                              {settings?.currency || "₹"}{discountedPrice.toFixed(0)}
                             </span>
                           </button>
                         );
                       })}
                     </div>
+
+                    {portionError && !selectedVariantName && (
+                      <p className="mt-2.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 animate-bounce">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        Please select Half or Full to add food to your cart
+                      </p>
+                    )}
                   </div>
                 );
               })()}
@@ -1809,25 +1913,27 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
               {/* Quantity Controls & Price */}
               <div className="flex items-center justify-between pt-5 border-t border-slate-100 dark:border-slate-800">
                 {(() => {
+                  const portionsList = getItemPortions(selectedItem);
+                  const hasPortions = portionsList.length > 0;
                   let currentPrice = selectedItem.price;
-                  const parsed = parseFoodItemDescription(selectedItem.description || '');
-                  let portionsList: { name: string; price: number }[] = [];
-                  if (selectedItem.portions && selectedItem.portions.length > 0) portionsList = selectedItem.portions;
-                  else if (selectedItem.hasPortions) {
-                    if (selectedItem.halfPrice) portionsList.push({ name: 'Half', price: selectedItem.halfPrice });
-                    if (selectedItem.fullPrice) portionsList.push({ name: 'Full', price: selectedItem.fullPrice });
-                  } else if (parsed.portions && parsed.portions.length > 0) portionsList = parsed.portions;
-                  else if (parsed.variants && parsed.variants.length > 0) portionsList = parsed.variants;
 
                   const matched = portionsList.find(p => p.name === selectedVariantName);
-                  if (matched) currentPrice = matched.price;
+                  if (matched) {
+                    currentPrice = matched.price;
+                  } else if (hasPortions) {
+                    const minPrice = Math.min(...portionsList.map(p => p.price));
+                    currentPrice = minPrice;
+                  }
+
                   const discountedItemPrice = currentPrice * (1 - (selectedItem.discountPercentage || 0) / 100);
                   
                   return (
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-455">{t.itemTotal}</p>
-                      <p className="text-xl font-black text-slate-850 dark:text-slate-100">
-                        {settings?.currency || '₹'}{(discountedItemPrice * quantity).toFixed(0)}
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {hasPortions && !selectedVariantName ? "From" : t.itemTotal}
+                      </p>
+                      <p className="text-xl font-black text-slate-900 dark:text-slate-100">
+                        {settings?.currency || "₹"}{(discountedItemPrice * quantity).toFixed(0)}
                       </p>
                     </div>
                   );
@@ -1850,13 +1956,31 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                 </div>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                className="btn-asym w-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-semibold py-3.5 px-6 mt-5 flex items-center justify-center gap-2 text-sm cursor-pointer hover:opacity-90 transition-all"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>{t.addToBasket}</span>
-              </button>
+              {(() => {
+                const portionsList = getItemPortions(selectedItem);
+                const hasPortions = portionsList.length > 0;
+                const isPortionMissing = hasPortions && !selectedVariantName;
+
+                return (
+                  <button
+                    onClick={handleAddToCart}
+                    className={`btn-asym w-full font-semibold py-3.5 px-6 mt-5 flex items-center justify-center gap-2 text-sm cursor-pointer transition-all ${
+                      isPortionMissing
+                        ? "bg-amber-500/15 border-2 border-dashed border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 active:scale-98"
+                        : "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 shadow-lg active:scale-95"
+                    }`}
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>
+                      {isPortionMissing
+                        ? "Select Half or Full to Add"
+                        : selectedVariantName
+                        ? `Add ${selectedVariantName} to Basket`
+                        : t.addToBasket}
+                    </span>
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
