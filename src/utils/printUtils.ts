@@ -46,6 +46,29 @@ class PrintQueueManager {
     task: Omit<PrintTask, "resolve" | "reject" | "retries">
   ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "bluetooth" | "none"; message?: string }> {
     return new Promise((resolve, reject) => {
+      const taskKey = `${task.type}-${task.orderId || task.orderNumber || "generic"}`;
+      const now = Date.now();
+
+      // Check 1: Is an identical task already waiting in the print queue?
+      const isAlreadyInQueue = this.queue.some(
+        q => `${q.type}-${q.orderId || q.orderNumber || "generic"}` === taskKey
+      );
+      if (isAlreadyInQueue) {
+        console.log(`[PrintQueue] Duplicate print job in queue suppressed: ${task.jobName} (${taskKey})`);
+        return resolve({ success: true, mode: "none", message: "Duplicate print in queue suppressed" });
+      }
+
+      // Check 2: Was this bill or KOT printed recently (prevents double bill prints upon settlement)?
+      const lastPrinted = this.lastPrintedMap.get(taskKey) || 0;
+      const suppressWindow = task.type === "bill" ? (task.forcePrint ? 4000 : 25000) : (task.forcePrint ? 2000 : 20000);
+      if (now - lastPrinted < suppressWindow) {
+        console.log(`[PrintQueue] Duplicate recent print suppressed: ${task.jobName} (${taskKey})`);
+        return resolve({ success: true, mode: "none", message: "Duplicate recent print suppressed" });
+      }
+
+      // Immediately reserve print slot so rapid async triggers cannot slip through
+      this.lastPrintedMap.set(taskKey, now);
+
       this.queue.push({
         ...task,
         retries: 0,

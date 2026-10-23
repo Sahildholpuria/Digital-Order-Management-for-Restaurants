@@ -872,8 +872,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               setPayments(data);
 
               data.forEach(p => {
-                if (!seenPaymentIds.current.has(p.id)) {
+                const isAlreadySeen = 
+                  seenPaymentIds.current.has(p.id) || 
+                  (p.orderId && seenPaymentIds.current.has(p.orderId)) || 
+                  (p.orderNumber && seenPaymentIds.current.has(p.orderNumber));
+
+                if (!isAlreadySeen) {
                   seenPaymentIds.current.add(p.id);
+                  if (p.orderId) seenPaymentIds.current.add(p.orderId);
+                  if (p.orderNumber) seenPaymentIds.current.add(p.orderNumber);
                   const pTime = p.createdAt ? new Date(p.createdAt).getTime() : 0;
                   const isLiveCreatedDuringSession = pTime >= (sessionStartTime.current - 5000);
 
@@ -1751,6 +1758,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addPaymentRecord = async (payment: PaymentRecord) => {
     // Instant Optimistic UI Update
     setPayments(prev => [payment, ...prev]);
+
+    // Mark as locally recorded so background subscribePayments never triggers a duplicate receipt print
+    if (payment.id) seenPaymentIds.current.add(payment.id);
+    if (payment.orderId) seenPaymentIds.current.add(payment.orderId);
+    if (payment.orderNumber) seenPaymentIds.current.add(payment.orderNumber);
+
     await dbService.addPayment(restaurantId, payment);
   };
 
