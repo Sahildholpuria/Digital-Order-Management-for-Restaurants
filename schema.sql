@@ -300,9 +300,17 @@ create policy "Allow staff billing settlements" on public.payments for all using
   exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager', 'cashier'))
 );
 
--- Policies for notifications (public inserts, matching staff reads/resolves)
-create policy "Allow public service call insertions" on public.notifications for insert with check (true);
-create policy "Allow staff service call lookups" on public.notifications for all using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+-- Policies for notifications (public inserts for guest calls, authenticated staff reads/updates/deletes)
+create policy "Allow public service call insertions" on public.notifications for insert to anon, authenticated with check (
+  restaurant_id is not null
+  and exists (
+    select 1 from public.restaurants r where r.id = notifications.restaurant_id
+  )
+  and type in ('call_waiter', 'request_bill', 'new_order')
+);
+create policy "Allow staff service call lookups" on public.notifications for select to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+create policy "Allow staff service call updates" on public.notifications for update to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id)) with check (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+create policy "Allow staff service call deletes" on public.notifications for delete to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
 
 -- Policies for user profiles (strict tenant privacy, remedied recursion)
 create policy "Allow users to read profiles" on public.users for select using (
