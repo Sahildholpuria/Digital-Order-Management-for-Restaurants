@@ -704,18 +704,30 @@ export const dbService = {
         .from('restaurants')
         .select('*')
         .eq('id', restaurantId)
-        .single();
+        .maybeSingle();
       
-      if (error) {
-        // Create initial settings if not present
+      if (error || !data) {
+        // Fallback to secure public profile RPC (for unauthenticated guests where direct SELECT on restaurants is restricted)
+        try {
+          const { data: publicProfile, error: rpcErr } = await supabase
+            .rpc('get_restaurant_public_profile', { p_restaurant_id: restaurantId });
+          if (!rpcErr && Array.isArray(publicProfile) && publicProfile.length > 0) {
+            return mapSettingsToFrontend(publicProfile[0]);
+          }
+        } catch (_) {}
+
+        // For authenticated staff, auto-create initial settings if not present
         const dbSettings = mapSettingsToDb({ ...DEFAULT_SETTINGS, id: restaurantId });
-        const { data: created, error: createError } = await supabase
-          .from('restaurants')
-          .insert(dbSettings)
-          .select()
-          .single();
-        if (createError) throw createError;
-        return mapSettingsToFrontend(created);
+        try {
+          const { data: created, error: createError } = await supabase
+            .from('restaurants')
+            .insert(dbSettings)
+            .select()
+            .single();
+          if (!createError && created) return mapSettingsToFrontend(created);
+        } catch (_) {}
+
+        return mapSettingsToFrontend({ ...DEFAULT_SETTINGS, id: restaurantId });
       }
       return mapSettingsToFrontend(data);
     } else {
@@ -802,7 +814,14 @@ export const dbService = {
 
     if (isSupabaseConfigured) {
       try {
-        // 1. Direct match on table ID
+        // 0. Primary secure RPC lookup for unauthenticated guests (returns only the scanned table)
+        const { data: rpcTable, error: rpcError } = await supabase
+          .rpc('get_scanned_table', { p_table_id: tableId });
+        if (!rpcError && Array.isArray(rpcTable) && rpcTable.length > 0 && rpcTable[0].restaurant_id) {
+          return rpcTable[0].restaurant_id;
+        }
+
+        // 1. Direct match on table ID (for authenticated staff)
         const { data, error } = await supabase
           .from('tables')
           .select('restaurant_id')
@@ -862,6 +881,26 @@ export const dbService = {
       return null;
     }
   },
+  async getScannedTable(tableId: string): Promise<RestaurantTable | null> {
+    if (!tableId || typeof tableId !== 'string') return null;
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .rpc('get_scanned_table', { p_table_id: tableId });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          return mapTableToFrontend(data[0]);
+        }
+      } catch (err) {
+        console.warn('getScannedTable lookup failed:', err);
+      }
+      return null;
+    } else {
+      const tables = await this.getTables('');
+      return tables.find(t => t.id === tableId || t.number === tableId) || null;
+    }
+  },
+
   async getTables(restaurantId: string): Promise<RestaurantTable[]> {
     if (isSupabaseConfigured) {
       const { data, error } = await supabase

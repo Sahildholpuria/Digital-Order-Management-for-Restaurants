@@ -260,16 +260,18 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Policies for settings (tenant configuration)
-create policy "Allow public read for settings" on public.restaurants for select using (true);
-create policy "Allow admin write for settings" on public.restaurants for all using (
+-- Policies for settings (tenant configuration: staff read/write; public accesses branding via get_restaurant_public_profile)
+create policy "Allow staff read for settings" on public.restaurants for select to authenticated using (
+  id = public.get_user_restaurant(auth.uid()) or public.is_super_admin(auth.uid())
+);
+create policy "Allow admin write for settings" on public.restaurants for all to authenticated using (
   (public.is_admin(auth.uid()) and id = public.get_user_restaurant(auth.uid()))
   or public.is_super_admin(auth.uid())
 );
 
--- Policies for tables (staff write restricted)
-create policy "Allow public read for tables" on public.tables for select using (true);
-create policy "Allow staff write for tables" on public.tables for all using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+-- Policies for tables (staff read/write restricted; unauthenticated guests read only scanned table via get_scanned_table)
+create policy "Allow staff read for tables" on public.tables for select to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+create policy "Allow staff write for tables" on public.tables for all to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
 
 -- Policies for menu categories (manager/admin restricted)
 create policy "Allow public read for categories" on public.categories for select using (true);
@@ -285,10 +287,13 @@ create policy "Allow manager write for items" on public.food_items for all using
   exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager'))
 );
 
--- Policies for orders (public creates, matching staff updates)
-create policy "Allow public order creation" on public.orders for insert with check (true);
-create policy "Allow public order reading" on public.orders for select using (true);
-create policy "Allow staff updates for orders" on public.orders for update using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+-- Policies for orders (public creates for valid restaurant, staff reads/updates within restaurant)
+create policy "Allow public order creation" on public.orders for insert with check (
+  restaurant_id is not null 
+  and exists (select 1 from public.restaurants r where r.id = orders.restaurant_id)
+);
+create policy "Allow staff order reading" on public.orders for select to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
+create policy "Allow staff updates for orders" on public.orders for update to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
 create policy "Allow admin deletions for orders" on public.orders for delete using (
   public.is_admin(auth.uid()) and 
   restaurant_id = public.get_user_restaurant(auth.uid())
@@ -341,6 +346,60 @@ $$ language plpgsql security definer;
 
 -- Grant execution permissions
 grant execute on function public.update_table_status(text, text) to anon, authenticated;
+
+-- Secure RPC function to get only the scanned table row (for guest QR menu without exposing all tables)
+create or replace function public.get_scanned_table(p_table_id text)
+returns setof public.tables as $$
+begin
+  return query
+  select *
+  from public.tables
+  where id = p_table_id
+     or number = p_table_id
+     or number = replace(p_table_id, 'table-', '')
+     or id = ('table-' || p_table_id)
+  limit 1;
+end;
+$$ language plpgsql security definer;
+
+-- Secure RPC function to get public restaurant branding only (for guest QR menu without exposing GST or private settings)
+create or replace function public.get_restaurant_public_profile(p_restaurant_id text)
+returns table (
+  id text,
+  name text,
+  tagline text,
+  currency text,
+  currency_symbol text,
+  tax_rate numeric,
+  service_charge_rate numeric,
+  logo text,
+  phone text,
+  address text,
+  opening_time text,
+  closing_time text,
+  is_active boolean
+) as $$
+begin
+  return query
+  select 
+    r.id,
+    r.name,
+    r.tagline,
+    r.currency,
+    r.currency_symbol,
+    r.tax_rate,
+    r.service_charge_rate,
+    r.logo,
+    r.phone,
+    r.address,
+    r.opening_time,
+    r.closing_time,
+    r.is_active
+  from public.restaurants r
+  where r.id = p_restaurant_id
+  limit 1;
+end;
+$$ language plpgsql security definer;
 
 -- Indexes for performance and scalability (tenant isolation and queries speed)
 create index if not exists idx_users_restaurant_id on public.users(restaurant_id);
@@ -451,15 +510,17 @@ grant execute on function public.update_table_status(text, text) to anon, authen
 -- ====================================================
 
 -- 1. Anonymous role (Customer QR menu, table scanning, customer order creation)
-grant select on public.restaurants to anon;
-grant select on public.tables to anon;
+-- ZERO DATA LEAK: Anon SELECT access is strictly restricted to menu items & categories.
+-- Orders, restaurants, tables, and payments cannot be dumped by anon.
 grant select on public.categories to anon;
 grant select on public.food_items to anon;
-grant select, insert, update on public.orders to anon;
-grant select, insert on public.payments to anon;
-grant select, insert on public.notifications to anon;
+grant insert on public.orders to anon;
+grant insert on public.notifications to anon;
 grant select on public.announcements to anon;
 grant select on public.system_config to anon;
+
+grant execute on function public.get_scanned_table(text) to anon, authenticated, service_role;
+grant execute on function public.get_restaurant_public_profile(text) to anon, authenticated, service_role;
 
 -- 2. Authenticated role (Restaurant Owners, Staff, Kitchen, Waiters, Super Admin)
 grant select, insert, update, delete on public.restaurants to authenticated;

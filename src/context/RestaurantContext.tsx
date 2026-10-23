@@ -904,28 +904,29 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           } catch (e) { console.error('subscribePayments error:', e); }
         }
       } else {
-        // Guest Customer Mode
+        // Guest Customer Mode (Zero Data Leak: only fetch scanned table row, menu categories, and food items)
         try {
-          const [sData, tData] = await Promise.all([
+          const menuMatch = window.location.pathname.match(/^\/menu\/([^/]+)$/);
+          const trackerMatch = window.location.pathname.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+          const activeTableId = menuMatch?.[1] || trackerMatch?.[1];
+
+          const [sData, scannedTable] = await Promise.all([
             dbService.getSettings(restaurantId),
-            dbService.getTables(restaurantId)
+            activeTableId ? dbService.getScannedTable(activeTableId) : null
           ]);
           if (sData) setSettings(sData);
-          if (tData) {
-            setTables(tData);
-            setTablesLoaded(true);
+          if (scannedTable) {
+            setTables([scannedTable]);
+            setCurrentTable(scannedTable);
           }
+          setTablesLoaded(true);
         } catch (err) {
           console.error('Guest data fetch error:', err);
           setTablesLoaded(true);
         }
 
-        // Guest customer only subscribes to live orders for their table
-        try {
-          unsubOrders = dbService.subscribeOrders(restaurantId, (data) => {
-            setOrders(data);
-          });
-        } catch (e) { console.error('subscribeOrders error:', e); }
+        // Note: Unauthenticated visitors do not subscribe to or download orders across the database.
+        // Orders placed by this guest are securely maintained in local state and session storage.
       }
     };
 
