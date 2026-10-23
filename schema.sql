@@ -30,7 +30,16 @@ create table public.restaurants (
   currency text default '₹',
   opening_hours text,
   closing_hours text,
-  theme_color text default '#6366F1',
+  theme_color text default '#064E3B',
+  settings jsonb default '{
+    "theme_color": "#064E3B",
+    "enable_waiter_call": true,
+    "enable_bill_request": true,
+    "enable_sound_notification": true,
+    "enable_bill_printing": true,
+    "website_url": "",
+    "hide_subscription_plan": false
+  }'::jsonb not null,
   subscription_status text check (subscription_status in ('trial', 'active', 'expired', 'suspended')) default 'trial' not null,
   subscription_expires_at timestamp with time zone default timezone('utc'::text, now() + interval '30 days') not null,
   plan_type text check (plan_type in ('starter', 'pro', 'pro_6m', 'pro_1y')) default 'starter' not null,
@@ -163,7 +172,7 @@ alter publication supabase_realtime add table public.subscription_payments;
 
 -- 4. INSERT DEMO TENANT CONFIG (Required for foreign keys)
 insert into public.restaurants (id, name, theme_color)
-values ('demo-restaurant', 'The Grand Bistro', '#6366F1')
+values ('demo-restaurant', 'The Grand Bistro', '#064E3B')
 on conflict (id) do nothing;
 
 -- 5. PROFILE SYNC TRIGGER (Creates user profile row automatically on Supabase Auth Sign Up)
@@ -187,7 +196,7 @@ begin
     
     -- Ensure the restaurant exists to satisfy the foreign key constraint
     insert into public.restaurants (id, name, theme_color)
-    values (target_restaurant_id, 'My Restaurant', '#6366F1')
+    values (target_restaurant_id, 'My Restaurant', '#064E3B')
     on conflict (id) do nothing;
   end if;
 

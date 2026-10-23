@@ -24,6 +24,7 @@ export interface RestaurantSettings {
   paymentQrImage?: string;
   paymentQrType?: "dynamic" | "custom";
   createdAt: any;
+  settings?: Record<string, any>;
 }
 
 export type UserRole = 'admin' | 'manager' | 'cashier' | 'kitchen' | 'waiter';

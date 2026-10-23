@@ -17,18 +17,59 @@ import {
 // ==========================================
 
 const mapSettingsToFrontend = (row: any): RestaurantSettings => {
+  // Support dedicated PostgreSQL jsonb 'settings' column while preserving backwards compatibility
+  const rawSettings = typeof row.settings === 'string' 
+    ? (() => { try { return JSON.parse(row.settings); } catch (_) { return {}; } })()
+    : (row.settings && typeof row.settings === 'object' ? row.settings : {});
+
   const rawTheme = row.theme_color || row.themeColor || '#064E3B';
-  const themeParts = rawTheme.split('|');
-  let themeColor = themeParts[0] || '#064E3B';
+  const themeParts = typeof rawTheme === 'string' && rawTheme.includes('|') ? rawTheme.split('|') : [];
+
+  // Theme color (prefer jsonb, fallback to clean pipe part, fallback to row.theme_color)
+  let themeColor = rawSettings.theme_color || rawSettings.themeColor || themeParts[0] || row.theme_color || row.themeColor || '#064E3B';
+  if (typeof themeColor === 'string' && themeColor.includes('|')) {
+    themeColor = themeColor.split('|')[0];
+  }
   if (['#10B981', '#059669', '#6366F1', '#4f46e5', '#18251D', '#0B132B', '#0F172A'].includes(themeColor)) {
     themeColor = '#064E3B';
   }
-  const enableWaiterCall = themeParts[1] !== 'false';
-  const enableBillRequest = themeParts[2] !== 'false';
-  const enableSoundNotification = themeParts[3] !== 'false';
-  const enableBillPrinting = themeParts[4] !== 'false';
-  const websiteUrl = themeParts[5] || row.website_url || row.websiteUrl || '';
-  const hideSubscriptionPlan = themeParts[6] === 'true' || row.hide_subscription_plan === true || row.hideSubscriptionPlan === true;
+
+  // Feature toggles & configs (prefer jsonb, fallback to legacy pipe-delimited values)
+  const enableWaiterCall = rawSettings.enable_waiter_call !== undefined 
+    ? rawSettings.enable_waiter_call !== false 
+    : rawSettings.enableWaiterCall !== undefined 
+      ? rawSettings.enableWaiterCall !== false 
+      : (themeParts.length > 1 ? themeParts[1] !== 'false' : true);
+
+  const enableBillRequest = rawSettings.enable_bill_request !== undefined 
+    ? rawSettings.enable_bill_request !== false 
+    : rawSettings.enableBillRequest !== undefined 
+      ? rawSettings.enableBillRequest !== false 
+      : (themeParts.length > 2 ? themeParts[2] !== 'false' : true);
+
+  const enableSoundNotification = rawSettings.enable_sound_notification !== undefined 
+    ? rawSettings.enable_sound_notification !== false 
+    : rawSettings.enableSoundNotification !== undefined 
+      ? rawSettings.enableSoundNotification !== false 
+      : (themeParts.length > 3 ? themeParts[3] !== 'false' : true);
+
+  const enableBillPrinting = rawSettings.enable_bill_printing !== undefined 
+    ? rawSettings.enable_bill_printing !== false 
+    : rawSettings.enableBillPrinting !== undefined 
+      ? rawSettings.enableBillPrinting !== false 
+      : (themeParts.length > 4 ? themeParts[4] !== 'false' : true);
+
+  const websiteUrl = rawSettings.website_url !== undefined 
+    ? rawSettings.website_url 
+    : rawSettings.websiteUrl !== undefined 
+      ? rawSettings.websiteUrl 
+      : (themeParts.length > 5 ? themeParts[5] : (row.website_url || row.websiteUrl || ''));
+
+  const hideSubscriptionPlan = rawSettings.hide_subscription_plan !== undefined 
+    ? rawSettings.hide_subscription_plan === true 
+    : rawSettings.hideSubscriptionPlan !== undefined 
+      ? rawSettings.hideSubscriptionPlan === true 
+      : (themeParts.length > 6 ? themeParts[6] === 'true' : (row.hide_subscription_plan === true || row.hideSubscriptionPlan === true));
 
   return {
     id: row.id,
@@ -37,7 +78,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     phone: row.phone,
     email: row.email,
     gstNumber: row.gst_number || row.gstNumber || '',
-    websiteUrl,
+    websiteUrl: websiteUrl || '',
     taxPercentage: Number(row.tax_percentage ?? row.taxPercentage ?? 0),
     currency: row.currency || '₹',
     openingHours: row.opening_hours || row.openingHours || '09:00',
@@ -55,6 +96,7 @@ const mapSettingsToFrontend = (row: any): RestaurantSettings => {
     paymentQrImage: row.payment_qr_image || row.paymentQrImage || "",
     paymentQrType: row.payment_qr_type || row.paymentQrType || "dynamic",
     createdAt: row.created_at || row.createdAt,
+    settings: rawSettings,
   };
 };
 
@@ -78,7 +120,7 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     ...(model.paymentQrType !== undefined && { payment_qr_type: model.paymentQrType }),
   };
 
-  if (
+  const hasConfigUpdates = (
     model.themeColor !== undefined ||
     model.websiteUrl !== undefined ||
     model.enableWaiterCall !== undefined ||
@@ -86,15 +128,33 @@ const mapSettingsToDb = (model: Partial<RestaurantSettings>) => {
     model.enableSoundNotification !== undefined ||
     model.enableBillPrinting !== undefined ||
     model.hideSubscriptionPlan !== undefined
-  ) {
-    const color = model.themeColor || '#064E3B';
+  );
+
+  if (hasConfigUpdates) {
+    let cleanColor = model.themeColor || '#064E3B';
+    if (typeof cleanColor === 'string' && cleanColor.includes('|')) {
+      cleanColor = cleanColor.split('|')[0];
+    }
     const waiter = model.enableWaiterCall !== false;
     const bill = model.enableBillRequest !== false;
     const sound = model.enableSoundNotification !== false;
     const printBill = model.enableBillPrinting !== false;
     const site = model.websiteUrl ?? '';
-    const hideSub = model.hideSubscriptionPlan === true ? 'true' : 'false';
-    dbRow.theme_color = `${color}|${waiter}|${bill}|${sound}|${printBill}|${site}|${hideSub}`;
+    const hideSub = model.hideSubscriptionPlan === true;
+
+    // 1. Dedicated PostgreSQL jsonb settings column (zero risk of string corruption from pipes)
+    dbRow.settings = {
+      theme_color: cleanColor,
+      enable_waiter_call: waiter,
+      enable_bill_request: bill,
+      enable_sound_notification: sound,
+      enable_bill_printing: printBill,
+      website_url: site,
+      hide_subscription_plan: hideSub,
+    };
+
+    // 2. Pure theme_color string (no crammed settings)
+    dbRow.theme_color = cleanColor;
   }
 
   return dbRow;
@@ -492,6 +552,11 @@ const DEFAULT_SETTINGS = {
   openingHours: '09:00',
   closingHours: '23:00',
   themeColor: '#064E3B',
+  enableWaiterCall: true,
+  enableBillRequest: true,
+  enableSoundNotification: true,
+  enableBillPrinting: true,
+  hideSubscriptionPlan: false,
   subscriptionStatus: 'trial' as const,
   planType: 'starter' as const,
   subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -1072,7 +1137,16 @@ export const dbService = {
         const defaultList = [{
           id: 'demo-restaurant',
           name: 'The Grand Bistro',
-          theme_color: '#6366F1|true|true|true|en',
+          theme_color: '#064E3B',
+          settings: {
+            theme_color: '#064E3B',
+            enable_waiter_call: true,
+            enable_bill_request: true,
+            enable_sound_notification: true,
+            enable_bill_printing: true,
+            website_url: 'www.grandbistro.com',
+            hide_subscription_plan: false,
+          },
           subscription_status: 'trial',
           plan_type: 'starter',
           created_at: new Date().toISOString()
