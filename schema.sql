@@ -532,6 +532,11 @@ grant insert on public.orders to anon;
 grant insert on public.notifications to anon;
 grant select on public.announcements to anon;
 grant select on public.system_config to anon;
+-- Table grants required for PostgREST schema cache introspection (RLS policies strictly govern all actual data access)
+grant select, insert, update on public.restaurants to anon;
+grant select on public.tables to anon;
+grant select on public.orders to anon;
+grant select on public.payments to anon;
 
 grant execute on function public.get_scanned_table(text) to anon, authenticated, service_role;
 grant execute on function public.get_restaurant_public_profile(text) to anon, authenticated, service_role;
