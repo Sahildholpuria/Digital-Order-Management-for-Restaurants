@@ -308,10 +308,15 @@ create policy "Allow admin deletions for orders" on public.orders for delete usi
   restaurant_id = public.get_user_restaurant(auth.uid())
 );
 
--- Policies for payments (cashier/manager/admin restricted with tenant isolation)
-create policy "Allow staff billing settlements" on public.payments for all using (
-  public.belongs_to_restaurant(auth.uid(), restaurant_id) and 
-  exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager', 'cashier'))
+-- Policies for payments (SELECT restricted exclusively to admin, manager, cashier; waiters can only INSERT at-table settlements)
+create policy "Allow staff billing settlements" on public.payments for all to authenticated using (
+  (public.belongs_to_restaurant(auth.uid(), restaurant_id) and 
+   exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager', 'cashier')))
+  or public.is_super_admin(auth.uid())
+) with check (
+  (public.belongs_to_restaurant(auth.uid(), restaurant_id) and 
+   exists (select 1 from public.users where id = auth.uid() and role in ('admin', 'manager', 'cashier', 'waiter')))
+  or public.is_super_admin(auth.uid())
 );
 
 -- Policies for notifications (public inserts for guest calls, authenticated staff reads/updates/deletes)
