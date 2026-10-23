@@ -185,20 +185,6 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
       const primaryOrder = activeOrders[0];
       const paymentId = `pay-${Date.now()}`;
 
-      // Snapshot receipt order before orders are marked completed
-      const receiptOrder: RestaurantOrder = {
-        ...primaryOrder,
-        id: primaryOrder.id,
-        orderNumber: primaryOrder.orderNumber,
-        tableName: table ? `Table ${table.number}` : `Takeaway #${takeawayOrder?.tokenNumber || ""}`,
-        items: [...consolidatedItems],
-        subtotal,
-        discount: discountAmount,
-        tax: taxAmount,
-        grandTotal,
-        paymentMethod: paymentMethod.toUpperCase(),
-      };
-
       // 1. Log payment transaction record
       const paymentRecord: PaymentRecord = {
         id: paymentId,
@@ -247,12 +233,8 @@ export const AtTableSettlementModal: React.FC<AtTableSettlementModalProps> = ({
       }
 
       // 5. Auto print thermal receipt if checked
-      if (autoPrintReceipt && settings?.enableBillPrinting !== false) {
-        try {
-          await printBillReceipt(receiptOrder, settings, undefined, true);
-        } catch (printErr) {
-          console.warn("Settlement receipt auto-print notice:", printErr);
-        }
+      if (autoPrintReceipt) {
+        await handlePrintReceipt();
       }
 
       showToast(`Bill for ${titleText} settled successfully via ${paymentMethod.toUpperCase()} (${currency}${grandTotal.toFixed(0)})!`, "success");

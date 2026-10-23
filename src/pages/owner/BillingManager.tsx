@@ -224,7 +224,7 @@ export const BillingManager: React.FC = () => {
 
   const [autoPrintOnSettle, setAutoPrintOnSettle] = useState<boolean>(() => {
     const saved = localStorage.getItem("restaurantsos_autoprint_on_settle");
-    return saved !== "false";
+    return saved !== null ? saved === "true" : false;
   });
 
   const handleMarkPaid = async () => {
@@ -233,20 +233,6 @@ export const BillingManager: React.FC = () => {
     try {
       const primaryOrder = selectedGroup.orders[0] || selectedOrder;
       const paymentId = `pay-${Date.now()}`;
-
-      // Snapshot receipt order before order status transitions to completed
-      const receiptPrintOrder: RestaurantOrder = {
-        ...primaryOrder,
-        id: primaryOrder.id,
-        orderNumber: primaryOrder.orderNumber,
-        tableName: selectedGroup.tableName,
-        items: [...selectedGroup.items],
-        subtotal,
-        discount: discountAmount,
-        tax: taxAmount,
-        grandTotal,
-        paymentMethod: paymentMethod.toUpperCase(),
-      };
 
       // 1. Log payment settlement with genuine primary order ID
       await addPaymentRecord({
@@ -295,9 +281,18 @@ export const BillingManager: React.FC = () => {
       showToast(`${selectedGroup.tableName} settled successfully via ${paymentMethod.toUpperCase()}!`, "success");
 
       // 4. Auto-trigger bill printing on POS thermal billing machine if enabled
-      if (autoPrintOnSettle !== false && settings?.enableBillPrinting !== false) {
+      if (autoPrintOnSettle && settings?.enableBillPrinting !== false) {
         try {
-          await printBillReceipt(receiptPrintOrder, settings, undefined, true);
+          const receiptPrintOrder: RestaurantOrder = {
+            ...primaryOrder,
+            tableName: selectedGroup.tableName,
+            items: selectedGroup.items,
+            subtotal,
+            discount: discountAmount,
+            tax: taxAmount,
+            grandTotal,
+          };
+          await printBillReceipt({ ...receiptPrintOrder, paymentMethod: paymentMethod.toUpperCase() }, settings, undefined, true);
         } catch (err) {
           console.warn("Settlement receipt auto-print notice:", err);
         }

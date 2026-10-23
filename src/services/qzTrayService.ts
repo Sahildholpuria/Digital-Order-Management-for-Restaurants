@@ -402,7 +402,6 @@ class QZTrayService {
 
       const printConfig = qz.configs.create(targetPrinter, {
         colorType: "grayscale",
-        copies: 1,
         rasterize: false,
         scaleContent: true,
         size: inchHeight ? { width: inchWidth, height: inchHeight } : { width: inchWidth },
