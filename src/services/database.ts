@@ -928,6 +928,15 @@ export const dbService = {
           return dataRest.id;
         }
 
+        // 4. Robust fallback: if single restaurant active in database, resolve to it so guests are never blocked
+        const { data: singleRest } = await supabase
+          .from('restaurants')
+          .select('id')
+          .limit(2);
+        if (singleRest && singleRest.length === 1) {
+          return singleRest[0].id;
+        }
+
         return null;
       } catch (err) {
         console.warn('getRestaurantIdByTableId lookup failed:', err);

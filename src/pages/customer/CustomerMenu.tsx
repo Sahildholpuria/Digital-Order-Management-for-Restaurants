@@ -575,7 +575,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
       if (!settings || !tablesLoaded || tableNotFound) {
         setResolutionTimedOut(true);
       }
-    }, 3000);
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, [settings, tablesLoaded, tableNotFound]);
@@ -589,7 +589,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
     return !tables.some(t => 
       t.id === tableId || 
       t.number === tableId || 
-      t.number.replace(/^table[\s\-_]*/i, '').trim() === cleanId
+      t.number.replace(/^table[\s\-_]*/i, '').trim() === cleanId ||
+      currentTable?.id === tableId
     );
   }, [tablesLoaded, settings, tables, tableId]);
 

@@ -1735,6 +1735,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const addTable = async (table: RestaurantTable) => {
+    const effectiveRestId = restaurantId || currentUser?.restaurantId || settings?.id || "dev-restaurant";
     // Instant Optimistic UI Update
     setTables(prev => {
       const exists = prev.some(t => t.id === table.id);
@@ -1743,7 +1744,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return [...prev, table].sort((a, b) => a.number.localeCompare(b.number));
     });
-    await dbService.saveTable(restaurantId, table);
+    try {
+      await dbService.saveTable(effectiveRestId, table);
+    } catch (err) {
+      console.error("Failed to save table to database:", err);
+      showToast("Failed to save table to database. Please check permissions.", "error");
+      setTables(prev => prev.filter(t => t.id !== table.id));
+      throw err;
+    }
   };
 
   const deleteTable = async (tableId: string) => {
