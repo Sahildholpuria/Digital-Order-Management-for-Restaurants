@@ -1396,8 +1396,8 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                           })()}
 
                           {/* Price & Add Stepper Row */}
-                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
-                            <div className="flex items-center gap-1.5">
+                          <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50 gap-2 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
                               {(() => {
                                 const cardPortions = getItemPortions(item);
                                 if (cardPortions.length > 0) {
@@ -1463,22 +1463,17 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                       e.stopPropagation();
                                       handleOpenItem(item);
                                     }}
-                                    className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                    className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 text-[11px] font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
                                   >
                                     <span>+ ADD</span>
-                                    {totalInCart > 0 ? (
+                                    {totalInCart > 0 && (
                                       <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
                                         {totalInCart}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9px] text-emerald-400 dark:text-emerald-600 font-extrabold uppercase">
-                                        options
                                       </span>
                                     )}
                                   </button>
                                 );
                               }
-
                               if (totalInCart === 0) {
                                 return (
                                   <button
@@ -1486,7 +1481,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                       e.stopPropagation();
                                       handleOpenItem(item);
                                     }}
-                                    className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 text-[11px] font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                                    className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90 text-[11px] font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
                                   >
                                     <span>+ ADD</span>
                                   </button>
