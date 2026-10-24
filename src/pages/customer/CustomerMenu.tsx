@@ -10,6 +10,7 @@ import { FSSAIIndicator } from '../../components/FSSAIIndicator';
 import { RestaurantsOSLogo } from '../../components/RestaurantsOSLogo';
 import { Backdrop } from '../../components/common/Backdrop';
 import { parseFoodItemDescription } from '../../services/database';
+import { getCleanTableNumber } from '../../utils/tableUtils';
 
 interface CustomerMenuProps {
   tableId: string;
@@ -177,28 +178,7 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
   // Returns a clean, short display number from the actual table record.
   // Never displays raw 13-digit timestamp IDs (e.g. 1785560211444).
   const getTableDisplayNumber = () => {
-    const target = currentTable || tables.find(t => t.id === tableId || t.number === tableId);
-    
-    if (target?.number) {
-      const clean = target.number.replace(/^table[\s\-_]*/i, '').trim();
-      if (clean && !/^\d{7,}$/.test(clean)) {
-        return clean;
-      }
-    }
-
-    if (tables && tables.length > 0) {
-      const idx = tables.findIndex(t => t.id === tableId || t.id === currentTable?.id || t.number === tableId);
-      if (idx !== -1) {
-        return `${idx + 1}`;
-      }
-    }
-
-    const cleanId = tableId ? tableId.replace(/^table[\s\-_]*/i, '').trim() : '';
-    if (cleanId && !/^\d{7,}$/.test(cleanId)) {
-      return cleanId;
-    }
-
-    return '1';
+    return getCleanTableNumber(currentTable, tables, tableId);
   };
 
   const [searchQuery, setSearchQuery] = useState('');

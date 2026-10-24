@@ -21,6 +21,12 @@ import {
 
 import { translations, Language } from '../translations';
 import { printKOTReceipt, printBillReceipt } from '../utils/printUtils';
+import {
+  formatTableDisplayName,
+  getCleanTableNumber,
+  isTimestampId,
+  sanitizeOrderTableName,
+} from '../utils/tableUtils';
 import { offlineSyncService } from '../services/offlineSyncService';
 import { indexedDBQueue } from '../services/indexedDBQueue';
 import { qzTrayService, QZPrinterConfig, QZConnectionStatus } from '../services/qzTrayService';
@@ -1071,40 +1077,69 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const setCurrentTableById = (tableId: string) => {
-    const cleanNum = tableId.replace(/^table-/i, '');
+    const safeNum = getCleanTableNumber(undefined, tables, tableId);
+    const cleanNum = tableId.replace(/^table[\s\-_]*/i, "");
     const table = tables.find(t => 
       t.id === tableId || 
       t.number === cleanNum || 
       t.number === tableId ||
-      t.id.replace(/^table-/i, '') === cleanNum
+      t.id.replace(/^table[\s\-_]*/i, "") === cleanNum
     );
     if (table) {
-      setCurrentTable(table);
+      if (isTimestampId(table.number)) {
+        setCurrentTable({ ...table, number: safeNum });
+      } else {
+        setCurrentTable(table);
+      }
     } else {
-      // Create temporary local table state if not loaded yet
+      // Create temporary local table state with guaranteed human-readable number
       setCurrentTable({
         id: tableId,
-        number: cleanNum,
+        number: safeNum,
         capacity: 4,
         status: 'available',
         qrCodeUrl: '',
         updatedAt: new Date().toISOString()
       });
+
+      // Fetch authentic table from DB in background if available
+      if (isSupabaseConfigured && tableId) {
+        dbService.getScannedTable(tableId).then(dbTable => {
+          if (dbTable) {
+            const cleanResolvedNum = getCleanTableNumber(dbTable, tables, tableId);
+            setCurrentTable({ ...dbTable, number: cleanResolvedNum });
+          }
+        }).catch(err => {
+          console.warn("Async table fetch by QR ID failed:", err);
+        });
+      }
     }
   };
 
   // Re-sync currentTable when tables array updates from Supabase/realtime
   useEffect(() => {
     if (currentTable && tables.length > 0) {
-      const cleanNum = currentTable.number || currentTable.id.replace(/^table-/i, '');
+      const cleanNum = currentTable.number || currentTable.id.replace(/^table[\s\-_]*/i, "");
       const matched = tables.find(t => 
         t.id === currentTable.id || 
         t.number === cleanNum || 
         t.number === currentTable.number ||
-        t.id.replace(/^table-/i, '') === cleanNum
+        t.id.replace(/^table[\s\-_]*/i, "") === cleanNum
       );
-      if (matched && (matched.id !== currentTable.id || matched.status !== currentTable.status)) {
-        setCurrentTable(matched);
+      if (matched) {
+        const cleanMatchedNumber = getCleanTableNumber(matched, tables, currentTable.id);
+        const needsUpdate = 
+          matched.id !== currentTable.id || 
+          matched.status !== currentTable.status ||
+          currentTable.number !== cleanMatchedNumber ||
+          isTimestampId(currentTable.number);
+
+        if (needsUpdate) {
+          setCurrentTable({
+            ...matched,
+            number: cleanMatchedNumber
+          });
+        }
       }
     }
   }, [tables]);
@@ -1252,14 +1287,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Resolve table if dine_in
     let targetTable = currentTable;
+    let urlTableId: string | undefined = undefined;
     if (orderType === "dine_in" && !targetTable) {
       const menuMatch = typeof window !== 'undefined' ? window.location.pathname.match(/^\/menu\/([^\/]+)$/) : null;
-      const urlTableId = menuMatch?.[1];
+      urlTableId = menuMatch?.[1];
       if (urlTableId) {
-        const cleanNum = urlTableId.replace(/^table[\s\-_]*/i, '');
-        targetTable = tables.find(t => t.id === urlTableId || t.number === cleanNum || t.number === urlTableId || t.id.replace(/^table-/i, '') === cleanNum) || {
+        const cleanNum = getCleanTableNumber(undefined, tables, urlTableId);
+        targetTable = tables.find(t => 
+          t.id === urlTableId || 
+          t.number === cleanNum || 
+          t.number === urlTableId || 
+          t.id.replace(/^table[\s\-_]*/i, "") === cleanNum
+        ) || {
           id: urlTableId,
-          number: cleanNum || '1',
+          number: cleanNum,
           capacity: 4,
           status: 'occupied',
           qrCodeUrl: "",
@@ -1277,7 +1318,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return isToday && o.orderType === "takeaway";
     });
     const tokenStr = isTakeaway ? `TK-${String(todayTakeaways.length + 1).padStart(2, "0")}` : undefined;
-    const cleanTableName = isTakeaway ? `Takeaway • ${tokenStr}` : `Table ${targetTable?.number || ""}`;
+    const cleanTableName = isTakeaway ? `Takeaway • ${tokenStr}` : formatTableDisplayName(targetTable, tables, urlTableId);
 
     const taxRate = settings?.taxPercentage ?? 0;
     const subtotal = getCartSubtotal();
@@ -1362,7 +1403,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         orderId: resultOrder.id,
         message: isTakeaway
           ? `New Takeaway pickup order ${orderNum} (${tokenStr}) received.`
-          : `New order ${orderNum} received from Table ${currentTable?.number}.`,
+          : `New order ${orderNum} received from ${cleanTableName}.`,
         isRead: false,
         createdAt: new Date().toISOString(),
       };
@@ -1494,8 +1535,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     // Find target table
     const targetTable = tables.find(t => t.id === tableId || t.number === tableId);
-    const tableNumber = targetTable ? targetTable.number : tableId.replace(/^table-/i, "");
-    const cleanTableName = `Table ${tableNumber}`;
+    const cleanTableName = formatTableDisplayName(targetTable, tables, tableId);
 
     const taxRate = settings?.taxPercentage ?? 0;
     const subtotal = Math.round(items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * 100) / 100;
@@ -1593,7 +1633,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         tableId: targetTable ? targetTable.id : tableId,
         tableName: cleanTableName,
         orderId: resultOrder.id,
-        message: `⚡ Captain punched new order ${orderNum} for Table ${tableNumber}.`,
+        message: `⚡ Captain punched new order ${orderNum} for ${cleanTableName}.`,
         isRead: false,
         createdAt: new Date().toISOString(),
       };
@@ -1614,12 +1654,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const callWaiter = async () => {
     if (!currentTable) return;
+    const cleanDisplay = formatTableDisplayName(currentTable, tables);
     const notification: RestaurantNotification = {
       id: `notify-${Date.now()}`,
       type: 'call_waiter',
       tableId: currentTable.id,
-      tableName: `Table ${currentTable.number}`,
-      message: `Table ${currentTable.number} is requesting a waiter.`,
+      tableName: cleanDisplay,
+      message: `${cleanDisplay} is requesting a waiter.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
@@ -1628,12 +1669,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const requestBill = async () => {
     if (!currentTable) return;
+    const cleanDisplay = formatTableDisplayName(currentTable, tables);
     const notification: RestaurantNotification = {
       id: `notify-${Date.now()}`,
       type: 'request_bill',
       tableId: currentTable.id,
-      tableName: `Table ${currentTable.number}`,
-      message: `Table ${currentTable.number} is requesting the bill.`,
+      tableName: cleanDisplay,
+      message: `${cleanDisplay} is requesting the bill.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     };

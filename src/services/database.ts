@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase, signUpClient } from './supabase';
+import { sanitizeOrderTableName, isTimestampId } from '../utils/tableUtils';
 import {
   RestaurantSettings,
   UserProfile,
@@ -408,7 +409,7 @@ const mapOrderToFrontend = (row: any): RestaurantOrder => {
     id: row.id,
     orderNumber: row.order_number || row.orderNumber,
     tableId: row.table_id || row.tableId,
-    tableName: row.table_name || row.tableName,
+    tableName: sanitizeOrderTableName(row.table_name || row.tableName, row.table_id || row.tableId),
     tableFloor: row.table_floor || row.tableFloor || undefined,
     orderType: isTakeaway ? "takeaway" : (row.order_type || row.orderType || "dine_in"),
     customerName: row.customer_name || row.customerName,
@@ -437,7 +438,7 @@ const mapOrderToDb = (model: RestaurantOrder, restaurantId: string) => ({
   restaurant_id: restaurantId,
   order_number: model.orderNumber,
   table_id: model.tableId,
-  table_name: model.tableName,
+  table_name: sanitizeOrderTableName(model.tableName, model.tableId),
   ...(model.tableFloor && { table_floor: model.tableFloor }),
   order_type: model.orderType || "dine_in",
   ...(model.customerName && { customer_name: model.customerName }),
@@ -461,7 +462,7 @@ const mapPaymentToFrontend = (row: any): PaymentRecord => ({
   id: row.id,
   orderId: row.order_id || row.orderId,
   orderNumber: row.order_number || row.orderNumber,
-  tableName: row.table_name || row.tableName,
+  tableName: sanitizeOrderTableName(row.table_name || row.tableName, undefined),
   orderType: row.order_type || row.orderType,
   customerName: row.customer_name || row.customerName,
   customerPhone: row.customer_phone || row.customerPhone,
@@ -479,7 +480,7 @@ const mapPaymentToDb = (model: PaymentRecord, restaurantId: string) => ({
   restaurant_id: restaurantId,
   order_id: model.orderId,
   order_number: model.orderNumber,
-  table_name: model.tableName,
+  table_name: sanitizeOrderTableName(model.tableName, undefined),
   subtotal: model.subtotal,
   tax: model.tax,
   discount: model.discount,
@@ -488,23 +489,28 @@ const mapPaymentToDb = (model: PaymentRecord, restaurantId: string) => ({
   created_at: model.createdAt,
 });
 
-const mapNotificationToFrontend = (row: any): RestaurantNotification => ({
-  id: row.id,
-  type: row.type,
-  tableId: row.table_id,
-  tableName: row.table_name,
-  orderId: row.order_id,
-  message: row.message,
-  isRead: row.is_read,
-  createdAt: row.created_at,
-});
+const mapNotificationToFrontend = (row: any): RestaurantNotification => {
+  const cleanTableName = sanitizeOrderTableName(row.table_name, row.table_id);
+  const rawMsg = row.message || "";
+  const cleanMsg = isTimestampId(row.table_name) ? rawMsg.replace(/Table\s+\d{7,}/gi, cleanTableName) : rawMsg;
+  return {
+    id: row.id,
+    type: row.type,
+    tableId: row.table_id,
+    tableName: cleanTableName,
+    orderId: row.order_id,
+    message: cleanMsg,
+    isRead: row.is_read,
+    createdAt: row.created_at,
+  };
+};
 
 const mapNotificationToDb = (model: RestaurantNotification, restaurantId: string) => ({
   id: model.id,
   restaurant_id: restaurantId,
   type: model.type,
   table_id: model.tableId,
-  table_name: model.tableName,
+  table_name: sanitizeOrderTableName(model.tableName, model.tableId),
   ...(model.orderId && { order_id: model.orderId }),
   message: model.message,
   is_read: model.isRead,
