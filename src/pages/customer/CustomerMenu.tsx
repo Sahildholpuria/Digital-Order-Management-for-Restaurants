@@ -1390,6 +1390,11 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                                     <Clock className="w-3 h-3 text-emerald-500 flex-shrink-0" />
                                     {item.preparationTime || 15}m
                                   </span>
+                                  {getItemPortions(item).length > 0 && (
+                                    <span className="text-emerald-700 dark:text-emerald-400 font-bold text-[9px] bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
+                                      Half / Full
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1401,21 +1406,6 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
                               {(() => {
                                 const cardPortions = getItemPortions(item);
                                 if (cardPortions.length > 0) {
-                                  const halfOpt = cardPortions.find(p => p.name.toLowerCase().includes("half"));
-                                  const fullOpt = cardPortions.find(p => p.name.toLowerCase().includes("full"));
-                                  if (halfOpt && fullOpt) {
-                                    const discHalf = halfOpt.price * (1 - (item.discountPercentage || 0) / 100);
-                                    const discFull = fullOpt.price * (1 - (item.discountPercentage || 0) / 100);
-                                    return (
-                                      <div className="flex flex-col">
-                                        <div className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-1">
-                                          <span className="text-amber-600 dark:text-amber-400 font-extrabold text-[10px]">Half:</span> {settings?.currency || "₹"}{discHalf.toFixed(0)}
-                                          <span className="text-slate-300 dark:text-slate-600">•</span>
-                                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px]">Full:</span> {settings?.currency || "₹"}{discFull.toFixed(0)}
-                                        </div>
-                                      </div>
-                                    );
-                                  }
                                   const prices = cardPortions.map(p => p.price);
                                   const minPrice = Math.min(...prices);
                                   const maxPrice = Math.max(...prices);
