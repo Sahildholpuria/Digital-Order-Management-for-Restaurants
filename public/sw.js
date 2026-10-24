@@ -3,8 +3,8 @@
  * Optimized for Ultra-Fast Loading on Slow 2G/3G Cellular & Offline Networks.
  */
 
-const CACHE_NAME = 'restaurants-os-v7';
-const STATIC_ASSETS_CACHE = 'restaurants-os-static-v7';
+const CACHE_NAME = 'restaurants-os-v8';
+const STATIC_ASSETS_CACHE = 'restaurants-os-static-v8';
 const IMAGE_CACHE_NAME = 'restaurants-os-images-v2';
 
 const PRECACHE_ASSETS = [

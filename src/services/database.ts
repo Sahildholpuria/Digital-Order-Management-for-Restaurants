@@ -880,8 +880,10 @@ export const dbService = {
       };
     }
   },
-  async getRestaurantIdByTableId(tableId: string): Promise<string | null> {
-    if (!tableId || typeof tableId !== 'string') return null;
+  async getRestaurantIdByTableId(rawTableId: string): Promise<string | null> {
+    if (!rawTableId || typeof rawTableId !== 'string') return null;
+    const tableId = decodeURIComponent(rawTableId).replace(/\/+$/, '').trim();
+    if (!tableId) return null;
 
     if (isSupabaseConfigured) {
       try {
@@ -961,8 +963,10 @@ export const dbService = {
       return null;
     }
   },
-  async getScannedTable(tableId: string): Promise<RestaurantTable | null> {
-    if (!tableId || typeof tableId !== 'string') return null;
+  async getScannedTable(rawTableId: string): Promise<RestaurantTable | null> {
+    if (!rawTableId || typeof rawTableId !== 'string') return null;
+    const tableId = decodeURIComponent(rawTableId).replace(/\/+$/, '').trim();
+    if (!tableId) return null;
 
     if (isSupabaseConfigured) {
       try {

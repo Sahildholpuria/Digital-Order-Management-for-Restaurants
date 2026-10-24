@@ -436,10 +436,11 @@ export const App: React.FC = () => {
       );
     }
 
+    const cleanPath = (currentPath || "").replace(/\/+$/, "") || "/";
     // Check if Customer Menu route: /menu/:tableId
-    const menuMatch = currentPath.match(/^\/menu\/([^/]+)$/);
+    const menuMatch = cleanPath.match(/^\/menu\/([^/?#]+)$/);
     // Check if Order Tracker route: /menu/:tableId/track/:orderId
-    const trackerMatch = currentPath.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+    const trackerMatch = cleanPath.match(/^\/menu\/([^/?#]+)\/track\/([^/?#]+)$/);
 
     if (trackerMatch) {
       const [, tableId, orderId] = trackerMatch;

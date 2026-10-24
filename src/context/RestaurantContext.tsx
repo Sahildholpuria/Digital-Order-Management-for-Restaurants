@@ -190,10 +190,11 @@ export const clearTenantCache = (keepTenantId?: string) => {
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [restaurantId, setRestaurantId] = useState<string>(() => {
-    const path = window.location.pathname;
-    const menuMatch = path.match(/^\/menu\/([^/]+)$/);
-    const trackerMatch = path.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
-    const tableId = menuMatch?.[1] || trackerMatch?.[1];
+    const cleanPath = (window.location.pathname || "").replace(/\/+$/, "");
+    const menuMatch = cleanPath.match(/^\/menu\/([^/?#]+)/);
+    const trackerMatch = cleanPath.match(/^\/menu\/([^/?#]+)\/track\/([^/?#]+)/);
+    const rawTableId = menuMatch?.[1] || trackerMatch?.[1];
+    const tableId = rawTableId ? decodeURIComponent(rawTableId).trim() : "";
     
     if (tableId) {
       const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
@@ -222,11 +223,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return isSupabaseConfigured ? '' : 'demo-restaurant';
   });
   const [isResolvingId, setIsResolvingId] = useState<boolean>(() => {
-    const path = window.location.pathname;
-    const isMenuRoute = path.match(/^\/menu\/([^/]+)$/) || path.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
+    const cleanPath = (window.location.pathname || "").replace(/\/+$/, "");
+    const isMenuRoute = cleanPath.match(/^\/menu\/([^/?#]+)/);
     if (!isMenuRoute) return false;
     
-    const tableId = isMenuRoute[1];
+    const tableId = decodeURIComponent(isMenuRoute[1]).trim();
     const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
     return !cached;
   });
@@ -682,9 +683,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Resolve restaurantId from URL tableId for guest customers
   useEffect(() => {
     const resolveRestaurantFromUrl = async () => {
-      const menuMatch = window.location.pathname.match(/^\/menu\/([^/]+)$/);
-      const trackerMatch = window.location.pathname.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
-      const tableId = menuMatch?.[1] || trackerMatch?.[1];
+      const cleanPath = (window.location.pathname || "").replace(/\/+$/, "");
+      const menuMatch = cleanPath.match(/^\/menu\/([^/?#]+)/);
+      const trackerMatch = cleanPath.match(/^\/menu\/([^/?#]+)\/track\/([^/?#]+)/);
+      const rawTableId = menuMatch?.[1] || trackerMatch?.[1];
+      const tableId = rawTableId ? decodeURIComponent(rawTableId).trim() : "";
       
       if (tableId) {
         const cached = localStorage.getItem(`resolved_rest_${tableId}`) || sessionStorage.getItem(`resolved_rest_${tableId}`);
@@ -944,9 +947,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } else {
         // Guest Customer Mode (Zero Data Leak: only fetch scanned table row, menu categories, and food items)
         try {
-          const menuMatch = window.location.pathname.match(/^\/menu\/([^/]+)$/);
-          const trackerMatch = window.location.pathname.match(/^\/menu\/([^/]+)\/track\/([^/]+)$/);
-          const activeTableId = menuMatch?.[1] || trackerMatch?.[1];
+          const cleanPath = (window.location.pathname || "").replace(/\/+$/, "");
+          const menuMatch = cleanPath.match(/^\/menu\/([^/?#]+)/);
+          const trackerMatch = cleanPath.match(/^\/menu\/([^/?#]+)\/track\/([^/?#]+)/);
+          const rawTableId = menuMatch?.[1] || trackerMatch?.[1];
+          const activeTableId = rawTableId ? decodeURIComponent(rawTableId).trim() : "";
 
           const [sData, scannedTable] = await Promise.all([
             dbService.getSettings(restaurantId),

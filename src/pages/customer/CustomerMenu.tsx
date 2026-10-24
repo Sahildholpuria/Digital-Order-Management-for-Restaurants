@@ -626,7 +626,18 @@ export const CustomerMenu: React.FC<CustomerMenuProps> = ({ tableId }) => {
           <div className="space-y-3">
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                try {
+                  if (tableId) {
+                    localStorage.removeItem(`resolved_rest_${tableId}`);
+                    sessionStorage.removeItem(`resolved_rest_${tableId}`);
+                  }
+                  if ("caches" in window) {
+                    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+                  }
+                } catch (_) {}
+                window.location.reload();
+              }}
               className="w-full bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md text-xs cursor-pointer flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
