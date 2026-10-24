@@ -791,13 +791,21 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     let unsubNotifications: () => void = () => {};
 
     const loadData = async () => {
-      try {
-        await dbService.cleanupExpiredOrders(restaurantId);
-      } catch (e) {
-        console.warn('cleanupExpiredOrders error:', e);
-      }
-
       const isStaffUser = !!currentUser;
+      // Only staff users perform 30-day order retention cleanup, throttled to at most once per 24 hours
+      if (isStaffUser) {
+        const lastCleanupKey = `last_orders_cleanup_${restaurantId}`;
+        const lastCleanup = localStorage.getItem(lastCleanupKey);
+        const now = Date.now();
+        if (!lastCleanup || now - Number(lastCleanup) > 24 * 60 * 60 * 1000) {
+          try {
+            localStorage.setItem(lastCleanupKey, String(now));
+            await dbService.cleanupExpiredOrders(restaurantId);
+          } catch (e) {
+            console.warn('cleanupExpiredOrders error:', e);
+          }
+        }
+      }
       // Subscriptions active for all users (Staff & Guest Customers) so menu updates/deletions reflect instantly on Customer Menu
       try {
         unsubCategories = dbService.subscribeCategories(restaurantId, (data) => {
@@ -984,7 +992,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unsubPayments();
       unsubNotifications();
     };
-  }, [restaurantId, currentTable?.id, subscriptionTrigger, currentUser?.id, loading]);
+  }, [restaurantId, subscriptionTrigger, currentUser?.id, loading]);
 
   // Trigger Sound, Speech Synthesis & Background Notifications
   const triggerNotificationSoundAndSpeech = (n: RestaurantNotification) => {
@@ -1082,8 +1090,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const setCurrentTableById = (tableId: string) => {
-    const safeNum = getCleanTableNumber(undefined, tables, tableId);
     const cleanNum = tableId.replace(/^table[\s\-_]*/i, "");
+    if (
+      currentTable && 
+      (currentTable.id === tableId || currentTable.number === cleanNum) && 
+      !isTimestampId(currentTable.number)
+    ) {
+      return;
+    }
+    const safeNum = getCleanTableNumber(undefined, tables, tableId);
     const table = tables.find(t => 
       t.id === tableId || 
       t.number === cleanNum || 
@@ -1140,9 +1155,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           isTimestampId(currentTable.number);
 
         if (needsUpdate) {
-          setCurrentTable({
-            ...matched,
-            number: cleanMatchedNumber
+          setCurrentTable(prev => {
+            if (!prev) return { ...matched, number: cleanMatchedNumber };
+            if (prev.id === matched.id && prev.status === matched.status && prev.number === cleanMatchedNumber) {
+              return prev;
+            }
+            return {
+              ...matched,
+              number: cleanMatchedNumber
+            };
           });
         }
       }
