@@ -1,8 +1,10 @@
 import { RestaurantOrder, RestaurantSettings } from "../types";
 import { qzTrayService, PaperWidth } from "../services/qzTrayService";
 import { bluetoothPrinterService } from "../services/bluetoothPrinterService";
+import { electronService } from "../services/electronService";
 
 export type { PaperWidth };
+export type PrintMode = "native" | "qz-tray" | "browser" | "bluetooth" | "none";
 
 export const isMobileDevice = (): boolean => {
   if (typeof window === "undefined") return false;
@@ -28,7 +30,7 @@ export interface PrintTask {
   rawOrder?: RestaurantOrder;
   restaurantName?: string;
   settings?: RestaurantSettings | null;
-  resolve: (res: { success: boolean; mode: "qz-tray" | "browser" | "bluetooth" | "none"; message?: string }) => void;
+  resolve: (res: { success: boolean; mode: PrintMode; message?: string }) => void;
   reject: (err: any) => void;
 }
 
@@ -44,7 +46,7 @@ class PrintQueueManager {
 
   public enqueue(
     task: Omit<PrintTask, "resolve" | "reject" | "retries">
-  ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "bluetooth" | "none"; message?: string }> {
+  ): Promise<{ success: boolean; mode: PrintMode; message?: string }> {
     return new Promise((resolve, reject) => {
       this.queue.push({
         ...task,
@@ -91,7 +93,7 @@ class PrintQueueManager {
 
   private async executePrintTask(
     task: PrintTask
-  ): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "bluetooth" | "none"; message?: string }> {
+  ): Promise<{ success: boolean; mode: PrintMode; message?: string }> {
     // Global duplicate print suppression (suppresses accidental double clicks and duplicate auto-dispatches)
     const printKey = `${task.type}-${task.orderId || task.orderNumber || "generic"}`;
     const now = Date.now();
@@ -117,6 +119,34 @@ class PrintQueueManager {
         }
       } catch (btErr) {
         console.warn("[PrintQueue] Bluetooth print error:", btErr);
+      }
+    }
+
+    // 1.5. Native Silent Thermal Printing in Desktop App (Windows & Mac)
+    if (electronService.isElectron()) {
+      try {
+        const qzConfig = qzTrayService.getConfig();
+        const targetPrinter = task.printerName || (task.type === "kot" ? qzConfig.kotPrinter : qzConfig.billPrinter);
+        if (!task.forcePrint) {
+          if (task.type === "kot" && qzConfig.autoPrintKOT === false) {
+            return { success: true, mode: "none", message: "Auto-print KOT disabled" };
+          }
+          if (task.type === "bill" && qzConfig.autoPrintBill === false) {
+            return { success: true, mode: "none", message: "Auto-print Bill disabled" };
+          }
+        }
+
+        const res = await electronService.printThermalReceipt({
+          html: task.html,
+          deviceName: targetPrinter,
+          silent: !task.forcePrint,
+        });
+
+        if (res.success) {
+          return { success: true, mode: "native", message: "Dispatched to native desktop printer" };
+        }
+      } catch (electronErr) {
+        console.warn("[PrintQueue] Electron native print error:", electronErr);
       }
     }
 
@@ -975,7 +1005,7 @@ export const printKOTReceipt = async (
   restaurantName: string = "Main Kitchen",
   paperWidth?: PaperWidth,
   forcePrint: boolean = false
-): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "bluetooth" | "none"; message?: string }> => {
+): Promise<{ success: boolean; mode: PrintMode; message?: string }> => {
   if (!order || !order.id) return { success: false, mode: "none" };
 
   if (!forcePrint && order.status === "pending") {
@@ -1010,7 +1040,7 @@ export const printBillReceipt = async (
   settings?: RestaurantSettings | null,
   paperWidth?: PaperWidth,
   forcePrint: boolean = false
-): Promise<{ success: boolean; mode: "qz-tray" | "browser" | "bluetooth" | "none"; message?: string }> => {
+): Promise<{ success: boolean; mode: PrintMode; message?: string }> => {
   if (!order || !order.id) return { success: false, mode: "none" };
 
   const qzConfig = qzTrayService.getConfig();

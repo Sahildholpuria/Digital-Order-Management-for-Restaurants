@@ -1,8 +1,12 @@
 {
   "name": "digital-order-management-for-restaurants",
+  "productName": "RestaurantsOS",
+  "description": "Ultra-fast Digital Order Management System & POS for Restaurants & Cafes",
+  "author": "RestaurantsOS Team <support@restaurantsos.in>",
   "private": true,
   "version": "2.5.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "node scripts/bump-version.js sync && tsc -b && vite build",
@@ -12,7 +16,13 @@
     "bump:patch": "node scripts/bump-version.js patch",
     "bump:minor": "node scripts/bump-version.js minor",
     "bump:major": "node scripts/bump-version.js major",
-    "test": "vitest run"
+    "test": "vitest run",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env ELECTRON=true electron electron/main.cjs --dev\"",
+    "electron:build": "cross-env ELECTRON=true npm run build",
+    "electron:pack": "npm run electron:build && electron-builder --dir",
+    "electron:dist": "npm run electron:build && electron-builder",
+    "electron:dist:mac": "npm run electron:build && electron-builder --mac",
+    "electron:dist:win": "npm run electron:build && electron-builder --win"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.6",
@@ -37,9 +47,14 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wait-on": "^9.5.1"
   }
 }

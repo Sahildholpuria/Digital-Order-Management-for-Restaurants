@@ -30,6 +30,7 @@ import {
 import { offlineSyncService } from '../services/offlineSyncService';
 import { indexedDBQueue } from '../services/indexedDBQueue';
 import { qzTrayService, QZPrinterConfig, QZConnectionStatus } from '../services/qzTrayService';
+import { electronService } from '../services/electronService';
 
 interface RestaurantContextType {
   lang: Language;
@@ -341,14 +342,28 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [qzConfig, setQzConfig] = useState<QZPrinterConfig>(qzTrayService.getConfig());
 
   useEffect(() => {
+    // If running inside desktop application (Electron), load native system printers
+    if (electronService.isElectron()) {
+      setQzStatus("connected");
+      electronService.getPrinters().then(printers => {
+        if (printers && printers.length > 0) {
+          const names = printers.map(p => p.name || p.displayName).filter(Boolean);
+          setQzPrinters(names);
+        }
+      }).catch(() => {});
+    }
+
     const unsubscribe = qzTrayService.subscribe((status, printers) => {
-      setQzStatus(status);
-      setQzPrinters(printers);
+      // In web, reflect QZ Tray status; in desktop, remain connected
+      if (!electronService.isElectron()) {
+        setQzStatus(status);
+        setQzPrinters(printers);
+      }
       setQzConfig(qzTrayService.getConfig());
     });
 
     // Auto-connect if enabled
-    if (qzConfig.autoConnect !== false) {
+    if (!electronService.isElectron() && qzConfig.autoConnect !== false) {
       qzTrayService.connect().catch(() => {});
     }
 
@@ -358,6 +373,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const connectQZTray = async () => {
+    if (electronService.isElectron()) {
+      setQzStatus("connected");
+      await refreshQZPrinters();
+      showToast("🟢 Native desktop printing engine active!", "success");
+      return true;
+    }
+
     const success = await qzTrayService.connect();
     if (success) {
       showToast("🟢 Connected to QZ Tray thermal printer service!", "success");
@@ -369,11 +391,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const disconnectQZTray = async () => {
+    if (electronService.isElectron()) {
+      showToast("Native desktop printing is managed by operating system.", "info");
+      return;
+    }
     await qzTrayService.disconnect();
     showToast("QZ Tray disconnected.", "info");
   };
 
   const refreshQZPrinters = async () => {
+    if (electronService.isElectron()) {
+      const printers = await electronService.getPrinters();
+      const names = printers.map(p => p.name || p.displayName).filter(Boolean);
+      setQzPrinters(names);
+      showToast(`Discovered ${names.length} native desktop printers`, "info");
+      return names;
+    }
     const list = await qzTrayService.refreshPrinters();
     showToast(`Discovered ${list.length} thermal printers`, "info");
     return list;

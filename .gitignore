@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Electron desktop packaging artifacts
+release
+release-builds
