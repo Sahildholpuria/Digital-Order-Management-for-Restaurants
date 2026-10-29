@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTimestampId, getCleanTableNumber, formatTableDisplayName, sanitizeOrderTableName } from "../tableUtils";
+import { isTimestampId, getCleanTableNumber, formatTableDisplayName, sanitizeOrderTableName, getPublicMenuBaseUrl } from "../tableUtils";
 import { RestaurantTable } from "../../types";
 
 describe("tableUtils unit tests", () => {
@@ -171,6 +171,19 @@ describe("tableUtils unit tests", () => {
       expect(sanitizeOrderTableName("Table 2")).toBe("Table 2");
       expect(sanitizeOrderTableName("Table 5")).toBe("Table 5");
       expect(sanitizeOrderTableName("Table VIP-4")).toBe("Table VIP-4");
+    });
+  });
+
+  describe("getPublicMenuBaseUrl", () => {
+    it("prefers explicit custom websiteUrl when configured with http/https", () => {
+      expect(getPublicMenuBaseUrl("https://mybistro.com/")).toBe("https://mybistro.com");
+      expect(getPublicMenuBaseUrl("http://order.ramrasoi.in")).toBe("http://order.ramrasoi.in");
+    });
+
+    it("falls back to window.location.origin or production domain", () => {
+      const url = getPublicMenuBaseUrl(null);
+      expect(url).toMatch(/^https?:\/\//);
+      expect(url).not.toContain("file://");
     });
   });
 });

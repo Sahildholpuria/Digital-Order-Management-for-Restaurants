@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import dbService, { parseFoodItemDescription } from '../services/database';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import {
@@ -188,6 +188,9 @@ export const clearTenantCache = (keepTenantId?: string) => {
     console.warn('RestaurantsOS: Error clearing tenant cache:', e);
   }
 };
+
+// Global in-memory throttle to ensure 30-day order cleanup never loops within a session
+const cleanedUpRestaurants = new Set<string>();
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [restaurantId, setRestaurantId] = useState<string>(() => {
@@ -551,27 +554,34 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Profile found — map to frontend shape
         const isSuper = !!data.is_super_admin;
         const impersonatedTenant = localStorage.getItem('superadmin_impersonated_tenant_id');
+        const isCustomerRoute = window.location.pathname.startsWith('/menu/');
 
         let targetRestaurantId: string;
         if (isSuper && impersonatedTenant) {
           // Super Admin is impersonating a tenant: retain tenant context
           targetRestaurantId = impersonatedTenant;
-          clearTenantCache(targetRestaurantId);
-          setRestaurantId(targetRestaurantId);
-          localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+          if (!isCustomerRoute) {
+            clearTenantCache(targetRestaurantId);
+            setRestaurantId(targetRestaurantId);
+            localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+          }
         } else if (isSuper) {
           // Super Admin in Central SaaS Mode
           targetRestaurantId = '';
-          clearTenantCache();
-          setRestaurantId('');
-          localStorage.removeItem('last_active_staff_restaurant_id');
+          if (!isCustomerRoute) {
+            clearTenantCache();
+            setRestaurantId('');
+            localStorage.removeItem('last_active_staff_restaurant_id');
+          }
         } else {
           // Normal staff account
           targetRestaurantId = data.restaurant_id || '';
-          clearTenantCache(targetRestaurantId);
-          setRestaurantId(targetRestaurantId);
-          if (targetRestaurantId) {
-            localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+          if (!isCustomerRoute) {
+            clearTenantCache(targetRestaurantId);
+            setRestaurantId(targetRestaurantId);
+            if (targetRestaurantId) {
+              localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
+            }
           }
         }
 
@@ -589,6 +599,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } else {
         // Profile genuinely missing (e.g. legacy account) — only insert then
         const isSuper = user.email === 'superadmin@restaurant.com' || user.email?.includes('super') || false;
+        const isCustomerRoute = window.location.pathname.startsWith('/menu/');
         const profile: UserProfile = {
           id: user.id,
           restaurantId: isSuper ? undefined : 'demo-restaurant',
@@ -599,7 +610,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           createdAt: new Date().toISOString(),
         };
         await dbService.addUser(isSuper ? '' : 'demo-restaurant', profile);
-        if (!isSuper) {
+        if (!isSuper && !isCustomerRoute) {
           setRestaurantId('demo-restaurant');
         }
         setCurrentUserState(profile);
@@ -659,10 +670,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, []); // Global auth listener mounts once. Never re-subscribe on restaurantId change.
 
-  // Sync restaurantId with logged-in user's profile restaurantId
+  // Sync restaurantId with logged-in user's profile restaurantId (Staff Portal only)
   useEffect(() => {
+    const isCustomerRoute = window.location.pathname.startsWith('/menu/');
+    if (isCustomerRoute) return; // Never overwrite scanned table's restaurant on customer routes
+
     if (currentUser?.isSuperAdmin) {
       // Super Admin is platform-level: starts with empty restaurant context unless actively impersonating
       const storedImpersonating = localStorage.getItem('last_active_staff_restaurant_id');
@@ -676,7 +690,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setRestaurantId(currentUser.restaurantId);
       localStorage.setItem('last_active_staff_restaurant_id', currentUser.restaurantId);
     }
-  }, [currentUser]);
+  }, [currentUser?.id, currentUser?.restaurantId, currentUser?.isSuperAdmin]);
 
   // Screen Wake Lock API to prevent devices from sleeping/locking during restaurant shifts
   useEffect(() => {
@@ -824,19 +838,24 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     let unsubNotifications: () => void = () => {};
 
     const loadData = async () => {
-      const isStaffUser = !!currentUser;
-      // Only staff users perform 30-day order retention cleanup, throttled to at most once per 24 hours
-      if (isStaffUser) {
+      const isCustomerRoute = window.location.pathname.startsWith('/menu/');
+      const isStaffUser = !!currentUser && !isCustomerRoute;
+
+      // Only authenticated admin staff in the staff portal perform 30-day order retention cleanup (throttled to at most once per 24h & session)
+      if (isStaffUser && !cleanedUpRestaurants.has(restaurantId) && (currentUser?.role === 'admin' || currentUser?.isSuperAdmin)) {
         const lastCleanupKey = `last_orders_cleanup_${restaurantId}`;
         const lastCleanup = localStorage.getItem(lastCleanupKey);
         const now = Date.now();
         if (!lastCleanup || now - Number(lastCleanup) > 24 * 60 * 60 * 1000) {
+          cleanedUpRestaurants.add(restaurantId);
           try {
             localStorage.setItem(lastCleanupKey, String(now));
             await dbService.cleanupExpiredOrders(restaurantId);
           } catch (e) {
             console.warn('cleanupExpiredOrders error:', e);
           }
+        } else {
+          cleanedUpRestaurants.add(restaurantId);
         }
       }
       // Subscriptions active for all users (Staff & Guest Customers) so menu updates/deletions reflect instantly on Customer Menu
@@ -1122,7 +1141,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
-  const setCurrentTableById = (tableId: string) => {
+  const setCurrentTableById = useCallback((tableId: string) => {
     const cleanNum = tableId.replace(/^table[\s\-_]*/i, "");
     if (
       currentTable && 
@@ -1167,7 +1186,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
       }
     }
-  };
+  }, [tables, currentTable]);
 
   // Re-sync currentTable when tables array updates from Supabase/realtime
   useEffect(() => {

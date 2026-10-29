@@ -110,3 +110,24 @@ export const sanitizeOrderTableName = (
   // Format cleanly with proper casing
   return cleanNum.toLowerCase().startsWith("table") ? cleanNum : `Table ${cleanNum}`;
 };
+
+/**
+ * Returns the public web base URL for customer QR codes and menu links.
+ * When running inside native desktop apps (Electron, where window.location.origin is "file://"),
+ * this reliably falls back to settings.websiteUrl or https://app.restaurantsos.in
+ * so customer smartphone cameras always navigate to the public web application.
+ */
+export const getPublicMenuBaseUrl = (websiteUrl?: string | null): string => {
+  if (websiteUrl && /^https?:\/\//i.test(websiteUrl.trim())) {
+    return websiteUrl.trim().replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    const origin = window.location.origin;
+    if (origin.startsWith('http://') || origin.startsWith('https://')) {
+      // If deployed web app (e.g. app.restaurantsos.in or localhost dev), use current origin
+      return origin.replace(/\/+$/, '');
+    }
+  }
+  return ((import.meta as any).env?.VITE_PUBLIC_APP_URL || 'https://app.restaurantsos.in').replace(/\/+$/, '');
+};
+

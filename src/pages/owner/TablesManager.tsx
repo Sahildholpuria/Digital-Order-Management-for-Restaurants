@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
+import { getPublicMenuBaseUrl } from "../../utils/tableUtils";
 
 const FLOOR_PRESETS = [
   "Ground Floor",
@@ -95,7 +96,8 @@ export const TablesManager: React.FC = () => {
     if (!tableNumber.trim()) return;
 
     const id = editingTable ? editingTable.id : `table-${Date.now()}`;
-    const qrCodeUrl = `${window.location.origin}/menu/${id}`;
+    const baseUrl = getPublicMenuBaseUrl(settings?.websiteUrl);
+    const qrCodeUrl = `${baseUrl}/menu/${id}`;
 
     const newTable: RestaurantTable = {
       id,
@@ -351,7 +353,7 @@ export const TablesManager: React.FC = () => {
       {/* Grid of Tables */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
         {filteredTables.map(table => {
-          const menuUrl = `${window.location.origin}/menu/${table.id}`;
+          const menuUrl = `${getPublicMenuBaseUrl(settings?.websiteUrl)}/menu/${table.id}`;
           const cleanNum = table.number || table.id.replace(/^table-/i, "");
           const activeOrders = orders.filter(o => 
             (o.tableId === table.id || 
@@ -625,7 +627,7 @@ export const TablesManager: React.FC = () => {
 
       {/* ===== FULL-SCREEN QR PREVIEW MODAL (Mobile & Tablet Optimized) ===== */}
       {previewTable && (() => {
-        const menuUrl = `${window.location.origin}/menu/${previewTable.id}`;
+        const menuUrl = `${getPublicMenuBaseUrl(settings?.websiteUrl)}/menu/${previewTable.id}`;
         return (
           <div 
             className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"

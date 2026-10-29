@@ -2083,24 +2083,28 @@ export const dbService = {
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
     if (isSupabaseConfigured) {
-      // 1. Delete orders older than 30 days
-      const { error: ordersError } = await supabase
-        .from('orders')
-        .delete()
-        .eq('restaurant_id', restaurantId)
-        .lt('created_at', thirtyDaysAgoStr);
-      if (ordersError) {
-        console.error('Error cleaning up old orders:', ordersError);
-      }
+      try {
+        // 1. Delete orders older than 30 days
+        const { error: ordersError } = await supabase
+          .from('orders')
+          .delete()
+          .eq('restaurant_id', restaurantId)
+          .lt('created_at', thirtyDaysAgoStr);
+        if (ordersError) {
+          console.warn('Orders cleanup skipped/notice:', ordersError.message || ordersError);
+        }
 
-      // 2. Delete payment transactions older than 30 days
-      const { error: paymentsError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('restaurant_id', restaurantId)
-        .lt('created_at', thirtyDaysAgoStr);
-      if (paymentsError) {
-        console.error('Error cleaning up old payments:', paymentsError);
+        // 2. Delete payment transactions older than 30 days
+        const { error: paymentsError } = await supabase
+          .from('payments')
+          .delete()
+          .eq('restaurant_id', restaurantId)
+          .lt('created_at', thirtyDaysAgoStr);
+        if (paymentsError) {
+          console.warn('Payments cleanup skipped/notice:', paymentsError.message || paymentsError);
+        }
+      } catch (err) {
+        console.warn('cleanupExpiredOrders exception:', err);
       }
     } else {
       // LocalStorage orders cleanup

@@ -3,6 +3,7 @@ import { dbService } from '../../services/database';
 import { RestaurantSettings, UserProfile, SaaSAnnouncement } from '../../types';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { PageLoader } from '../../components/PageLoader';
+import { getPublicMenuBaseUrl } from '../../utils/tableUtils';
 import { 
   getSubscriptionPlans,
   getPlanById,
@@ -2861,8 +2862,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
       {/* ===== CREATED CREDENTIALS / WELCOME PACKAGE SUMMARY MODAL ===== */}
       {credsModal && (() => {
-        const portalUrl = `${window.location.origin}/admin`;
-        const customerMenuUrl = `${window.location.origin}/menu/${credsModal.slug}`;
+        const baseUrl = getPublicMenuBaseUrl();
+        const portalUrl = `${baseUrl}/admin`;
+        const customerMenuUrl = `${baseUrl}/menu/${credsModal.slug}`;
         const welcomeMessage = `👋 *Welcome to RestaurantsOS!*\n\nHere are your access details for *${credsModal.restName}*:\n\n🏢 *Restaurant:* ${credsModal.restName}\n👤 *Role:* ${credsModal.role}\n📧 *Login Email:* ${credsModal.email || 'Not configured'}\n🔑 *Password:* ${credsModal.pass}\n\n💻 *Staff POS Portal:* ${portalUrl}\n📱 *Customer QR Menu:* ${customerMenuUrl}\n\nPlease save these credentials securely. Reach out anytime if you need assistance!`;
 
         const cleanPhone = (credsModal.phone || '').trim().replace(/[^0-9]/g, '');

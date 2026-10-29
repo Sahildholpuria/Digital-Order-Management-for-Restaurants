@@ -303,7 +303,7 @@ create policy "Allow public order creation" on public.orders for insert with che
 );
 create policy "Allow staff order reading" on public.orders for select to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
 create policy "Allow staff updates for orders" on public.orders for update to authenticated using (public.belongs_to_restaurant(auth.uid(), restaurant_id));
-create policy "Allow admin deletions for orders" on public.orders for delete using (
+create policy "Allow admin deletions for orders" on public.orders for delete to authenticated using (
   public.is_admin(auth.uid()) and 
   restaurant_id = public.get_user_restaurant(auth.uid())
 );
@@ -507,14 +507,10 @@ execute function public.protect_user_roles();
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 revoke execute on function public.protect_user_roles() from public, anon, authenticated;
 revoke execute on function public.is_admin(uuid) from public, anon;
-revoke execute on function public.is_super_admin(uuid) from public, anon;
-revoke execute on function public.belongs_to_restaurant(uuid, text) from public, anon;
-revoke execute on function public.get_user_restaurant(uuid) from public, anon;
-
-grant execute on function public.is_admin(uuid) to authenticated, service_role;
-grant execute on function public.is_super_admin(uuid) to authenticated, service_role;
-grant execute on function public.belongs_to_restaurant(uuid, text) to authenticated, service_role;
-grant execute on function public.get_user_restaurant(uuid) to authenticated, service_role;
+grant execute on function public.is_admin(uuid) to anon, authenticated, service_role;
+grant execute on function public.is_super_admin(uuid) to anon, authenticated, service_role;
+grant execute on function public.belongs_to_restaurant(uuid, text) to anon, authenticated, service_role;
+grant execute on function public.get_user_restaurant(uuid) to anon, authenticated, service_role;
 grant execute on function public.update_table_status(text, text) to anon, authenticated, service_role;
 
 
