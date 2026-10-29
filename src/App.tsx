@@ -41,6 +41,8 @@ import { PWAInstallButton } from './components/common/PWAInstallButton';
 import { APP_VERSION } from './config/appVersion';
 import { HelpSupportModal } from './components/common/HelpSupportModal';
 import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
+import { UpdateModal } from './components/common/UpdateModal';
+import electronService from './services/electronService';
 
 import { 
   ChevronDown,
@@ -227,7 +229,27 @@ export const App: React.FC = () => {
   const { currentUser, logoutUser, loading, settings, restaurantId, setRestaurantId, lang, setLang, t, orders, qzStatus, connectQZTray } = useRestaurant();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateAvailableInfo, setUpdateAvailableInfo] = useState<any>(null);
   const { theme, toggleTheme } = useTheme();
+
+  // Listen for native desktop update triggers & status changes
+  useEffect(() => {
+    const unsubTrigger = electronService.onTriggerCheckUpdates(() => {
+      setIsUpdateModalOpen(true);
+    });
+
+    const unsubStatus = electronService.onUpdateStatusChange((payload) => {
+      if (payload.status === 'available') {
+        setUpdateAvailableInfo(payload.info);
+      }
+    });
+
+    return () => {
+      unsubTrigger();
+      unsubStatus();
+    };
+  }, []);
 
   // Navigation Routing States
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -902,6 +924,21 @@ export const App: React.FC = () => {
               {/* Right Action Controls & User Profile */}
               <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                 
+                {/* Available Desktop/App Update Notification Pill */}
+                {updateAvailableInfo && (
+                  <button
+                    onClick={() => setIsUpdateModalOpen(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/35 text-[11px] font-black shadow-xs animate-pulse cursor-pointer transition-all"
+                    title={`New version v${updateAvailableInfo.version} is available! Click to update.`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="hidden sm:inline">Update Ready</span>
+                    <span className="font-mono text-[10px] bg-emerald-500 text-white px-1.5 py-0.2 rounded font-bold">
+                      v{updateAvailableInfo.version}
+                    </span>
+                  </button>
+                )}
+
                 {/* QZ Tray Thermal Status Badge */}
                 <div 
                   onClick={() => qzStatus !== "connected" && connectQZTray()}
@@ -1115,12 +1152,25 @@ export const App: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* App Version Badge */}
-                        <div className="pt-2 px-1 text-center flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                          <span>RestaurantsOS</span>
-                          <span className="font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60">
-                            v{APP_VERSION}
-                          </span>
+                        {/* Check for Updates Action & App Version Badge */}
+                        <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserMenuOpen(false);
+                              setIsUpdateModalOpen(true);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+                            title="Check for desktop & web updates"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-emerald-500 group-hover:rotate-12 transition-transform" />
+                              <span>Check for Updates</span>
+                            </div>
+                            <span className="font-mono text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60 group-hover:border-emerald-500/50 transition-colors">
+                              v{APP_VERSION}
+                            </span>
+                          </button>
                         </div>
                       </div>
                     </>
@@ -1387,12 +1437,20 @@ export const App: React.FC = () => {
                 <span>{t.logOut}</span>
               </button>
 
-              <div className="pt-1 px-1 text-center flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                <span>RestaurantsOS POS</span>
-                <span className="font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setIsUpdateModalOpen(true)}
+                className="w-full pt-1 px-1 text-center flex items-center justify-between text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer font-medium group"
+                title="Click to check for application updates"
+              >
+                <span className="flex items-center gap-1 group-hover:text-emerald-500 transition-colors">
+                  <Sparkles className="w-3 h-3 text-emerald-500" />
+                  <span>RestaurantsOS POS</span>
+                </span>
+                <span className="font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60 group-hover:border-emerald-500/50 transition-colors">
                   v{APP_VERSION}
                 </span>
-              </div>
+              </button>
             </div>
           </aside>
 
@@ -1707,6 +1765,10 @@ export const App: React.FC = () => {
       {renderAppContent()}
       <ToastContainer />
       <CustomConfirmModal />
+      <UpdateModal 
+        isOpen={isUpdateModalOpen} 
+        onClose={() => setIsUpdateModalOpen(false)} 
+      />
     </>
   );
 };

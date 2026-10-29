@@ -1,6 +1,12 @@
 const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const { autoUpdater } = require('electron-updater');
+
+// Configure auto-updater for managed POS updates
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
 
 // Determine execution environment
 const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev') || !app.isPackaged;
@@ -96,6 +102,12 @@ function setupMenu() {
             label: 'RestaurantsOS',
             submenu: [
               { role: 'about', label: 'About RestaurantsOS' },
+              {
+                label: 'Check for Updates...',
+                click: () => {
+                  if (mainWindow) mainWindow.webContents.send('trigger-check-updates');
+                },
+              },
               { type: 'separator' },
               { role: 'services' },
               { type: 'separator' },
@@ -168,6 +180,13 @@ function setupMenu() {
     {
       role: 'help',
       submenu: [
+        {
+          label: 'Check for Updates...',
+          click: () => {
+            if (mainWindow) mainWindow.webContents.send('trigger-check-updates');
+          },
+        },
+        { type: 'separator' },
         {
           label: 'RestaurantsOS Documentation',
           click: () => shell.openExternal('https://restaurantsos.in'),
@@ -278,9 +297,180 @@ ipcMain.handle('open-external', async (event, url) => {
   return false;
 });
 
+// ==========================================
+// 5. IN-APP AUTO-UPDATES (Windows & macOS)
+// Seamless in-place updates preserving user data & local settings
+// ==========================================
+
+function sendUpdateStatus(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('auto-updater-status', payload);
+  }
+}
+
+autoUpdater.on('checking-for-update', () => {
+  sendUpdateStatus({ status: 'checking' });
+});
+
+autoUpdater.on('update-available', (info) => {
+  sendUpdateStatus({
+    status: 'available',
+    info: {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes,
+    },
+  });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  sendUpdateStatus({
+    status: 'not-available',
+    info: {
+      version: info.version || app.getVersion(),
+    },
+  });
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  sendUpdateStatus({
+    status: 'downloading',
+    progress: {
+      percent: Math.round(progressObj.percent || 0),
+      bytesPerSecond: progressObj.bytesPerSecond || 0,
+      transferred: progressObj.transferred || 0,
+      total: progressObj.total || 0,
+    },
+  });
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  sendUpdateStatus({
+    status: 'downloaded',
+    info: {
+      version: info.version,
+    },
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  console.warn('[AutoUpdater] Native updater notice:', err?.message || err);
+  sendUpdateStatus({
+    status: 'error',
+    error: err ? err.message : 'Update check error',
+  });
+});
+
+function compareVersions(v1, v2) {
+  const p1 = (v1 || '').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const p2 = (v2 || '').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+    const num1 = p1[i] || 0;
+    const num2 = p2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+async function checkGitHubReleasesDirectly(initialError = '') {
+  try {
+    const currentVersion = app.getVersion();
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/Sahildholpuria/Digital-Order-Management-for-Restaurants/releases/latest',
+      headers: { 'User-Agent': 'RestaurantsOS-Desktop-POS' },
+    };
+
+    const data = await new Promise((resolve, reject) => {
+      https.get(options, (res) => {
+        let body = '';
+        res.on('data', chunk => { body += chunk; });
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(body));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }).on('error', reject);
+    });
+
+    if (data && data.tag_name) {
+      const latestVersion = data.tag_name.replace(/^v/, '');
+      const isNewer = compareVersions(latestVersion, currentVersion) > 0;
+      const releaseInfo = {
+        version: latestVersion,
+        releaseDate: data.published_at,
+        releaseNotes: data.body,
+        downloadUrl: data.html_url,
+      };
+
+      if (isNewer) {
+        sendUpdateStatus({
+          status: 'available',
+          info: releaseInfo,
+        });
+        return { success: true, isNewer: true, info: releaseInfo };
+      } else {
+        sendUpdateStatus({
+          status: 'not-available',
+          info: { version: currentVersion },
+        });
+        return { success: true, isNewer: false, info: { version: currentVersion } };
+      }
+    }
+  } catch (err) {
+    console.warn('[AutoUpdater] Direct GitHub release fallback notice:', err);
+  }
+  return { success: false, error: initialError || 'Unable to contact update server' };
+}
+
+// IPC 5a: Trigger Update Check
+ipcMain.handle('check-for-updates', async () => {
+  if (isDev) {
+    return await checkGitHubReleasesDirectly();
+  }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, updateInfo: result?.updateInfo };
+  } catch (err) {
+    console.warn('[AutoUpdater] checkForUpdates fallback notice:', err?.message || err);
+    return await checkGitHubReleasesDirectly(err.message);
+  }
+});
+
+// IPC 5b: Start Download
+ipcMain.handle('start-download-update', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (err) {
+    console.error('[AutoUpdater] downloadUpdate failed:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// IPC 5c: Quit & Install Update
+ipcMain.handle('quit-and-install-update', () => {
+  setImmediate(() => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+  return { success: true };
+});
+
 // App Lifecycle
 app.whenReady().then(() => {
   createWindow();
+
+  // Subtle automatic background check for updates 6s after launch when running packaged
+  if (!isDev) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch(err => {
+        console.warn('[AutoUpdater] Background check notice:', err?.message || err);
+      });
+    }, 6000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

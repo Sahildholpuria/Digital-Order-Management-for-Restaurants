@@ -63,8 +63,17 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": "always",
     "createStartMenuShortcut": true,
-    "shortcutName": "RestaurantsOS"
+    "shortcutName": "RestaurantsOS",
+    "deleteAppDataOnUninstall": false
   },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "Sahildholpuria",
+      "repo": "Digital-Order-Management-for-Restaurants",
+      "releaseType": "release"
+    }
+  ],
   "asar": true
 }
 

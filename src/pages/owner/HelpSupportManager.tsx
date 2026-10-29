@@ -11,14 +11,17 @@ import {
   Check,
   Copy,
   ChevronRight,
-  Headphones
+  Headphones,
+  RefreshCw
 } from "lucide-react";
+import { UpdateModal } from "../../components/common/UpdateModal";
 
 export const HelpSupportManager: React.FC = () => {
   const { settings, showToast } = useRestaurant();
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [supportConfig, setSupportConfig] = useState<SupportChannelsConfig>(() => supportConfigService.getSupportConfig());
 
   React.useEffect(() => {
@@ -244,15 +247,28 @@ export const HelpSupportManager: React.FC = () => {
 
       {/* App Version Info & Live Status Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 border-t border-slate-200/80 dark:border-slate-800 pt-6">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-slate-600 dark:text-slate-300">RestaurantsOS Live Cloud</span>
+          <span className="font-semibold text-slate-600 dark:text-slate-300">RestaurantsOS Live Cloud & Desktop</span>
           <span>•</span>
           <span>Version <span className="font-mono font-bold text-slate-800 dark:text-slate-100">v{APP_VERSION}</span></span>
+          <button
+            type="button"
+            onClick={() => setIsUpdateModalOpen(true)}
+            className="ml-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] transition-colors cursor-pointer border border-indigo-200 dark:border-indigo-800/60 active:scale-95"
+            title="Check GitHub for newer versions"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>Check for Updates</span>
+          </button>
         </div>
-        <span className="text-[11px] text-slate-400">All systems operational & up to date</span>
+        <span className="text-[11px] text-slate-400">Settings and local databases are permanently preserved across updates</span>
       </div>
 
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+      />
     </div>
   );
 };

@@ -75,7 +75,10 @@ jobs:
             platform: Windows
             build_script: npm run electron:dist:win
             artifact_name: RestaurantsOS-Windows-Installers
-            artifact_path: release/*.exe
+            artifact_path: |
+              release/*.exe
+              release/*.blockmap
+              release/latest.yml
           - os: macos-latest
             platform: macOS
             build_script: npm run electron:dist:mac
@@ -83,6 +86,8 @@ jobs:
             artifact_path: |
               release/*.dmg
               release/*.zip
+              release/*.blockmap
+              release/latest-mac.yml
 
     steps:
       - name: Checkout repository
@@ -135,9 +140,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-artifacts/RestaurantsOS-Windows-Installers/*.exe
-            release-artifacts/RestaurantsOS-macOS-Installers/*.dmg
-            release-artifacts/RestaurantsOS-macOS-Installers/*.zip
+            release-artifacts/RestaurantsOS-Windows-Installers/*
+            release-artifacts/RestaurantsOS-macOS-Installers/*
           name: RestaurantsOS ${{ github.ref_name }}
           draft: false
           prerelease: false
