@@ -1,0 +1,146 @@
+name: Build & Package (Web, Windows & macOS)
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - development
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish as GitHub Release?'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://joinchsfajroeowrffeb.supabase.co' }}
+  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvaW5jaHNmYWpyb2Vvd3JmZmViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNjU0MTEsImV4cCI6MjA5OTg0MTQxMX0.P93EgS5JNjOdrtfRbLwFdoKIwYdZqM7PL31ErDyuLYw' }}
+  VITE_RAZORPAY_KEY_ID: ${{ secrets.VITE_RAZORPAY_KEY_ID || 'rzp_live_TkI9AUz7AebIq0' }}
+
+jobs:
+  # ==========================================
+  # JOB 1: Test & Validate Web Application
+  # ==========================================
+  test-and-verify:
+    name: Unit Tests & Web Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest Unit Tests
+        run: npm test
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Upload Web Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RestaurantsOS-Web-Dist
+          path: dist/
+          retention-days: 14
+
+  # ==========================================
+  # JOB 2: Build Native Desktop Packages (Windows & macOS)
+  # ==========================================
+  build-desktop:
+    name: Build Desktop App (${{ matrix.platform }})
+    needs: test-and-verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+            build_script: npm run electron:dist:win
+            artifact_name: RestaurantsOS-Windows-Installers
+            artifact_path: release/*.exe
+          - os: macos-latest
+            platform: macOS
+            build_script: npm run electron:dist:mac
+            artifact_name: RestaurantsOS-macOS-Installers
+            artifact_path: |
+              release/*.dmg
+              release/*.zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Desktop Binaries (${{ matrix.platform }})
+        env:
+          ELECTRON: 'true'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: ${{ matrix.build_script }}
+
+      - name: Upload Desktop Artifacts (${{ matrix.platform }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          retention-days: 30
+
+  # ==========================================
+  # JOB 3: Publish GitHub Release (On Tag or Manual Dispatch)
+  # ==========================================
+  publish-github-release:
+    name: Publish GitHub Release
+    needs: build-desktop
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts/
+
+      - name: Display downloaded release files
+        run: ls -R release-artifacts/
+
+      - name: Create GitHub Release with Binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-artifacts/RestaurantsOS-Windows-Installers/*.exe
+            release-artifacts/RestaurantsOS-macOS-Installers/*.dmg
+            release-artifacts/RestaurantsOS-macOS-Installers/*.zip
+          name: RestaurantsOS ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
