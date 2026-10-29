@@ -17,7 +17,7 @@ on:
         description: 'Publish as GitHub Release?'
         required: false
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: write
@@ -117,16 +117,24 @@ jobs:
           retention-days: 30
 
   # ==========================================
-  # JOB 3: Publish GitHub Release (On Tag or Manual Dispatch)
+  # JOB 3: Publish GitHub Release (On Main, Tag or Manual Dispatch)
   # ==========================================
   publish-github-release:
     name: Publish GitHub Release
     needs: build-desktop
-    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true'
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event.inputs.publish_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Extract application version from package.json
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "tag_name=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Download all built artifacts
         uses: actions/download-artifact@v4
@@ -139,12 +147,14 @@ jobs:
       - name: Create GitHub Release with Binaries
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.get_version.outputs.tag_name }}
           files: |
             release-artifacts/RestaurantsOS-Windows-Installers/*
             release-artifacts/RestaurantsOS-macOS-Installers/*
-          name: RestaurantsOS ${{ github.ref_name }}
+          name: RestaurantsOS ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || steps.get_version.outputs.tag_name }}
           draft: false
           prerelease: false
+          make_latest: "true"
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
