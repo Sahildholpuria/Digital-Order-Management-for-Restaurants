@@ -354,3 +354,4 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, initi
   );
 };
 export default UpdateModal;
+
