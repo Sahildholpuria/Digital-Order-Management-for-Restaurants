@@ -77,3 +77,4 @@ All outputs are created in the `release/` directory.
 In the desktop application, thermal receipt and KOT printing works **silently and directly** to your POS printers (USB, Network, or Bluetooth) without browser dialog popups:
 - Handled through [`electron/main.cjs`](../electron/main.cjs) and [`src/services/electronService.ts`](../src/services/electronService.ts).
 - Web browsers continue to use standard Web Printing / Bluetooth ESC/POS as before.
+
