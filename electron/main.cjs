@@ -353,11 +353,30 @@ autoUpdater.on('update-downloaded', (info) => {
   });
 });
 
+function sanitizeUpdaterError(err) {
+  const msg = typeof err === 'string' ? err : (err?.message || String(err || ''));
+  if (
+    msg.includes('releases.atom') ||
+    msg.includes('authentication token is correct') ||
+    (msg.includes('404') && (msg.includes('github.com') || msg.includes('releases')))
+  ) {
+    return '404: No published releases found on GitHub. This happens when no release tag has been pushed yet or the repository is set to Private on GitHub.';
+  }
+  if (msg.includes('net::ERR_INTERNET_DISCONNECTED') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
+    return 'No internet connection detected. Please check your network and try again.';
+  }
+  if (msg.includes('net::ERR_CONNECTION_REFUSED')) {
+    return 'Connection refused by update server. Please check your firewall or try again.';
+  }
+  const clean = msg.replace(/\\n/g, '\n').split('\n')[0].trim();
+  return clean.length > 200 ? clean.slice(0, 200) + '...' : (clean || 'Update check failed');
+}
+
 autoUpdater.on('error', (err) => {
   console.warn('[AutoUpdater] Native updater notice:', err?.message || err);
   sendUpdateStatus({
     status: 'error',
-    error: err ? err.message : 'Update check error',
+    error: sanitizeUpdaterError(err),
   });
 });
 
@@ -423,7 +442,7 @@ async function checkGitHubReleasesDirectly(initialError = '') {
   } catch (err) {
     console.warn('[AutoUpdater] Direct GitHub release fallback notice:', err);
   }
-  return { success: false, error: initialError || 'Unable to contact update server' };
+  return { success: false, error: sanitizeUpdaterError(initialError) || 'Unable to contact update server' };
 }
 
 // IPC 5a: Trigger Update Check

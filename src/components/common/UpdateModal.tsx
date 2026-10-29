@@ -9,7 +9,8 @@ import {
   ShieldCheck, 
   X, 
   ArrowRight,
-  HardDrive
+  HardDrive,
+  HelpCircle
 } from "lucide-react";
 import { APP_VERSION } from "../../config/appVersion";
 import electronService from "../../services/electronService";
@@ -317,37 +318,81 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, initi
         )}
 
         {/* 6. ERROR / NOTICE */}
-        {updateState.status === 'error' && (
-          <div className="space-y-4 py-2">
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-              <div className="font-bold flex items-center gap-1.5 text-amber-600 dark:text-amber-400 mb-1">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>Update Status Notice</span>
+        {updateState.status === 'error' && (() => {
+          const rawErr = updateState.error || '';
+          const is404OrPrivate = rawErr.includes('404') || rawErr.includes('releases.atom') || rawErr.includes('authentication token') || rawErr.includes('No published releases');
+          const cleanMsg = rawErr
+            .replace(/\\n/g, '\n')
+            .split('\n')[0]
+            .replace(/^404\s*"?method:\s*GET[^"]*"?/i, 'Release check returned 404 (Not Found)')
+            .trim();
+
+          return (
+            <div className="space-y-4 py-1">
+              {is404OrPrivate ? (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-950 dark:text-amber-200 leading-relaxed space-y-2.5">
+                  <div className="font-extrabold flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-sm">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>No Published Releases Found on GitHub</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    GitHub returned <strong>404 Not Found</strong>. To enable automatic updates on Windows & macOS:
+                  </p>
+                  <div className="space-y-2 text-[11px] text-slate-700 dark:text-slate-300 pt-0.5">
+                    <div className="flex items-start gap-2 bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-amber-500/15">
+                      <span className="w-4 h-4 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-100">Push your release tag to GitHub:</strong>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                          git push origin v2.5.0
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-amber-500/15">
+                      <span className="w-4 h-4 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                      <div>
+                        <strong className="text-slate-800 dark:text-slate-100">Ensure GitHub Repo is Public:</strong>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          In GitHub Settings → General → Change visibility to <strong>Public</strong> so installed desktop applications can download releases without developer tokens.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-600 dark:text-amber-400 mb-1">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Update Status Notice</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    {cleanMsg || 'Could not connect to update servers. Check your internet connection.'}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={triggerCheck}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Retry Check</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => electronService.openExternal('https://github.com/Sahildholpuria/Digital-Order-Management-for-Restaurants/releases')}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open GitHub</span>
+                </button>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                {updateState.error || 'Could not connect to update servers. Check your internet connection.'}
-              </p>
             </div>
-
-            <div className="flex justify-between items-center gap-2 pt-2">
-              <button
-                onClick={triggerCheck}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry</span>
-              </button>
-
-              <button
-                onClick={() => electronService.openExternal('https://github.com/Sahildholpuria/Digital-Order-Management-for-Restaurants/releases')}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>GitHub Releases</span>
-              </button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
       </div>
     </div>
