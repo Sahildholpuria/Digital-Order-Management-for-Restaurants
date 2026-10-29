@@ -541,80 +541,54 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const syncSupabaseProfile = async (user: any) => {
     try {
-      // Query directly by user ID — avoids relying on context restaurantId
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      let profileData: any = null;
+      const isCustomerRoute = window.location.pathname.startsWith('/menu/');
+      const impersonatedTenant = localStorage.getItem('superadmin_impersonated_tenant_id');
 
-      if (error) throw error;
-
-      if (data) {
-        // Profile found — map to frontend shape
-        const isSuper = !!data.is_super_admin;
-        const impersonatedTenant = localStorage.getItem('superadmin_impersonated_tenant_id');
-        const isCustomerRoute = window.location.pathname.startsWith('/menu/');
-
-        let targetRestaurantId: string;
-        if (isSuper && impersonatedTenant) {
-          // Super Admin is impersonating a tenant: retain tenant context
-          targetRestaurantId = impersonatedTenant;
-          if (!isCustomerRoute) {
-            clearTenantCache(targetRestaurantId);
-            setRestaurantId(targetRestaurantId);
-            localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
-          }
-        } else if (isSuper) {
-          // Super Admin in Central SaaS Mode
-          targetRestaurantId = '';
-          if (!isCustomerRoute) {
-            clearTenantCache();
-            setRestaurantId('');
-            localStorage.removeItem('last_active_staff_restaurant_id');
-          }
-        } else {
-          // Normal staff account
-          targetRestaurantId = data.restaurant_id || '';
-          if (!isCustomerRoute) {
-            clearTenantCache(targetRestaurantId);
-            setRestaurantId(targetRestaurantId);
-            if (targetRestaurantId) {
-              localStorage.setItem('last_active_staff_restaurant_id', targetRestaurantId);
-            }
-          }
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!error && data) {
+          profileData = data;
+        } else if (error) {
+          console.warn('Profile fetch notice in syncSupabaseProfile:', error.message);
         }
-
-        const profile: UserProfile = {
-          id: data.id,
-          restaurantId: isSuper ? (impersonatedTenant || undefined) : (data.restaurant_id || undefined),
-          name: data.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
-          email: data.email || user.email || '',
-          role: data.role || 'admin',
-          isSuperAdmin: isSuper,
-          createdAt: data.created_at || new Date().toISOString(),
-        };
-        try { localStorage.setItem('restaurant_current_user', JSON.stringify(profile)); } catch (_) {}
-        setCurrentUserState(profile);
-      } else {
-        // Profile genuinely missing (e.g. legacy account) — only insert then
-        const isSuper = user.email === 'superadmin@restaurant.com' || user.email?.includes('super') || false;
-        const isCustomerRoute = window.location.pathname.startsWith('/menu/');
-        const profile: UserProfile = {
-          id: user.id,
-          restaurantId: isSuper ? undefined : 'demo-restaurant',
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff Member',
-          email: user.email || '',
-          role: 'admin',
-          isSuperAdmin: isSuper,
-          createdAt: new Date().toISOString(),
-        };
-        await dbService.addUser(isSuper ? '' : 'demo-restaurant', profile);
-        if (!isSuper && !isCustomerRoute) {
-          setRestaurantId('demo-restaurant');
-        }
-        setCurrentUserState(profile);
+      } catch (e) {
+        console.warn('Profile fetch warning in syncSupabaseProfile:', e);
       }
+
+      const isSuper = !!profileData?.is_super_admin || user.email === 'superadmin@restaurant.com' || user.email?.includes('super');
+      const activeStoredRest = localStorage.getItem('last_active_staff_restaurant_id');
+      const resolvedRestId = isSuper 
+        ? (impersonatedTenant || '') 
+        : (profileData?.restaurant_id || (activeStoredRest && activeStoredRest !== 'demo-restaurant' ? activeStoredRest : 'test-restaurant'));
+
+      if (!isCustomerRoute) {
+        if (resolvedRestId) {
+          clearTenantCache(resolvedRestId);
+          setRestaurantId(resolvedRestId);
+          localStorage.setItem('last_active_staff_restaurant_id', resolvedRestId);
+        } else if (isSuper) {
+          clearTenantCache();
+          setRestaurantId('');
+          localStorage.removeItem('last_active_staff_restaurant_id');
+        }
+      }
+
+      const profile: UserProfile = {
+        id: user.id,
+        restaurantId: isSuper ? (impersonatedTenant || undefined) : (resolvedRestId || undefined),
+        name: profileData?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Staff',
+        email: user.email || '',
+        role: profileData?.role || 'admin',
+        isSuperAdmin: isSuper,
+        createdAt: profileData?.created_at || new Date().toISOString(),
+      };
+      try { localStorage.setItem('restaurant_current_user', JSON.stringify(profile)); } catch (_) {}
+      setCurrentUserState(profile);
     } catch (err) {
       console.error('Error syncing user profile:', err);
     } finally {
@@ -1897,7 +1871,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // MOCK AUTH
   const loginMockUser = async (email: string, role: UserRole): Promise<UserProfile> => {
     const isSuper = email === 'superadmin@restaurant.com' || email.includes('super');
-    const mockRestaurantId = isSuper ? '' : (restaurantId || 'demo-restaurant');
+    const activeRest = localStorage.getItem('last_active_staff_restaurant_id');
+    const mockRestaurantId = isSuper ? '' : (restaurantId || (activeRest && activeRest !== 'demo-restaurant' ? activeRest : 'test-restaurant'));
     if (!isSuper) {
       clearTenantCache(mockRestaurantId);
       setRestaurantId(mockRestaurantId);

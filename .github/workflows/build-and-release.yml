@@ -107,6 +107,9 @@ jobs:
           ELECTRON: 'true'
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://joinchsfajroeowrffeb.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvaW5jaHNmYWpyb2Vvd3JmZmViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyNjU0MTEsImV4cCI6MjA5OTg0MTQxMX0.P93EgS5JNjOdrtfRbLwFdoKIwYdZqM7PL31ErDyuLYw' }}
+          VITE_RAZORPAY_KEY_ID: ${{ secrets.VITE_RAZORPAY_KEY_ID || 'rzp_live_TkI9AUz7AebIq0' }}
         run: ${{ matrix.build_script }}
 
       - name: Upload Desktop Artifacts (${{ matrix.platform }})

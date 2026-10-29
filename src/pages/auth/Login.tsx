@@ -69,16 +69,23 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
       // Fast resolve user profile immediately without waiting for background subscription
       let profile: any = null;
       if (data?.user) {
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.user.id)
-          .maybeSingle();
+        let profileData: any = null;
+        try {
+          const { data: pData, error: pErr } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          if (!pErr && pData) profileData = pData;
+        } catch (e) {
+          console.warn('Profile fetch notice in Login:', e);
+        }
 
         const isSuper = !!profileData?.is_super_admin || data.user.email === 'superadmin@restaurant.com';
+        const activeRest = profileData?.restaurant_id || localStorage.getItem('last_active_staff_restaurant_id') || 'test-restaurant';
         profile = {
           id: data.user.id,
-          restaurantId: isSuper ? undefined : (profileData?.restaurant_id || undefined),
+          restaurantId: isSuper ? undefined : activeRest,
           name: profileData?.name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Staff',
           email: data.user.email || '',
           role: profileData?.role || 'admin',

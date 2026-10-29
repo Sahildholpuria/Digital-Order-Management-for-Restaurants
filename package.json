@@ -4,7 +4,7 @@
   "description": "Ultra-fast Digital Order Management System & POS for Restaurants & Cafes",
   "author": "RestaurantsOS Team <support@restaurantsos.in>",
   "private": true,
-  "version": "2.5.0",
+  "version": "2.5.1",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {

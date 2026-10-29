@@ -222,6 +222,13 @@ export const isAdminPortalRoute = (pathname: string): boolean => {
   if (pathname.startsWith("/admin/") || pathname.startsWith("/dashboard/")) return true;
   const directMatch = pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
   if (directMatch && VALID_ADMIN_TABS.includes(directMatch[1] as AdminTab)) return true;
+  
+  // Desktop Electron (file:// or packaged app index.html) defaults to Admin/POS portal
+  if (typeof window !== 'undefined' && (Boolean((window as any).electronAPI?.isElectron) || window.location.protocol === 'file:')) {
+    if (pathname.endsWith('index.html') || pathname === '/' || pathname === '') {
+      return true;
+    }
+  }
   return false;
 };
 
@@ -252,7 +259,19 @@ export const App: React.FC = () => {
   }, []);
 
   // Navigation Routing States
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(() => {
+    const isDesktop = typeof window !== 'undefined' && (Boolean((window as any).electronAPI?.isElectron) || window.location.protocol === 'file:');
+    const path = window.location.pathname;
+    if (isDesktop && (path.endsWith('index.html') || path === '/' || path === '')) {
+      const savedUser = localStorage.getItem('restaurant_current_user');
+      const savedTab = localStorage.getItem('pos_portal_active_tab') || 'dashboard';
+      if (savedUser) {
+        return `/admin/${savedTab}`;
+      }
+      return '/login';
+    }
+    return path;
+  });
   const [currentHash, setCurrentHash] = useState(window.location.hash);
   const [currentSearch, setCurrentSearch] = useState(window.location.search);
   const [impersonatedTenantId, setImpersonatedTenantId] = useState<string | null>(() => {
@@ -278,7 +297,7 @@ export const App: React.FC = () => {
     localStorage.setItem("last_active_staff_restaurant_id", targetRestaurantId);
     setRestaurantId(targetRestaurantId);
     setActiveTab("dashboard");
-    window.history.pushState(null, "", "/admin/dashboard");
+    try { window.history.pushState(null, "", "/admin/dashboard"); } catch (_) {}
     setCurrentPath("/admin/dashboard");
     setCurrentHash("");
   };
@@ -289,7 +308,7 @@ export const App: React.FC = () => {
     localStorage.removeItem("last_active_staff_restaurant_id");
     setRestaurantId("");
     setActiveTab("superadmin");
-    window.history.pushState(null, "", "/admin/superadmin");
+    try { window.history.pushState(null, "", "/admin/superadmin"); } catch (_) {}
     setCurrentPath("/admin/superadmin");
     setCurrentHash("");
   };
@@ -302,11 +321,14 @@ export const App: React.FC = () => {
     setActiveTab(tabId);
     localStorage.setItem("pos_portal_active_tab", tabId);
     const newPath = `/admin/${tabId}`;
-    if (window.location.pathname !== newPath || window.location.hash) {
-      window.history.pushState(null, "", newPath);
-      setCurrentPath(newPath);
-      setCurrentHash("");
+    const isDesktop = typeof window !== 'undefined' && (Boolean((window as any).electronAPI?.isElectron) || window.location.protocol === 'file:');
+    if (!isDesktop && window.location.protocol !== 'file:') {
+      if (window.location.pathname !== newPath || window.location.hash) {
+        try { window.history.pushState(null, "", newPath); } catch (_) {}
+      }
     }
+    setCurrentPath(newPath);
+    setCurrentHash("");
     setMobileSidebarOpen(false);
   };
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -413,36 +435,51 @@ export const App: React.FC = () => {
     if (isAdminPortalRoute(currentPath)) {
       localStorage.setItem("pos_portal_active_tab", activeTab);
       const targetPath = `/admin/${activeTab}`;
-      // Clean up if currently on bare /admin or with hash or on alias like /orders
-      if (window.location.pathname !== targetPath || window.location.hash) {
-        window.history.replaceState(null, "", targetPath);
+      const isDesktop = typeof window !== 'undefined' && (Boolean((window as any).electronAPI?.isElectron) || window.location.protocol === 'file:');
+      if (!isDesktop && window.location.protocol !== 'file:') {
+        if (window.location.pathname !== targetPath || window.location.hash) {
+          try { window.history.replaceState(null, "", targetPath); } catch (_) {}
+          setCurrentPath(targetPath);
+          setCurrentHash("");
+        }
+      } else {
         setCurrentPath(targetPath);
-        setCurrentHash("");
       }
     }
   }, [activeTab, currentPath]);
 
   const navigateTo = (pathOrUrl: string, hash: string = "") => {
     try {
-      const parsed = new URL(pathOrUrl, window.location.origin);
-      const targetHash = hash || parsed.hash;
-      window.history.pushState(null, "", parsed.pathname + parsed.search + targetHash);
-      setCurrentPath(parsed.pathname);
+      const isDesktop = typeof window !== 'undefined' && (Boolean((window as any).electronAPI?.isElectron) || window.location.protocol === 'file:');
+      let targetPath = pathOrUrl;
+      let targetHash = hash;
+
+      if (!targetPath.startsWith('/') && !targetPath.startsWith('#') && !targetPath.startsWith('http')) {
+        targetPath = '/' + targetPath;
+      }
+
+      if (!isDesktop && window.location.protocol !== 'file:') {
+        try {
+          const parsed = new URL(pathOrUrl, window.location.origin);
+          targetHash = hash || parsed.hash;
+          targetPath = parsed.pathname;
+          window.history.pushState(null, "", parsed.pathname + parsed.search + targetHash);
+        } catch (_) {
+          try { window.history.pushState(null, "", targetPath + targetHash); } catch (_) {}
+        }
+      } else {
+        try { window.history.pushState(null, "", '#' + targetPath); } catch (_) {}
+      }
+
+      setCurrentPath(targetPath);
       setCurrentHash(targetHash);
-      setCurrentSearch(parsed.search);
-      const tab = extractTabFromLocation(parsed.pathname, targetHash);
-      if (tab) {
-        setActiveTab(tab);
-      }
-    } catch {
-      window.history.pushState(null, "", pathOrUrl + hash);
-      setCurrentPath(pathOrUrl);
-      setCurrentHash(hash);
       setCurrentSearch(window.location.search);
-      const tab = extractTabFromLocation(pathOrUrl, hash);
+      const tab = extractTabFromLocation(targetPath, targetHash);
       if (tab) {
         setActiveTab(tab);
       }
+    } catch (e) {
+      console.warn('Navigation error:', e);
     }
   };
 

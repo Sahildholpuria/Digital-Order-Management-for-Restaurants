@@ -333,11 +333,13 @@ create policy "Allow staff service call deletes" on public.notifications for del
 
 -- Policies for user profiles (strict tenant privacy, remedied recursion)
 create policy "Allow users to read profiles" on public.users for select using (
-  (auth.uid() is not null and restaurant_id = public.get_user_restaurant(auth.uid()))
+  id = auth.uid()
+  or (auth.uid() is not null and restaurant_id = public.get_user_restaurant(auth.uid()))
   or public.is_super_admin(auth.uid())
 );
 create policy "Allow admin write for profiles" on public.users for all using (
-  (public.is_admin(auth.uid()) and restaurant_id = public.get_user_restaurant(auth.uid()))
+  id = auth.uid()
+  or (public.is_admin(auth.uid()) and restaurant_id = public.get_user_restaurant(auth.uid()))
   or public.is_super_admin(auth.uid())
 );
 
